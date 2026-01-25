@@ -1,0 +1,15 @@
+#!/bin/sh
+
+ALLOWED_TYPES="^(fix|feat|refactor|test|docs|style|chore|perf|ci|build|revert|merge):"
+
+COMMIT_MSG_FILE=$1
+COMMIT_MSG=$(head -n 1 "$COMMIT_MSG_FILE")
+
+if ! echo "$COMMIT_MSG" | grep -iqE "$ALLOWED_TYPES"; then
+  echo "❌ Format invalide du message de commit."
+  echo "💡 Exemple attendu : fix: correction du bug du login"
+  echo "🔑 Types autorisés : fix, feat, refactor, test, docs, style, chore, perf, ci, build, revert, merge"
+  exit 1
+fi
+
+exit 0
