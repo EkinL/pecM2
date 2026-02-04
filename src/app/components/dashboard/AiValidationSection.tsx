@@ -1,4 +1,4 @@
-import { AiProfile, Timestamp, Utilisateur } from "../../types/dashboard";
+import { AiProfile, Timestamp, Utilisateur } from '../../types/dashboard';
 
 type AiValidationSectionProps = {
   aiLoading: boolean;
@@ -40,7 +40,7 @@ export const AiValidationSection = ({
         </p>
       </div>
       <span className="text-xs text-slate-400">
-        {aiLoading ? "Chargement…" : `${pendingAiProfiles.length} en attente`}
+        {aiLoading ? 'Chargement…' : `${pendingAiProfiles.length} en attente`}
       </span>
     </div>
 
@@ -50,7 +50,7 @@ export const AiValidationSection = ({
         {aiActionSuccess && <p className="text-emerald-300">{aiActionSuccess}</p>}
         {aiActionImageUrl && (
           <p className="text-emerald-200">
-            Avatar URL:{" "}
+            Avatar URL:{' '}
             <a
               href={aiActionImageUrl}
               target="_blank"
@@ -90,12 +90,14 @@ export const AiValidationSection = ({
                 </span>
               </div>
               <p className="mt-1 text-xs text-slate-400">
-                Propriétaire : {owner ? formatUserLabel(owner) : "Inconnu"}
+                Propriétaire : {owner ? formatUserLabel(owner) : 'Inconnu'}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                {profile.mentality ?? "Mentalité libre"} · {formatLookSummary(profile)}
+                {profile.mentality ?? 'Mentalité libre'} · {formatLookSummary(profile)}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Créée le {formatDate(profile.createdAt)}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Créée le {formatDate(profile.createdAt)}
+              </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -103,7 +105,7 @@ export const AiValidationSection = ({
                   disabled={isBusy}
                   className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
                 >
-                  {isBusy && aiAction?.type === "approve" ? "Validation..." : "Valider"}
+                  {isBusy && aiAction?.type === 'approve' ? 'Validation...' : 'Valider'}
                 </button>
                 <button
                   type="button"
@@ -111,7 +113,7 @@ export const AiValidationSection = ({
                   disabled={isBusy}
                   className="rounded-lg border border-rose-400/60 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed"
                 >
-                  {isBusy && aiAction?.type === "reject" ? "Refus..." : "Refuser"}
+                  {isBusy && aiAction?.type === 'reject' ? 'Refus...' : 'Refuser'}
                 </button>
               </div>
             </div>

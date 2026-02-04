@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   auth,
   createConversation,
@@ -12,8 +12,8 @@ import {
   fetchConversationsForUserRealTime,
   fetchUtilisateursRealTime,
   fetchUtilisateurByIdRealTime,
-} from "../indexFirebase";
-import { formatLookSummary } from "./aiOptions";
+} from '../indexFirebase';
+import { formatLookSummary } from './aiOptions';
 import {
   countryLabelByCode,
   countryOptions,
@@ -21,7 +21,7 @@ import {
   normalizeCountryCodeInput,
   readStoredManualCountry,
   writeStoredManualCountry,
-} from "../data/countries";
+} from '../data/countries';
 
 type Timestamp = {
   seconds?: number;
@@ -100,28 +100,28 @@ type AiEvaluation = {
 
 const formatDate = (value?: Timestamp | string) => {
   if (!value) {
-    return "—";
+    return '—';
   }
-  if (typeof value === "string") {
-    return new Date(value).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'string') {
+    return new Date(value).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  if (typeof value === "object" && value?.seconds) {
-    return new Date(value.seconds * 1000).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'object' && value?.seconds) {
+    return new Date(value.seconds * 1000).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  return "—";
+  return '—';
 };
 
 const formatAverageRating = (value?: number) => {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return "Non notee";
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return 'Non notee';
   }
-  return `${value.toLocaleString("fr-FR", {
+  return `${value.toLocaleString('fr-FR', {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
   })}/5`;
@@ -129,7 +129,7 @@ const formatAverageRating = (value?: number) => {
 
 const formatOwnerLabel = (owner?: Utilisateur) => {
   if (!owner) {
-    return "Créateur inconnu";
+    return 'Créateur inconnu';
   }
   if (owner.pseudo) {
     return owner.pseudo;
@@ -137,15 +137,15 @@ const formatOwnerLabel = (owner?: Utilisateur) => {
   if (owner.mail) {
     return owner.mail;
   }
-  return owner.id ? `Créateur ${owner.id.slice(0, 5)}` : "Créateur";
+  return owner.id ? `Créateur ${owner.id.slice(0, 5)}` : 'Créateur';
 };
 
-const normalizeFilterValue = (value?: string) => value?.trim().toLowerCase() ?? "";
+const normalizeFilterValue = (value?: string) => value?.trim().toLowerCase() ?? '';
 
 const buildFilterOptions = (values: Array<string | undefined>) => {
   const map = new Map<string, string>();
   values.forEach((value) => {
-    if (typeof value !== "string") {
+    if (typeof value !== 'string') {
       return;
     }
     const trimmed = value.trim();
@@ -159,41 +159,41 @@ const buildFilterOptions = (values: Array<string | undefined>) => {
   });
   return Array.from(map.entries())
     .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, "fr-FR"));
+    .sort((a, b) => a.label.localeCompare(b.label, 'fr-FR'));
 };
 
 const matchesFilter = (value: string | undefined, filter: string) => {
-  if (filter === "all") {
+  if (filter === 'all') {
     return true;
   }
-  if (filter === "__missing__") {
+  if (filter === '__missing__') {
     return !normalizeFilterValue(value);
   }
   return normalizeFilterValue(value) === filter;
 };
 
 const normalizeStatus = (status?: string) => {
-  const normalized = status?.toLowerCase() ?? "pending";
-  if (["pending", "active", "suspended", "disabled", "rejected"].includes(normalized)) {
+  const normalized = status?.toLowerCase() ?? 'pending';
+  if (['pending', 'active', 'suspended', 'disabled', 'rejected'].includes(normalized)) {
     return normalized;
   }
-  return "pending";
+  return 'pending';
 };
 
 const statusLabels: Record<string, string> = {
-  pending: "En attente",
-  active: "Active",
-  suspended: "Suspendue",
-  disabled: "Desactivee",
-  rejected: "Refusee",
+  pending: 'En attente',
+  active: 'Active',
+  suspended: 'Suspendue',
+  disabled: 'Desactivee',
+  rejected: 'Refusee',
 };
 
 const statusStyles: Record<string, string> = {
-  pending: "bg-amber-100/80 text-amber-700 border border-amber-400/70",
-  active: "bg-emerald-100/80 text-emerald-700 border border-emerald-400/70",
-  suspended: "bg-sky-100/80 text-sky-700 border border-sky-400/70",
-  disabled: "bg-slate-100/80 text-slate-700 border border-slate-300/80",
-  rejected: "bg-rose-100/80 text-rose-700 border border-rose-400/70",
+  pending: 'bg-amber-100/80 text-amber-700 border border-amber-400/70',
+  active: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
+  suspended: 'bg-sky-100/80 text-sky-700 border border-sky-400/70',
+  disabled: 'bg-slate-100/80 text-slate-700 border border-slate-300/80',
+  rejected: 'bg-rose-100/80 text-rose-700 border border-rose-400/70',
 };
 
 const LOCATION_FAILURE_THRESHOLD = 3;
@@ -205,16 +205,12 @@ export default function IaCataloguePage() {
   const [profile, setProfile] = useState<Profil | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
-  const [locationStatus, setLocationStatus] = useState<"pending" | "ready" | "error">(
-    "pending"
-  );
+  const [locationStatus, setLocationStatus] = useState<'pending' | 'ready' | 'error'>('pending');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationFailures, setLocationFailures] = useState(0);
-  const [manualCountry, setManualCountry] = useState<{ code: string; label: string } | null>(
-    null
-  );
-  const [manualCountrySelect, setManualCountrySelect] = useState("");
-  const [manualCountryInput, setManualCountryInput] = useState("");
+  const [manualCountry, setManualCountry] = useState<{ code: string; label: string } | null>(null);
+  const [manualCountrySelect, setManualCountrySelect] = useState('');
+  const [manualCountryInput, setManualCountryInput] = useState('');
   const [manualCountryError, setManualCountryError] = useState<string | null>(null);
 
   const [aiProfiles, setAiProfiles] = useState<AiProfile[]>([]);
@@ -223,7 +219,7 @@ export default function IaCataloguePage() {
   const [users, setUsers] = useState<Utilisateur[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const [evaluations, setEvaluations] = useState<AiEvaluation[]>([]);
   const [evaluationsLoading, setEvaluationsLoading] = useState(true);
@@ -235,20 +231,20 @@ export default function IaCataloguePage() {
 
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [mentalityFilter, setMentalityFilter] = useState("all");
-  const [genderFilter, setGenderFilter] = useState("all");
-  const [skinFilter, setSkinFilter] = useState("all");
-  const [hairFilter, setHairFilter] = useState("all");
-  const [outfitFilter, setOutfitFilter] = useState("all");
-  const [ethnicityFilter, setEthnicityFilter] = useState("all");
-  const roleMismatch = Boolean(userId && profile?.role && profile.role !== "client");
-  const isAdminUser = profile?.role === "admin";
+  const [searchQuery, setSearchQuery] = useState('');
+  const [mentalityFilter, setMentalityFilter] = useState('all');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [skinFilter, setSkinFilter] = useState('all');
+  const [hairFilter, setHairFilter] = useState('all');
+  const [outfitFilter, setOutfitFilter] = useState('all');
+  const [ethnicityFilter, setEthnicityFilter] = useState('all');
+  const roleMismatch = Boolean(userId && profile?.role && profile.role !== 'client');
+  const isAdminUser = profile?.role === 'admin';
   const locationRequired = Boolean(userId) && !roleMismatch;
-  const locationReady = locationStatus === "ready" || Boolean(manualCountry);
+  const locationReady = locationStatus === 'ready' || Boolean(manualCountry);
   const locationBlocked = locationRequired && !locationReady;
   const locationCtaLabel =
-    locationStatus === "pending" ? "Localisation..." : "Activer la localisation";
+    locationStatus === 'pending' ? 'Localisation...' : 'Activer la localisation';
 
   useEffect(() => {
     const stored = readStoredManualCountry();
@@ -258,27 +254,27 @@ export default function IaCataloguePage() {
   }, []);
 
   const requestLocation = useCallback(() => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setLocationStatus("error");
-      setLocationError("Geolocalisation indisponible.");
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationStatus('error');
+      setLocationError('Geolocalisation indisponible.');
       setLocationFailures((prev) => Math.max(prev, LOCATION_FAILURE_THRESHOLD));
       return;
     }
 
     setLocationError(null);
-    setLocationStatus("pending");
+    setLocationStatus('pending');
     navigator.geolocation.getCurrentPosition(
       () => {
-        setLocationStatus("ready");
+        setLocationStatus('ready');
         setLocationError(null);
         setLocationFailures(0);
       },
       () => {
-        setLocationStatus("error");
-        setLocationError("Localisation requise pour continuer.");
+        setLocationStatus('error');
+        setLocationError('Localisation requise pour continuer.');
         setLocationFailures((prev) => prev + 1);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 },
     );
   }, []);
 
@@ -310,15 +306,15 @@ export default function IaCataloguePage() {
     setProfileLoading(true);
     const unsubscribe = fetchUtilisateurByIdRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setProfile(data as Profil | null);
         setProfileError(null);
         setProfileLoading(false);
       },
       () => {
-        setProfileError("Impossible de recuperer le profil.");
+        setProfileError('Impossible de recuperer le profil.');
         setProfileLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -326,13 +322,13 @@ export default function IaCataloguePage() {
 
   useEffect(() => {
     if (!locationRequired) {
-      setLocationStatus("pending");
+      setLocationStatus('pending');
       setLocationError(null);
       setLocationFailures(0);
       return;
     }
     if (manualCountry) {
-      setLocationStatus("ready");
+      setLocationStatus('ready');
       setLocationError(null);
       return;
     }
@@ -341,38 +337,38 @@ export default function IaCataloguePage() {
 
   const applyManualCountry = () => {
     const selectedCode =
-      manualCountrySelect === "custom"
+      manualCountrySelect === 'custom'
         ? normalizeCountryCodeInput(manualCountryInput)
         : normalizeCountryCodeInput(manualCountrySelect);
 
     if (!isValidCountryCode(selectedCode)) {
-      setManualCountryError("Selectionnez un pays ou un code ISO valide.");
+      setManualCountryError('Selectionnez un pays ou un code ISO valide.');
       return;
     }
 
     const label = countryLabelByCode[selectedCode] ?? `Pays ${selectedCode}`;
     writeStoredManualCountry(selectedCode, label);
     setManualCountry({ code: selectedCode, label });
-    setLocationStatus("ready");
+    setLocationStatus('ready');
     setLocationError(null);
     setLocationFailures(0);
     setManualCountryError(null);
-    setManualCountrySelect("");
-    setManualCountryInput("");
+    setManualCountrySelect('');
+    setManualCountryInput('');
   };
 
   useEffect(() => {
     setAiLoading(true);
     const unsubscribe = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiLoading(false);
         setAiError(null);
       },
       () => {
-        setAiError("Impossible de recuperer les IA.");
+        setAiError('Impossible de recuperer les IA.');
         setAiLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -381,16 +377,16 @@ export default function IaCataloguePage() {
   useEffect(() => {
     setUsersLoading(true);
     const unsubscribe = fetchUtilisateursRealTime(
-      (data) => {
+      (data: unknown) => {
         setUsers(data as Utilisateur[]);
         setUsersLoading(false);
         setUsersError(null);
       },
-      (error) => {
-        console.error("Impossible de recuperer les createurs IA", error);
-        setUsersError("Impossible de recuperer les createurs.");
+      (error: unknown) => {
+        console.error('Impossible de recuperer les createurs IA', error);
+        setUsersError('Impossible de recuperer les createurs.');
         setUsersLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -399,15 +395,15 @@ export default function IaCataloguePage() {
   useEffect(() => {
     setEvaluationsLoading(true);
     const unsubscribe = fetchAiEvaluationsRealTime(
-      (data) => {
+      (data: unknown) => {
         setEvaluations(data as AiEvaluation[]);
         setEvaluationsLoading(false);
         setEvaluationsError(null);
       },
       () => {
-        setEvaluationsError("Impossible de recuperer les evaluations.");
+        setEvaluationsError('Impossible de recuperer les evaluations.');
         setEvaluationsLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -423,15 +419,15 @@ export default function IaCataloguePage() {
     setConversationsLoading(true);
     const unsubscribe = fetchConversationsForUserRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setConversations(data as Conversation[]);
         setConversationsLoading(false);
         setConversationsError(null);
       },
       () => {
-        setConversationsError("Impossible de recuperer les conversations.");
+        setConversationsError('Impossible de recuperer les conversations.');
         setConversationsLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -464,7 +460,7 @@ export default function IaCataloguePage() {
       if (!evaluation.aiId) {
         return;
       }
-      if (typeof evaluation.rating !== "number" || !Number.isFinite(evaluation.rating)) {
+      if (typeof evaluation.rating !== 'number' || !Number.isFinite(evaluation.rating)) {
         return;
       }
       totals[evaluation.aiId] = totals[evaluation.aiId] ?? { total: 0, count: 0 };
@@ -482,13 +478,13 @@ export default function IaCataloguePage() {
         }
         return acc;
       },
-      {} as Record<string, { average: number; count: number }>
+      {} as Record<string, { average: number; count: number }>,
     );
   }, [evaluations]);
 
   const mentalityOptions = useMemo(
     () => buildFilterOptions(aiProfiles.map((profileItem) => profileItem.mentality)),
-    [aiProfiles]
+    [aiProfiles],
   );
 
   const appearanceOptions = useMemo(
@@ -499,25 +495,21 @@ export default function IaCataloguePage() {
       outfit: buildFilterOptions(aiProfiles.map((profileItem) => profileItem.look?.outfit)),
       ethnicity: buildFilterOptions(aiProfiles.map((profileItem) => profileItem.look?.ethnicity)),
     }),
-    [aiProfiles]
+    [aiProfiles],
   );
 
   const sortedAiProfiles = useMemo(
-    () =>
-      [...aiProfiles].sort(
-        (a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
-      ),
-    [aiProfiles]
+    () => [...aiProfiles].sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)),
+    [aiProfiles],
   );
 
   const isCatalogProfileVisible = (profileItem: AiProfile) =>
-    isAdminUser ||
-    (!profileItem.hiddenFromCatalogue && profileItem.visibility !== "private");
+    isAdminUser || (!profileItem.hiddenFromCatalogue && profileItem.visibility !== 'private');
 
   const filteredAiProfiles = useMemo(() => {
     const normalizedSearch = normalizeFilterValue(searchQuery);
 
-    if (statusFilter === "all") {
+    if (statusFilter === 'all') {
       return sortedAiProfiles.filter((profileItem) => {
         const name = normalizeFilterValue(profileItem.name);
         if (normalizedSearch && !name.includes(normalizedSearch)) {
@@ -547,7 +539,7 @@ export default function IaCataloguePage() {
         return true;
       });
     }
-    if (statusFilter === "available") {
+    if (statusFilter === 'available') {
       return sortedAiProfiles.filter((profileItem) => {
         const name = normalizeFilterValue(profileItem.name);
         if (normalizedSearch && !name.includes(normalizedSearch)) {
@@ -574,10 +566,7 @@ export default function IaCataloguePage() {
         if (!isCatalogProfileVisible(profileItem)) {
           return false;
         }
-        return (
-          normalizeStatus(profileItem.status) === "active" &&
-          Boolean(profileItem.imageUrl)
-        );
+        return normalizeStatus(profileItem.status) === 'active' && Boolean(profileItem.imageUrl);
       });
     }
     return sortedAiProfiles.filter((profileItem) => {
@@ -600,13 +589,13 @@ export default function IaCataloguePage() {
       if (!matchesFilter(profileItem.look?.outfit, outfitFilter)) {
         return false;
       }
-        if (!matchesFilter(profileItem.look?.ethnicity, ethnicityFilter)) {
-          return false;
-        }
-        if (!isCatalogProfileVisible(profileItem)) {
-          return false;
-        }
-        return normalizeStatus(profileItem.status) === statusFilter;
+      if (!matchesFilter(profileItem.look?.ethnicity, ethnicityFilter)) {
+        return false;
+      }
+      if (!isCatalogProfileVisible(profileItem)) {
+        return false;
+      }
+      return normalizeStatus(profileItem.status) === statusFilter;
     });
   }, [
     sortedAiProfiles,
@@ -622,32 +611,32 @@ export default function IaCataloguePage() {
 
   const hasFilterSelections =
     Boolean(normalizeFilterValue(searchQuery)) ||
-    mentalityFilter !== "all" ||
-    genderFilter !== "all" ||
-    skinFilter !== "all" ||
-    hairFilter !== "all" ||
-    outfitFilter !== "all" ||
-    ethnicityFilter !== "all";
+    mentalityFilter !== 'all' ||
+    genderFilter !== 'all' ||
+    skinFilter !== 'all' ||
+    hairFilter !== 'all' ||
+    outfitFilter !== 'all' ||
+    ethnicityFilter !== 'all';
 
   const resetFilters = () => {
-    setSearchQuery("");
-    setMentalityFilter("all");
-    setGenderFilter("all");
-    setSkinFilter("all");
-    setHairFilter("all");
-    setOutfitFilter("all");
-    setEthnicityFilter("all");
-    setStatusFilter("all");
+    setSearchQuery('');
+    setMentalityFilter('all');
+    setGenderFilter('all');
+    setSkinFilter('all');
+    setHairFilter('all');
+    setOutfitFilter('all');
+    setEthnicityFilter('all');
+    setStatusFilter('all');
   };
 
   const handleStartConversation = async (aiId: string) => {
     setActionError(null);
     if (!userId) {
-      setActionError("Connectez-vous pour demarrer une conversation.");
+      setActionError('Connectez-vous pour demarrer une conversation.');
       return;
     }
     if (locationBlocked) {
-      setActionError("Localisation requise pour demarrer une conversation.");
+      setActionError('Localisation requise pour demarrer une conversation.');
       requestLocation();
       return;
     }
@@ -657,9 +646,9 @@ export default function IaCataloguePage() {
       const conversation = await createConversation({ userId, aiId });
       router.push(`/conversations/${conversation.id}`);
     } catch (error) {
-      console.error("Erreur lors du demarrage", error);
+      console.error('Erreur lors du demarrage', error);
       const message =
-        error instanceof Error ? error.message : "Impossible de demarrer la conversation.";
+        error instanceof Error ? error.message : 'Impossible de demarrer la conversation.';
       setActionError(message);
     } finally {
       setActionId(null);
@@ -671,21 +660,15 @@ export default function IaCataloguePage() {
       <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 md:px-6 lg:px-8">
         <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-900 to-slate-950/80 p-6 shadow-2xl shadow-slate-900/40 backdrop-blur">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Catalogue IA
-            </p>
-            <h1 className="text-3xl font-semibold md:text-4xl">
-              Choisir une IA
-            </h1>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Catalogue IA</p>
+            <h1 className="text-3xl font-semibold md:text-4xl">Choisir une IA</h1>
             <p className="text-sm text-slate-400 md:text-base">
               Selectionnez une IA, lancez la conversation et payez en tokens.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-            <span>{profile?.mail ?? authMail ?? "Compte actif"}</span>
-            <span>
-              {profileLoading ? "..." : `${profile?.tokens ?? 0} tokens`}
-            </span>
+            <span>{profile?.mail ?? authMail ?? 'Compte actif'}</span>
+            <span>{profileLoading ? '...' : `${profile?.tokens ?? 0} tokens`}</span>
             {locationBlocked ? (
               <button
                 type="button"
@@ -744,9 +727,9 @@ export default function IaCataloguePage() {
             {locationBlocked && (
               <div className="mb-4 rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-xs text-amber-200">
                 <p>
-                  {locationStatus === "pending"
-                    ? "Localisation en cours..."
-                    : "Localisation requise pour discuter ou creer une IA."}
+                  {locationStatus === 'pending'
+                    ? 'Localisation en cours...'
+                    : 'Localisation requise pour discuter ou creer une IA.'}
                 </p>
                 <button
                   type="button"
@@ -757,10 +740,7 @@ export default function IaCataloguePage() {
                 </button>
                 {locationFailures >= LOCATION_FAILURE_THRESHOLD && (
                   <div className="mt-3 space-y-2 rounded-xl border border-amber-400/30 bg-slate-950/40 p-3 text-[11px] text-amber-100">
-                    <p>
-                      Geolocalisation echouee plusieurs fois. Choisissez un pays
-                      manuellement.
-                    </p>
+                    <p>Geolocalisation echouee plusieurs fois. Choisissez un pays manuellement.</p>
                     <div className="flex flex-wrap items-end gap-2">
                       <div className="space-y-1">
                         <label className="text-[10px] uppercase tracking-wide text-slate-400">
@@ -771,8 +751,8 @@ export default function IaCataloguePage() {
                           onChange={(event) => {
                             setManualCountrySelect(event.target.value);
                             setManualCountryError(null);
-                            if (event.target.value !== "custom") {
-                              setManualCountryInput("");
+                            if (event.target.value !== 'custom') {
+                              setManualCountryInput('');
                             }
                           }}
                           className="rounded-lg border border-slate-800/80 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-100"
@@ -787,18 +767,11 @@ export default function IaCataloguePage() {
                         </select>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                        {visibilityValue === "private" && (
-                          <span className="rounded-full border border-slate-700/80 bg-slate-900/60 px-3 py-1 text-xs font-semibold text-slate-200">
-                            Privée
-                          </span>
-                        )}
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${accessBadgeClass}`}
-                        >
-                          {accessTypeValue === "paid" ? "Payante" : "Gratuite"}
+                        <span className="rounded-full border border-slate-700/80 bg-slate-900/60 px-3 py-1 text-xs font-semibold text-slate-200">
+                          En cours de création
                         </span>
                       </div>
-                      {manualCountrySelect === "custom" && (
+                      {manualCountrySelect === 'custom' && (
                         <div className="space-y-1">
                           <label className="text-[10px] uppercase tracking-wide text-slate-400">
                             Code ISO
@@ -841,7 +814,7 @@ export default function IaCataloguePage() {
               </div>
               <span className="text-xs text-slate-400">
                 {aiLoading
-                  ? "Chargement..."
+                  ? 'Chargement...'
                   : `${filteredAiProfiles.length} IA / ${sortedAiProfiles.length}`}
               </span>
             </div>
@@ -883,9 +856,7 @@ export default function IaCataloguePage() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] uppercase tracking-wide text-slate-400">
-                  Genre
-                </label>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">Genre</label>
                 <select
                   value={genderFilter}
                   onChange={(event) => setGenderFilter(event.target.value)}
@@ -901,9 +872,7 @@ export default function IaCataloguePage() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] uppercase tracking-wide text-slate-400">
-                  Peau
-                </label>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">Peau</label>
                 <select
                   value={skinFilter}
                   onChange={(event) => setSkinFilter(event.target.value)}
@@ -937,9 +906,7 @@ export default function IaCataloguePage() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] uppercase tracking-wide text-slate-400">
-                  Tenue
-                </label>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">Tenue</label>
                 <select
                   value={outfitFilter}
                   onChange={(event) => setOutfitFilter(event.target.value)}
@@ -955,9 +922,7 @@ export default function IaCataloguePage() {
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] uppercase tracking-wide text-slate-400">
-                  Ethnie
-                </label>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">Ethnie</label>
                 <select
                   value={ethnicityFilter}
                   onChange={(event) => setEthnicityFilter(event.target.value)}
@@ -979,25 +944,25 @@ export default function IaCataloguePage() {
                 type="button"
                 onClick={resetFilters}
                 className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-600"
-                disabled={!hasFilterSelections && statusFilter === "all"}
+                disabled={!hasFilterSelections && statusFilter === 'all'}
               >
                 Reinitialiser les filtres
               </button>
               {hasFilterSelections && (
                 <span>
-                  {filteredAiProfiles.length} resultat{filteredAiProfiles.length > 1 ? "s" : ""}
+                  {filteredAiProfiles.length} resultat{filteredAiProfiles.length > 1 ? 's' : ''}
                 </span>
               )}
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2 text-xs">
               {[
-                { id: "all", label: "Toutes" },
-                { id: "available", label: "Disponibles" },
-                { id: "pending", label: "En attente" },
-                { id: "suspended", label: "Suspendues" },
-                { id: "disabled", label: "Desactivees" },
-                { id: "rejected", label: "Refusees" },
+                { id: 'all', label: 'Toutes' },
+                { id: 'available', label: 'Disponibles' },
+                { id: 'pending', label: 'En attente' },
+                { id: 'suspended', label: 'Suspendues' },
+                { id: 'disabled', label: 'Desactivees' },
+                { id: 'rejected', label: 'Refusees' },
               ].map((option) => (
                 <button
                   key={option.id}
@@ -1005,8 +970,8 @@ export default function IaCataloguePage() {
                   onClick={() => setStatusFilter(option.id)}
                   className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
                     statusFilter === option.id
-                      ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-200"
-                      : "border-slate-800/80 bg-slate-950/40 text-slate-300 hover:border-slate-600"
+                      ? 'border-emerald-400/70 bg-emerald-500/20 text-emerald-200'
+                      : 'border-slate-800/80 bg-slate-950/40 text-slate-300 hover:border-slate-600'
                   }`}
                 >
                   {option.label}
@@ -1018,9 +983,7 @@ export default function IaCataloguePage() {
               {aiLoading ? (
                 <p className="text-sm text-slate-400">Chargement des IA...</p>
               ) : filteredAiProfiles.length === 0 ? (
-                <p className="text-sm text-slate-400">
-                  Aucune IA pour ce filtre.
-                </p>
+                <p className="text-sm text-slate-400">Aucune IA pour ce filtre.</p>
               ) : (
                 filteredAiProfiles.map((profileItem) => {
                   const statusKey = normalizeStatus(profileItem.status);
@@ -1034,35 +997,35 @@ export default function IaCataloguePage() {
                   const ratingLabel = ratingSummary
                     ? formatAverageRating(ratingSummary.average)
                     : evaluationsLoading
-                      ? "Chargement..."
-                      : "Non notee";
+                      ? 'Chargement...'
+                      : 'Non notee';
                   const ratingCountLabel = ratingSummary
                     ? `${ratingSummary.count} avis`
                     : evaluationsLoading
-                      ? "Avis en cours..."
-                      : "Aucun avis";
+                      ? 'Avis en cours...'
+                      : 'Aucun avis';
                   const isBusy = actionId === profileItem.id;
-                  const canStart = statusKey === "active" && hasAvatar;
-                  const visibilityValue = profileItem.visibility ?? "public";
-                  const accessTypeValue = profileItem.accessType ?? "free";
+                  const canStart = statusKey === 'active' && hasAvatar;
+                  const visibilityValue = profileItem.visibility ?? 'public';
+                  const accessTypeValue = profileItem.accessType ?? 'free';
                   const accessBadgeClass =
-                    accessTypeValue === "paid"
-                      ? "border border-amber-400/70 bg-amber-500/10 text-amber-200"
-                      : "border border-emerald-400/70 bg-emerald-500/10 text-emerald-200";
+                    accessTypeValue === 'paid'
+                      ? 'border border-amber-400/70 bg-amber-500/10 text-amber-200'
+                      : 'border border-emerald-400/70 bg-emerald-500/10 text-emerald-200';
                   const statusNote =
-                    statusKey === "pending"
-                      ? "IA en attente de validation."
-                      : statusKey === "active" && !hasAvatar
-                        ? "Avatar en cours de generation."
-                        : statusKey === "suspended"
-                          ? "IA suspendue."
-                          : statusKey === "disabled"
-                            ? "IA desactivee."
-                            : statusKey === "rejected"
-                              ? "IA refusee."
-                              : "IA indisponible.";
+                    statusKey === 'pending'
+                      ? 'IA en attente de validation.'
+                      : statusKey === 'active' && !hasAvatar
+                        ? 'Avatar en cours de generation.'
+                        : statusKey === 'suspended'
+                          ? 'IA suspendue.'
+                          : statusKey === 'disabled'
+                            ? 'IA desactivee.'
+                            : statusKey === 'rejected'
+                              ? 'IA refusee.'
+                              : 'IA indisponible.';
                   const infoNote = locationBlocked
-                    ? "Localisation requise pour discuter."
+                    ? 'Localisation requise pour discuter.'
                     : statusNote;
                   const owner =
                     profileItem.ownerId && usersById[profileItem.ownerId]
@@ -1073,9 +1036,10 @@ export default function IaCataloguePage() {
                       ? formatOwnerLabel(owner)
                       : profileItem.ownerId
                         ? `Créateur ${profileItem.ownerId.slice(0, 5)}`
-                        : "Créateur inconnu";
-                  const ownerLink =
-                    profileItem.ownerId ? `/ia/owner/${profileItem.ownerId}` : undefined;
+                        : 'Créateur inconnu';
+                  const ownerLink = profileItem.ownerId
+                    ? `/ia/owner/${profileItem.ownerId}`
+                    : undefined;
                   return (
                     <div
                       key={profileItem.id}
@@ -1087,35 +1051,35 @@ export default function IaCataloguePage() {
                             {profileItem.name ?? `IA ${profileItem.id.slice(0, 5)}`}
                           </p>
                           <p className="mt-1 text-xs text-slate-400">
-                            {profileItem.mentality ?? "Mentalite non definie"} ·{" "}
-                            {profileItem.voice ?? "Voix non definie"}
+                            {profileItem.mentality ?? 'Mentalite non definie'} ·{' '}
+                            {profileItem.voice ?? 'Voix non definie'}
                           </p>
                           <p className="mt-1 text-xs text-slate-500">
                             {formatLookSummary(profileItem.look)}
                           </p>
                         </div>
-                      <span
-                        className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${statusStyles[statusKey]}`}
-                      >
-                        {statusLabels[statusKey]}
-                      </span>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                      {visibilityValue === "private" && (
-                        <span className="rounded-full border border-slate-700/80 bg-slate-900/60 px-3 py-1 text-xs font-semibold text-slate-200">
-                          Privée
+                        <span
+                          className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${statusStyles[statusKey]}`}
+                        >
+                          {statusLabels[statusKey]}
                         </span>
-                      )}
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${accessBadgeClass}`}
-                      >
-                        {accessTypeValue === "paid" ? "Payante" : "Gratuite"}
-                      </span>
-                    </div>
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
+                        {visibilityValue === 'private' && (
+                          <span className="rounded-full border border-slate-700/80 bg-slate-900/60 px-3 py-1 text-xs font-semibold text-slate-200">
+                            Privée
+                          </span>
+                        )}
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${accessBadgeClass}`}
+                        >
+                          {accessTypeValue === 'paid' ? 'Payante' : 'Gratuite'}
+                        </span>
+                      </div>
 
                       <div className="mt-3 text-xs text-slate-400">
-                        <p>Rythme vocal: {profileItem.voiceRhythm ?? "Non defini"}</p>
+                        <p>Rythme vocal: {profileItem.voiceRhythm ?? 'Non defini'}</p>
                         <p>
                           Note moyenne: {ratingLabel} · {ratingCountLabel}
                         </p>
@@ -1130,7 +1094,7 @@ export default function IaCataloguePage() {
                           Consulter
                         </Link>
                         <div className="text-[11px] text-slate-400">
-                          Créateur:{" "}
+                          Créateur:{' '}
                           {ownerLink ? (
                             <Link
                               href={ownerLink}
@@ -1139,9 +1103,7 @@ export default function IaCataloguePage() {
                               {ownerLabel}
                             </Link>
                           ) : (
-                            <span className="font-semibold text-slate-200">
-                              {ownerLabel}
-                            </span>
+                            <span className="font-semibold text-slate-200">{ownerLabel}</span>
                           )}
                         </div>
                         {locationBlocked ? (
@@ -1172,13 +1134,11 @@ export default function IaCataloguePage() {
                             disabled={!canStart || isBusy || conversationsLoading}
                             className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/40"
                           >
-                            {isBusy ? "Ouverture..." : "Demarrer"}
+                            {isBusy ? 'Ouverture...' : 'Demarrer'}
                           </button>
                         )}
                         {(!canStart || locationBlocked) && (
-                          <span className="text-[11px] text-slate-500">
-                            {infoNote}
-                          </span>
+                          <span className="text-[11px] text-slate-500">{infoNote}</span>
                         )}
                       </div>
                     </div>
@@ -1189,9 +1149,7 @@ export default function IaCataloguePage() {
           </section>
         )}
 
-        {actionError && (
-          <p className="text-sm text-rose-300">{actionError}</p>
-        )}
+        {actionError && <p className="text-sm text-rose-300">{actionError}</p>}
       </div>
     </div>
   );

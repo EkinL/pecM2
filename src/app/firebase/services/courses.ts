@@ -1,6 +1,6 @@
-import { addDoc, deleteDoc, doc, getDocs, serverTimestamp } from "firebase/firestore";
-import { cours } from "../collections";
-import { mapSnapshot, normalizeOptionalNumber, normalizeRequiredString } from "../helpers";
+import { addDoc, deleteDoc, doc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { cours } from '../collections';
+import { mapSnapshot, normalizeOptionalNumber, normalizeRequiredString } from '../helpers';
 
 export const fetchCours = async () => {
   try {
@@ -8,15 +8,15 @@ export const fetchCours = async () => {
 
     return mapSnapshot(snapshot);
   } catch (err) {
-    console.error("Erreur lors de la récupération des cours", err);
+    console.error('Erreur lors de la récupération des cours', err);
     throw err;
   }
 };
 
-export const addCours = async ({ coursName, prof, hours }) => {
-  const payload = {
-    coursName: normalizeRequiredString(coursName, "Cours"),
-    prof: normalizeRequiredString(prof, "Professeur"),
+export const addCours = async ({ coursName, prof, hours }: any) => {
+  const payload: any = {
+    coursName: normalizeRequiredString(coursName, 'Cours'),
+    prof: normalizeRequiredString(prof, 'Professeur'),
     dateOfCreate: serverTimestamp(),
   };
 
@@ -28,8 +28,8 @@ export const addCours = async ({ coursName, prof, hours }) => {
   return addDoc(cours, payload);
 };
 
-export const deleteCours = async (id) => {
-  const normalizedId = normalizeRequiredString(id, "ID");
+export const deleteCours = async (id: any) => {
+  const normalizedId = normalizeRequiredString(id, 'ID');
   const docRef = doc(cours, normalizedId);
 
   return deleteDoc(docRef);

@@ -1,8 +1,8 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { onAuthStateChanged } from "firebase/auth";
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   addDemande,
   auth,
@@ -10,7 +10,7 @@ import {
   fetchUtilisateurById,
   getTokenPrice,
   updateDemandeLocation,
-} from "../../indexFirebase";
+} from '../../indexFirebase';
 
 type Timestamp = {
   seconds?: number;
@@ -54,67 +54,67 @@ type Profil = {
 };
 
 const statusLabels: Record<string, string> = {
-  pending: "En attente",
-  matched: "Assignee",
-  accepted: "Acceptee",
-  cancelled: "Annulee",
-  other: "En cours",
+  pending: 'En attente',
+  matched: 'Assignee',
+  accepted: 'Acceptee',
+  cancelled: 'Annulee',
+  other: 'En cours',
 };
 
 const statusStyles: Record<string, string> = {
-  pending: "bg-amber-100/80 text-amber-700 border border-amber-400/70",
-  matched: "bg-sky-100/80 text-sky-700 border border-sky-400/70",
-  accepted: "bg-emerald-100/80 text-emerald-700 border border-emerald-400/70",
-  cancelled: "bg-rose-100/80 text-rose-700 border border-rose-400/70",
-  other: "bg-slate-100/80 text-slate-700 border border-slate-300/80",
+  pending: 'bg-amber-100/80 text-amber-700 border border-amber-400/70',
+  matched: 'bg-sky-100/80 text-sky-700 border border-sky-400/70',
+  accepted: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
+  cancelled: 'bg-rose-100/80 text-rose-700 border border-rose-400/70',
+  other: 'bg-slate-100/80 text-slate-700 border border-slate-300/80',
 };
 
 const normalizeStatus = (status?: string) => {
-  const normalized = status?.toLowerCase() ?? "";
-  if (["pending", "nouveau", "en attente", ""].includes(normalized)) {
-    return "pending";
+  const normalized = status?.toLowerCase() ?? '';
+  if (['pending', 'nouveau', 'en attente', ''].includes(normalized)) {
+    return 'pending';
   }
-  if (["matched", "assigne", "assigned"].includes(normalized)) {
-    return "matched";
+  if (['matched', 'assigne', 'assigned'].includes(normalized)) {
+    return 'matched';
   }
-  if (["accepted", "in progress", "en cours"].includes(normalized)) {
-    return "accepted";
+  if (['accepted', 'in progress', 'en cours'].includes(normalized)) {
+    return 'accepted';
   }
-  if (["cancelled", "annule", "annulee", "refused"].includes(normalized)) {
-    return "cancelled";
+  if (['cancelled', 'annule', 'annulee', 'refused'].includes(normalized)) {
+    return 'cancelled';
   }
-  return "other";
+  return 'other';
 };
 
 const formatDate = (value?: Timestamp | string) => {
   if (!value) {
-    return "-";
+    return '-';
   }
-  if (typeof value === "string") {
-    return new Date(value).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'string') {
+    return new Date(value).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  if (typeof value === "object" && value?.seconds) {
-    return new Date(value.seconds * 1000).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'object' && value?.seconds) {
+    return new Date(value.seconds * 1000).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  return "-";
+  return '-';
 };
 
 const formatCoordinates = (location?: GeoLocation | null) => {
   if (!location) {
-    return "Position inconnue";
+    return 'Position inconnue';
   }
   return `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
 };
 
 const formatAccuracy = (accuracy?: number) => {
-  if (typeof accuracy !== "number") {
-    return "Precision inconnue";
+  if (typeof accuracy !== 'number') {
+    return 'Precision inconnue';
   }
   return `±${Math.round(accuracy)} m`;
 };
@@ -128,7 +128,7 @@ const buildMapEmbedUrl = (location: GeoLocation) => {
   const bbox = `${left},${bottom},${right},${top}`;
 
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
-    bbox
+    bbox,
   )}&layer=mapnik&marker=${location.lat}%2C${location.lng}`;
 };
 
@@ -137,8 +137,8 @@ const buildMapLink = (location: GeoLocation) =>
 
 const requestBrowserLocation = () =>
   new Promise<GeoLocation>((resolve, reject) => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      reject(new Error("Geolocalisation indisponible."));
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      reject(new Error('Geolocalisation indisponible.'));
       return;
     }
 
@@ -151,7 +151,7 @@ const requestBrowserLocation = () =>
         });
       },
       (error) => reject(error),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 },
     );
   });
 
@@ -165,7 +165,7 @@ const formatClientLabel = (demande: Demande) => {
   if (demande.prestataireId) {
     return `Client ${demande.prestataireId.slice(0, 5)}`;
   }
-  return "Non assigne";
+  return 'Non assigne';
 };
 
 export default function ClientDemandesPage() {
@@ -179,8 +179,8 @@ export default function ClientDemandesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
-  const [demandeSearch, setDemandeSearch] = useState("");
-  const [demandeStatusFilter, setDemandeStatusFilter] = useState("all");
+  const [demandeSearch, setDemandeSearch] = useState('');
+  const [demandeStatusFilter, setDemandeStatusFilter] = useState('all');
   const [demandePage, setDemandePage] = useState(1);
   const [location, setLocation] = useState<GeoLocation | null>(null);
   const [locationCapturedAt, setLocationCapturedAt] = useState<Date | null>(null);
@@ -188,7 +188,7 @@ export default function ClientDemandesPage() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationUpdateState, setLocationUpdateState] = useState<{
     id: string;
-    status: "loading" | "success" | "error";
+    status: 'loading' | 'success' | 'error';
     message?: string;
   } | null>(null);
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
@@ -196,7 +196,7 @@ export default function ClientDemandesPage() {
   const [tokenZone, setTokenZone] = useState<string | null>(null);
   const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
   const [tokenPriceError, setTokenPriceError] = useState<string | null>(null);
-  const roleMismatch = Boolean(userId && profile?.role && profile.role !== "client");
+  const roleMismatch = Boolean(userId && profile?.role && profile.role !== 'client');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -214,8 +214,8 @@ export default function ClientDemandesPage() {
         setProfile(profileData);
         setProfileError(null);
       } catch (error) {
-        console.error("Impossible de charger le profil", error);
-        setProfileError("Profil utilisateur introuvable.");
+        console.error('Impossible de charger le profil', error);
+        setProfileError('Profil utilisateur introuvable.');
       } finally {
         setProfileLoading(false);
       }
@@ -235,15 +235,15 @@ export default function ClientDemandesPage() {
 
     const unsubscribe = fetchDemandesForClientRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setDemandes(data as Demande[]);
         setDemandesLoading(false);
         setDemandesError(null);
       },
       () => {
-        setDemandesError("Impossible de recuperer vos demandes.");
+        setDemandesError('Impossible de recuperer vos demandes.');
         setDemandesLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -272,7 +272,7 @@ export default function ClientDemandesPage() {
         if (!isActive) {
           return;
         }
-        if (!data || typeof data !== "object") {
+        if (!data || typeof data !== 'object') {
           setTokenPrice(null);
           setTokenCurrency(null);
           setTokenZone(null);
@@ -280,19 +280,18 @@ export default function ClientDemandesPage() {
         }
         const rawPrice = data.price ?? data.amount ?? data.value;
         let priceValue: number | null = null;
-        if (typeof rawPrice === "number" && Number.isFinite(rawPrice)) {
+        if (typeof rawPrice === 'number' && Number.isFinite(rawPrice)) {
           priceValue = rawPrice;
         }
-        if (typeof rawPrice === "string") {
+        if (typeof rawPrice === 'string') {
           const parsed = Number(rawPrice);
           priceValue = Number.isFinite(parsed) ? parsed : null;
         }
-        const currencyValue =
-          typeof data.currency === "string" ? data.currency : null;
+        const currencyValue = typeof data.currency === 'string' ? data.currency : null;
         const zoneValue =
-          typeof data.zone === "string"
+          typeof data.zone === 'string'
             ? data.zone
-            : typeof data.zoneLabel === "string"
+            : typeof data.zoneLabel === 'string'
               ? data.zoneLabel
               : null;
 
@@ -304,8 +303,8 @@ export default function ClientDemandesPage() {
         if (!isActive) {
           return;
         }
-        console.error("Erreur lors de la recuperation du prix dynamique", error);
-        setTokenPriceError("Impossible de recuperer le tarif dynamique.");
+        console.error('Erreur lors de la recuperation du prix dynamique', error);
+        setTokenPriceError('Impossible de recuperer le tarif dynamique.');
       })
       .finally(() => {
         if (isActive) {
@@ -319,11 +318,8 @@ export default function ClientDemandesPage() {
   }, [location]);
 
   const sortedDemandes = useMemo(
-    () =>
-      [...demandes].sort(
-        (a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
-      ),
-    [demandes]
+    () => [...demandes].sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)),
+    [demandes],
   );
 
   const filteredDemandes = useMemo(() => {
@@ -331,7 +327,7 @@ export default function ClientDemandesPage() {
 
     return sortedDemandes.filter((demande) => {
       const statusKey = normalizeStatus(demande.status);
-      if (demandeStatusFilter !== "all" && statusKey !== demandeStatusFilter) {
+      if (demandeStatusFilter !== 'all' && statusKey !== demandeStatusFilter) {
         return false;
       }
       if (!search) {
@@ -347,17 +343,14 @@ export default function ClientDemandesPage() {
         demande.id,
       ]
         .filter(Boolean)
-        .join(" ")
+        .join(' ')
         .toLowerCase();
       return haystack.includes(search);
     });
   }, [sortedDemandes, demandeSearch, demandeStatusFilter]);
 
   const demandesPageSize = 5;
-  const totalDemandesPages = Math.max(
-    1,
-    Math.ceil(filteredDemandes.length / demandesPageSize)
-  );
+  const totalDemandesPages = Math.max(1, Math.ceil(filteredDemandes.length / demandesPageSize));
   const currentDemandesPage = Math.min(demandePage, totalDemandesPages);
   const paginatedDemandes = useMemo(() => {
     const start = (currentDemandesPage - 1) * demandesPageSize;
@@ -371,10 +364,7 @@ export default function ClientDemandesPage() {
         acc[key] = (acc[key] ?? 0) + 1;
         return acc;
       },
-      { pending: 0, matched: 0, accepted: 0, cancelled: 0, other: 0 } as Record<
-        string,
-        number
-      >
+      { pending: 0, matched: 0, accepted: 0, cancelled: 0, other: 0 } as Record<string, number>,
     );
   }, [sortedDemandes]);
 
@@ -387,7 +377,7 @@ export default function ClientDemandesPage() {
       setLocation(nextLocation);
       setLocationCapturedAt(new Date());
     } catch (error) {
-      console.error("Erreur lors de la geolocalisation", error);
+      console.error('Erreur lors de la geolocalisation', error);
       setLocationError("Impossible d'obtenir votre position.");
     } finally {
       setLocationLoading(false);
@@ -395,22 +385,22 @@ export default function ClientDemandesPage() {
   };
 
   const handleUpdateLocation = async (demandeId: string) => {
-    setLocationUpdateState({ id: demandeId, status: "loading" });
+    setLocationUpdateState({ id: demandeId, status: 'loading' });
 
     try {
       const nextLocation = await requestBrowserLocation();
       await updateDemandeLocation({ demandeId, location: nextLocation });
       setLocationUpdateState({
         id: demandeId,
-        status: "success",
-        message: "Position mise a jour.",
+        status: 'success',
+        message: 'Position mise a jour.',
       });
     } catch (error) {
-      console.error("Erreur lors de la mise a jour de la position", error);
+      console.error('Erreur lors de la mise a jour de la position', error);
       setLocationUpdateState({
         id: demandeId,
-        status: "error",
-        message: "Impossible de partager la position.",
+        status: 'error',
+        message: 'Impossible de partager la position.',
       });
     }
   };
@@ -421,26 +411,26 @@ export default function ClientDemandesPage() {
     setSubmitSuccess(null);
 
     if (!userId) {
-      setSubmitError("Connectez-vous pour envoyer une demande.");
+      setSubmitError('Connectez-vous pour envoyer une demande.');
       return;
     }
 
-    if (profile?.role && profile.role !== "client") {
+    if (profile?.role && profile.role !== 'client') {
       setSubmitError("Ce compte n'est pas un profil client.");
       return;
     }
 
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const title = formData.get("title")?.toString().trim();
-    const description = formData.get("description")?.toString().trim();
-    const category = formData.get("category")?.toString().trim();
-    const budget = formData.get("budget")?.toString().trim();
-    const city = formData.get("city")?.toString().trim();
-    const availability = formData.get("availability")?.toString().trim();
+    const title = formData.get('title')?.toString().trim();
+    const description = formData.get('description')?.toString().trim();
+    const category = formData.get('category')?.toString().trim();
+    const budget = formData.get('budget')?.toString().trim();
+    const city = formData.get('city')?.toString().trim();
+    const availability = formData.get('availability')?.toString().trim();
 
     if (!title || !description) {
-      setSubmitError("Le titre et la description sont obligatoires.");
+      setSubmitError('Le titre et la description sont obligatoires.');
       return;
     }
 
@@ -460,9 +450,9 @@ export default function ClientDemandesPage() {
         location: location ?? undefined,
       });
       form.reset();
-      setSubmitSuccess("Demande envoyee. Nous vous notifions du matching.");
+      setSubmitSuccess('Demande envoyee. Nous vous notifions du matching.');
     } catch (error) {
-      console.error("Erreur lors de la creation de la demande", error);
+      console.error('Erreur lors de la creation de la demande', error);
       setSubmitError("Impossible d'envoyer la demande. Reessayez.");
     } finally {
       setIsSubmitting(false);
@@ -473,12 +463,8 @@ export default function ClientDemandesPage() {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 md:px-6 lg:px-8">
         <header className="space-y-3 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-900 to-slate-950/80 p-6 shadow-2xl shadow-slate-900/40 backdrop-blur">
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-            Espace client
-          </p>
-          <h1 className="text-3xl font-semibold md:text-4xl">
-            Nouvelle demande & suivi
-          </h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Espace client</p>
+          <h1 className="text-3xl font-semibold md:text-4xl">Nouvelle demande & suivi</h1>
           <p className="text-sm text-slate-400 md:text-base">
             Formulaire simple, appariement automatique avec un client, suivi en temps reel.
           </p>
@@ -534,7 +520,7 @@ export default function ClientDemandesPage() {
                   <span className="text-xs text-rose-300">{profileError}</span>
                 ) : (
                   <span className="text-xs text-slate-500">
-                    Role: {profile?.role ?? "non defini"}
+                    Role: {profile?.role ?? 'non defini'}
                   </span>
                 )}
               </div>
@@ -656,12 +642,10 @@ export default function ClientDemandesPage() {
                       disabled={locationLoading}
                       className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/60"
                     >
-                      {locationLoading ? "Localisation..." : "Detecter ma position"}
+                      {locationLoading ? 'Localisation...' : 'Detecter ma position'}
                     </button>
                   </div>
-                  {locationError && (
-                    <p className="mt-2 text-xs text-rose-300">{locationError}</p>
-                  )}
+                  {locationError && <p className="mt-2 text-xs text-rose-300">{locationError}</p>}
                   {location ? (
                     <div className="mt-3 space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
@@ -670,10 +654,10 @@ export default function ClientDemandesPage() {
                       </div>
                       {locationCapturedAt && (
                         <p className="text-[11px] text-slate-500">
-                          Capture le{" "}
-                          {locationCapturedAt.toLocaleString("fr-FR", {
-                            dateStyle: "short",
-                            timeStyle: "short",
+                          Capture le{' '}
+                          {locationCapturedAt.toLocaleString('fr-FR', {
+                            dateStyle: 'short',
+                            timeStyle: 'short',
                           })}
                         </p>
                       )}
@@ -714,16 +698,14 @@ export default function ClientDemandesPage() {
                     </div>
                     <span className="text-sm font-semibold text-white">
                       {tokenPriceLoading
-                        ? "Calcul..."
+                        ? 'Calcul...'
                         : tokenPrice !== null
-                          ? `${tokenPrice.toLocaleString("fr-FR")} ${tokenCurrency ?? ""}`.trim()
-                          : "Non disponible"}
+                          ? `${tokenPrice.toLocaleString('fr-FR')} ${tokenCurrency ?? ''}`.trim()
+                          : 'Non disponible'}
                     </span>
                   </div>
                   {tokenZone && (
-                    <p className="mt-2 text-xs text-slate-400">
-                      Zone detectee: {tokenZone}
-                    </p>
+                    <p className="mt-2 text-xs text-slate-400">Zone detectee: {tokenZone}</p>
                   )}
                   {tokenPriceError && (
                     <p className="mt-2 text-xs text-rose-300">{tokenPriceError}</p>
@@ -735,19 +717,15 @@ export default function ClientDemandesPage() {
                   )}
                 </div>
 
-                {submitError && (
-                  <p className="text-sm text-rose-300">{submitError}</p>
-                )}
-                {submitSuccess && (
-                  <p className="text-sm text-emerald-300">{submitSuccess}</p>
-                )}
+                {submitError && <p className="text-sm text-rose-300">{submitError}</p>}
+                {submitSuccess && <p className="text-sm text-emerald-300">{submitSuccess}</p>}
 
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
                 >
-                  {isSubmitting ? "Envoi..." : "Envoyer la demande"}
+                  {isSubmitting ? 'Envoi...' : 'Envoyer la demande'}
                 </button>
               </form>
             </article>
@@ -761,7 +739,7 @@ export default function ClientDemandesPage() {
                   </p>
                 </div>
                 <span className="text-xs text-slate-500">
-                  {demandesLoading ? "Chargement..." : `${sortedDemandes.length} demandes`}
+                  {demandesLoading ? 'Chargement...' : `${sortedDemandes.length} demandes`}
                 </span>
               </div>
 
@@ -822,8 +800,8 @@ export default function ClientDemandesPage() {
                   paginatedDemandes.map((demande) => {
                     const statusKey = normalizeStatus(demande.status);
                     const hasLocation =
-                      typeof demande.location?.lat === "number" &&
-                      typeof demande.location?.lng === "number";
+                      typeof demande.location?.lat === 'number' &&
+                      typeof demande.location?.lng === 'number';
                     const locationData = hasLocation
                       ? {
                           lat: demande.location?.lat as number,
@@ -833,11 +811,9 @@ export default function ClientDemandesPage() {
                       : null;
                     const isUpdatingLocation =
                       locationUpdateState?.id === demande.id &&
-                      locationUpdateState.status === "loading";
+                      locationUpdateState.status === 'loading';
                     const locationMessage =
-                      locationUpdateState?.id === demande.id
-                        ? locationUpdateState.message
-                        : null;
+                      locationUpdateState?.id === demande.id ? locationUpdateState.message : null;
                     return (
                       <div
                         key={demande.id}
@@ -854,7 +830,8 @@ export default function ClientDemandesPage() {
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-slate-400">
-                          {demande.category ?? "Categorie libre"} - {demande.city ?? "Ville inconnue"}
+                          {demande.category ?? 'Categorie libre'} -{' '}
+                          {demande.city ?? 'Ville inconnue'}
                         </p>
                         <p className="mt-1 text-xs text-slate-400">
                           Client: {formatClientLabel(demande)}
@@ -864,13 +841,9 @@ export default function ClientDemandesPage() {
                         </p>
                         <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
                           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                            <span>
-                              Position: {formatCoordinates(locationData)}
-                            </span>
+                            <span>Position: {formatCoordinates(locationData)}</span>
                             {demande.locationUpdatedAt && (
-                              <span>
-                                Maj {formatDate(demande.locationUpdatedAt)}
-                              </span>
+                              <span>Maj {formatDate(demande.locationUpdatedAt)}</span>
                             )}
                           </div>
                           {locationData ? (
@@ -891,9 +864,9 @@ export default function ClientDemandesPage() {
                           {locationMessage && (
                             <p
                               className={`mt-2 text-[11px] ${
-                                locationUpdateState?.status === "error"
-                                  ? "text-rose-300"
-                                  : "text-emerald-300"
+                                locationUpdateState?.status === 'error'
+                                  ? 'text-rose-300'
+                                  : 'text-emerald-300'
                               }`}
                             >
                               {locationMessage}
@@ -905,9 +878,7 @@ export default function ClientDemandesPage() {
                             disabled={isUpdatingLocation}
                             className="mt-3 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/60"
                           >
-                            {isUpdatingLocation
-                              ? "Mise a jour..."
-                              : "Mettre a jour ma position"}
+                            {isUpdatingLocation ? 'Mise a jour...' : 'Mettre a jour ma position'}
                           </button>
                         </div>
                       </div>
@@ -927,9 +898,7 @@ export default function ClientDemandesPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() =>
-                      setDemandePage((prev) => Math.min(totalDemandesPages, prev + 1))
-                    }
+                    onClick={() => setDemandePage((prev) => Math.min(totalDemandesPages, prev + 1))}
                     disabled={currentDemandesPage === totalDemandesPages}
                     className="rounded-lg border border-slate-800/80 bg-slate-950/60 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600 disabled:cursor-not-allowed disabled:text-slate-600"
                   >

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   auth,
   fetchAiProfilesRealTime,
@@ -13,7 +13,7 @@ import {
   deleteConversationWithMessages,
   signOutUser,
   updateConversationStatus,
-} from "../../indexFirebase";
+} from '../../indexFirebase';
 
 type Timestamp = {
   seconds?: number;
@@ -42,55 +42,59 @@ type AiProfile = {
 };
 
 const statusBucket = (status?: string) => {
-  const normalized = status?.toLowerCase() ?? "";
-  if (["pending", "nouveau", "queued", "en attente", ""].includes(normalized)) {
-    return "pending";
+  const normalized = status?.toLowerCase() ?? '';
+  if (['pending', 'nouveau', 'queued', 'en attente', ''].includes(normalized)) {
+    return 'pending';
   }
-  if (["in progress", "en cours", "ongoing", "matched", "actif", "accepted"].includes(normalized)) {
-    return "running";
+  if (['in progress', 'en cours', 'ongoing', 'matched', 'actif', 'accepted'].includes(normalized)) {
+    return 'running';
   }
-  if (["completed", "done", "termine", "terminee", "closed", "ended", "cancelled"].includes(normalized)) {
-    return "completed";
+  if (
+    ['completed', 'done', 'termine', 'terminee', 'closed', 'ended', 'cancelled'].includes(
+      normalized,
+    )
+  ) {
+    return 'completed';
   }
-  return "other";
+  return 'other';
 };
 
 const statusLabels: Record<string, string> = {
-  pending: "Ouverte",
-  running: "Ouverte",
-  completed: "Fermee",
-  other: "Ouverte",
+  pending: 'Ouverte',
+  running: 'Ouverte',
+  completed: 'Fermee',
+  other: 'Ouverte',
 };
 
 const statusStyles: Record<string, string> = {
-  pending: "bg-amber-100/80 text-amber-700 border border-amber-400/70",
-  running: "bg-emerald-100/80 text-emerald-700 border border-emerald-400/70",
-  completed: "bg-sky-100/80 text-sky-700 border border-sky-400/70",
-  other: "bg-slate-100/80 text-slate-700 border border-slate-300/80",
+  pending: 'bg-amber-100/80 text-amber-700 border border-amber-400/70',
+  running: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
+  completed: 'bg-sky-100/80 text-sky-700 border border-sky-400/70',
+  other: 'bg-slate-100/80 text-slate-700 border border-slate-300/80',
 };
 
 const formatDate = (value?: Timestamp | string) => {
   if (!value) {
-    return "—";
+    return '—';
   }
-  if (typeof value === "string") {
-    return new Date(value).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'string') {
+    return new Date(value).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  if (typeof value === "object" && value?.seconds) {
-    return new Date(value.seconds * 1000).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'object' && value?.seconds) {
+    return new Date(value.seconds * 1000).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  return "—";
+  return '—';
 };
 
 const formatUserLabel = (user?: Utilisateur) => {
   if (!user) {
-    return "Utilisateur inconnu";
+    return 'Utilisateur inconnu';
   }
   if (user.pseudo) {
     return user.pseudo;
@@ -106,9 +110,7 @@ export default function AdminConversationsPage() {
   const [adminChecking, setAdminChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
-  const [adminUser, setAdminUser] = useState<null | { uid: string; mail?: string | null }>(
-    null
-  );
+  const [adminUser, setAdminUser] = useState<null | { uid: string; mail?: string | null }>(null);
 
   const [users, setUsers] = useState<Utilisateur[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -121,12 +123,12 @@ export default function AdminConversationsPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [conversationsError, setConversationsError] = useState<string | null>(null);
-  const [conversationSearch, setConversationSearch] = useState("");
-  const [conversationStatusFilter, setConversationStatusFilter] = useState("all");
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [conversationStatusFilter, setConversationStatusFilter] = useState('all');
   const [conversationPage, setConversationPage] = useState(1);
   const [conversationAction, setConversationAction] = useState<{
     id: string;
-    type: "open" | "close" | "delete";
+    type: 'open' | 'close' | 'delete';
   } | null>(null);
   const [conversationActionError, setConversationActionError] = useState<string | null>(null);
   const [conversationActionSuccess, setConversationActionSuccess] = useState<string | null>(null);
@@ -147,25 +149,25 @@ export default function AdminConversationsPage() {
         setAdminUser(null);
         setIsAdmin(false);
         setAdminChecking(false);
-        router.replace("/auth");
+        router.replace('/auth');
         return;
       }
 
       setAdminUser({ uid: user.uid, mail: user.email });
 
       try {
-        const profile = await fetchUtilisateurById(user.uid);
-        if (profile?.role === "admin") {
+        const profile = (await fetchUtilisateurById(user.uid)) as { role?: string } | null;
+        if (profile?.role === 'admin') {
           setIsAdmin(true);
           setAdminError(null);
         } else {
           setIsAdmin(false);
-          setAdminError("Acces reserve aux admins.");
+          setAdminError('Acces reserve aux admins.');
         }
       } catch (error) {
-        console.error("Erreur lors de la verification du role admin", error);
+        console.error('Erreur lors de la verification du role admin', error);
         setIsAdmin(false);
-        setAdminError("Impossible de verifier le role admin.");
+        setAdminError('Impossible de verifier le role admin.');
       } finally {
         setAdminChecking(false);
       }
@@ -180,37 +182,37 @@ export default function AdminConversationsPage() {
     }
 
     const unsubUsers = fetchUtilisateursRealTime(
-      (data) => {
+      (data: unknown) => {
         setUsers(data as Utilisateur[]);
         setUsersLoading(false);
         setUsersError(null);
       },
       () => {
-        setUsersError("Impossible de recuperer les utilisateurs.");
+        setUsersError('Impossible de recuperer les utilisateurs.');
         setUsersLoading(false);
-      }
+      },
     );
     const unsubAiProfiles = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiLoading(false);
         setAiError(null);
       },
       () => {
-        setAiError("Impossible de recuperer les IA.");
+        setAiError('Impossible de recuperer les IA.');
         setAiLoading(false);
-      }
+      },
     );
     const unsubConversations = fetchConversationsRealTime(
-      (data) => {
+      (data: unknown) => {
         setConversations(data as Conversation[]);
         setConversationsLoading(false);
         setConversationsError(null);
       },
       () => {
-        setConversationsError("Impossible de recuperer les conversations.");
+        setConversationsError('Impossible de recuperer les conversations.');
         setConversationsLoading(false);
-      }
+      },
     );
 
     return () => {
@@ -248,7 +250,7 @@ export default function AdminConversationsPage() {
       .sort((a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0))
       .filter((conversation) => {
         const bucket = statusBucket(conversation.status);
-        if (conversationStatusFilter !== "all" && bucket !== conversationStatusFilter) {
+        if (conversationStatusFilter !== 'all' && bucket !== conversationStatusFilter) {
           return false;
         }
         if (!search) {
@@ -259,11 +261,11 @@ export default function AdminConversationsPage() {
         const haystack = [
           conversation.id,
           conversation.status,
-          owner ? formatUserLabel(owner) : "",
-          aiRef ? aiRef.name ?? aiRef.id : conversation.aiId ?? "",
+          owner ? formatUserLabel(owner) : '',
+          aiRef ? (aiRef.name ?? aiRef.id) : (conversation.aiId ?? ''),
         ]
           .filter(Boolean)
-          .join(" ")
+          .join(' ')
           .toLowerCase();
         return haystack.includes(search);
       });
@@ -272,7 +274,7 @@ export default function AdminConversationsPage() {
   const conversationsPageSize = 10;
   const totalConversationPages = Math.max(
     1,
-    Math.ceil(filteredConversations.length / conversationsPageSize)
+    Math.ceil(filteredConversations.length / conversationsPageSize),
   );
   const currentConversationPage = Math.min(conversationPage, totalConversationPages);
   const paginatedConversations = useMemo(() => {
@@ -285,10 +287,10 @@ export default function AdminConversationsPage() {
     setSignOutLoading(true);
     try {
       await signOutUser();
-      router.replace("/auth");
+      router.replace('/auth');
     } catch (error) {
-      console.error("Erreur lors de la deconnexion", error);
-      setSignOutError("Impossible de se deconnecter.");
+      console.error('Erreur lors de la deconnexion', error);
+      setSignOutError('Impossible de se deconnecter.');
     } finally {
       setSignOutLoading(false);
     }
@@ -297,15 +299,15 @@ export default function AdminConversationsPage() {
   const handleOpenConversation = async (conversationId: string) => {
     setConversationActionError(null);
     setConversationActionSuccess(null);
-    setConversationAction({ id: conversationId, type: "open" });
+    setConversationAction({ id: conversationId, type: 'open' });
 
     try {
       await updateConversationStatus({
         conversationId,
-        status: "running",
-        note: "opened by admin",
+        status: 'running',
+        note: 'opened by admin',
       });
-      setConversationActionSuccess("Conversation ouverte.");
+      setConversationActionSuccess('Conversation ouverte.');
     } catch (error) {
       console.error("Erreur lors de l'ouverture", error);
       setConversationActionError("Impossible d'ouvrir la conversation.");
@@ -331,18 +333,18 @@ export default function AdminConversationsPage() {
   const handleCloseConversation = async (conversationId: string) => {
     setConversationActionError(null);
     setConversationActionSuccess(null);
-    setConversationAction({ id: conversationId, type: "close" });
+    setConversationAction({ id: conversationId, type: 'close' });
 
     try {
       await updateConversationStatus({
         conversationId,
-        status: "completed",
-        note: "closed by admin",
+        status: 'completed',
+        note: 'closed by admin',
       });
-      setConversationActionSuccess("Conversation fermee.");
+      setConversationActionSuccess('Conversation fermee.');
     } catch (error) {
-      console.error("Erreur lors de la fermeture", error);
-      setConversationActionError("Impossible de fermer la conversation.");
+      console.error('Erreur lors de la fermeture', error);
+      setConversationActionError('Impossible de fermer la conversation.');
     } finally {
       setConversationAction(null);
     }
@@ -365,7 +367,7 @@ export default function AdminConversationsPage() {
   const handleDeleteConversation = async (conversationId: string) => {
     setConversationActionError(null);
     setConversationActionSuccess(null);
-    setConversationAction({ id: conversationId, type: "delete" });
+    setConversationAction({ id: conversationId, type: 'delete' });
 
     try {
       await deleteConversationWithMessages({
@@ -373,10 +375,10 @@ export default function AdminConversationsPage() {
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
       });
-      setConversationActionSuccess("Conversation supprimee.");
+      setConversationActionSuccess('Conversation supprimee.');
     } catch (error) {
-      console.error("Erreur lors de la suppression", error);
-      setConversationActionError("Impossible de supprimer la conversation.");
+      console.error('Erreur lors de la suppression', error);
+      setConversationActionError('Impossible de supprimer la conversation.');
     } finally {
       setConversationAction(null);
     }
@@ -408,7 +410,7 @@ export default function AdminConversationsPage() {
               disabled={signOutLoading}
               className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
             >
-              {signOutLoading ? "Deconnexion..." : "Se deconnecter"}
+              {signOutLoading ? 'Deconnexion...' : 'Se deconnecter'}
             </button>
             {signOutError && <p className="text-xs text-rose-300">{signOutError}</p>}
           </div>
@@ -429,7 +431,7 @@ export default function AdminConversationsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-            <span>{adminUser?.mail ?? "Compte admin"}</span>
+            <span>{adminUser?.mail ?? 'Compte admin'}</span>
             <Link
               href="/"
               className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
@@ -443,12 +445,10 @@ export default function AdminConversationsPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-semibold">Liste des conversations</h2>
-              <p className="text-sm text-slate-400">
-                Recherche par client, IA ou statut.
-              </p>
+              <p className="text-sm text-slate-400">Recherche par client, IA ou statut.</p>
             </div>
             <span className="text-xs text-slate-400">
-              {conversationsLoading ? "Chargement..." : `${filteredConversations.length} resultats`}
+              {conversationsLoading ? 'Chargement...' : `${filteredConversations.length} resultats`}
             </span>
           </div>
 
@@ -510,8 +510,8 @@ export default function AdminConversationsPage() {
                 const aiRef = conversation.aiId ? aiLookup[conversation.aiId] : undefined;
                 const isBusy = conversationAction?.id === conversation.id;
                 const canAccept =
-                  bucket === "pending" || bucket === "other" || bucket === "completed";
-                const canCancel = bucket !== "completed";
+                  bucket === 'pending' || bucket === 'other' || bucket === 'completed';
+                const canCancel = bucket !== 'completed';
                 return (
                   <div
                     key={conversation.id}
@@ -519,7 +519,7 @@ export default function AdminConversationsPage() {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-semibold">
-                        {owner ? formatUserLabel(owner) : "Conversation anonyme"}
+                        {owner ? formatUserLabel(owner) : 'Conversation anonyme'}
                       </p>
                       <span
                         className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${statusStyles[bucket]}`}
@@ -528,10 +528,14 @@ export default function AdminConversationsPage() {
                       </span>
                     </div>
                     <p className="mt-1 text-xs text-slate-400">
-                      IA · {aiRef ? aiRef.name ?? `IA ${aiRef.id.slice(0, 5)}` : `ID ${conversation.aiId?.slice(0, 5) ?? "?"}`}
+                      IA ·{' '}
+                      {aiRef
+                        ? (aiRef.name ?? `IA ${aiRef.id.slice(0, 5)}`)
+                        : `ID ${conversation.aiId?.slice(0, 5) ?? '?'}`}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      Messages : {conversation.messageCount ?? 0} · Maj {formatDate(conversation.updatedAt)}
+                      Messages : {conversation.messageCount ?? 0} · Maj{' '}
+                      {formatDate(conversation.updatedAt)}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       <Link
@@ -547,11 +551,11 @@ export default function AdminConversationsPage() {
                           disabled={isBusy}
                           className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
                         >
-                          {isBusy && conversationAction?.type === "open"
-                            ? "Ouverture..."
-                            : bucket === "completed"
-                              ? "Reouvrir"
-                              : "Ouvrir"}
+                          {isBusy && conversationAction?.type === 'open'
+                            ? 'Ouverture...'
+                            : bucket === 'completed'
+                              ? 'Reouvrir'
+                              : 'Ouvrir'}
                         </button>
                       )}
                       {canCancel && (
@@ -560,15 +564,15 @@ export default function AdminConversationsPage() {
                           onClick={() =>
                             handleRequestCloseConversation(
                               conversation.id,
-                              owner ? formatUserLabel(owner) : "Conversation anonyme"
+                              owner ? formatUserLabel(owner) : 'Conversation anonyme',
                             )
                           }
                           disabled={isBusy}
                           className="rounded-lg border border-rose-400/60 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed"
                         >
-                          {isBusy && conversationAction?.type === "close"
-                            ? "Fermeture..."
-                            : "Fermer"}
+                          {isBusy && conversationAction?.type === 'close'
+                            ? 'Fermeture...'
+                            : 'Fermer'}
                         </button>
                       )}
                       <button
@@ -576,15 +580,15 @@ export default function AdminConversationsPage() {
                         onClick={() =>
                           handleRequestDeleteConversation(
                             conversation.id,
-                            owner ? formatUserLabel(owner) : "Conversation anonyme"
+                            owner ? formatUserLabel(owner) : 'Conversation anonyme',
                           )
                         }
                         disabled={isBusy}
                         className="rounded-lg border border-rose-500/70 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-rose-100 transition hover:border-rose-400 disabled:cursor-not-allowed"
                       >
-                        {isBusy && conversationAction?.type === "delete"
-                          ? "Suppression..."
-                          : "Supprimer"}
+                        {isBusy && conversationAction?.type === 'delete'
+                          ? 'Suppression...'
+                          : 'Supprimer'}
                       </button>
                     </div>
                   </div>
@@ -620,13 +624,9 @@ export default function AdminConversationsPage() {
       {closeConversationDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4">
           <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/95 p-6 text-slate-100 shadow-2xl">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
-              Confirmation
-            </p>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Confirmation</p>
             <h3 className="mt-2 text-lg font-semibold">Fermer la conversation ?</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              {closeConversationDialog.label}
-            </p>
+            <p className="mt-1 text-sm text-slate-400">{closeConversationDialog.label}</p>
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"
@@ -649,13 +649,9 @@ export default function AdminConversationsPage() {
       {deleteConversationDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4">
           <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/95 p-6 text-slate-100 shadow-2xl">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
-              Confirmation
-            </p>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Confirmation</p>
             <h3 className="mt-2 text-lg font-semibold">Supprimer la conversation ?</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              {deleteConversationDialog.label}
-            </p>
+            <p className="mt-1 text-sm text-slate-400">{deleteConversationDialog.label}</p>
             <p className="mt-2 text-xs text-rose-200">
               Cette action supprime aussi tous les messages associes.
             </p>

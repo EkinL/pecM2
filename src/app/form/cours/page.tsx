@@ -1,7 +1,7 @@
 'use client';
 
-import { FormEvent, useState } from "react";
-import { addCours, deleteCours } from "../../indexFirebase";
+import { FormEvent, useState } from 'react';
+import { addCours, deleteCours } from '../../indexFirebase';
 
 export default function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,7 +18,7 @@ export default function UsersPage() {
     const id = formData.get('id')?.toString().trim();
 
     if (!id) {
-      setError('L\'ID est obligatoire pour la suppression.');
+      setError("L'ID est obligatoire pour la suppression.");
       return;
     }
 
@@ -34,7 +34,7 @@ export default function UsersPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -60,7 +60,7 @@ export default function UsersPage() {
       setSuccess('Cours ajouté avec succès.');
     } catch (err) {
       console.error('Erreur lors de la création du cours', err);
-      setError('Impossible d\'ajouter le cours, veuillez réessayer.');
+      setError("Impossible d'ajouter le cours, veuillez réessayer.");
     } finally {
       setIsSubmitting(false);
     }

@@ -1,5 +1,5 @@
-import { AiProfile, Timestamp, Utilisateur } from "../../types/dashboard";
-import { Dispatch, SetStateAction } from "react";
+import { AiProfile, Timestamp, Utilisateur } from '../../types/dashboard';
+import { Dispatch, SetStateAction } from 'react';
 
 type AiManagementSectionProps = {
   aiLoading: boolean;
@@ -12,7 +12,7 @@ type AiManagementSectionProps = {
   aiActionImageUrl: string | null;
   aiStatusStyles: Record<string, string>;
   aiStatusLabels: Record<string, string>;
-  handleAiStatusUpdate: (profileId: string, status: "active" | "suspended" | "disabled") => void;
+  handleAiStatusUpdate: (profileId: string, status: 'active' | 'suspended' | 'disabled') => void;
   aiEditId: string | null;
   startAiEdit: (profile: AiProfile) => void;
   handleAiEditCancel: () => void;
@@ -52,10 +52,12 @@ export const AiManagementSection = ({
     <div className="flex items-center justify-between">
       <div>
         <h2 className="text-xl font-semibold">Gestion IA</h2>
-        <p className="text-sm text-slate-400">Modifier les infos, suspendre ou désactiver les IA.</p>
+        <p className="text-sm text-slate-400">
+          Modifier les infos, suspendre ou désactiver les IA.
+        </p>
       </div>
       <span className="text-xs text-slate-400">
-        {aiLoading ? "Chargement…" : `${managedAiProfiles.length} IA`}
+        {aiLoading ? 'Chargement…' : `${managedAiProfiles.length} IA`}
       </span>
     </div>
 
@@ -65,7 +67,7 @@ export const AiManagementSection = ({
         {aiActionSuccess && <p className="text-emerald-300">{aiActionSuccess}</p>}
         {aiActionImageUrl && (
           <p className="text-emerald-200">
-            Avatar URL:{" "}
+            Avatar URL:{' '}
             <a
               href={aiActionImageUrl}
               target="_blank"
@@ -92,9 +94,9 @@ export const AiManagementSection = ({
           const statusKey = normalizeStatusLabel(profile.status);
           const isActionBusy = aiAction?.id === profile.id;
           const isEditing = aiEditId === profile.id;
-          const canActivate = statusKey !== "active";
-          const canSuspend = statusKey === "active";
-          const canDisable = statusKey !== "disabled";
+          const canActivate = statusKey !== 'active';
+          const canSuspend = statusKey === 'active';
+          const canDisable = statusKey !== 'disabled';
 
           return (
             <div
@@ -112,41 +114,45 @@ export const AiManagementSection = ({
                 </span>
               </div>
               <p className="mt-1 text-xs text-slate-400">
-                Propriétaire : {owner ? formatUserLabel(owner) : "Inconnu"}
+                Propriétaire : {owner ? formatUserLabel(owner) : 'Inconnu'}
               </p>
               <p className="mt-1 text-xs text-slate-400">
-                {profile.mentality ?? "Mentalité libre"} · {formatLookSummary(profile)}
+                {profile.mentality ?? 'Mentalité libre'} · {formatLookSummary(profile)}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Créée le {formatDate(profile.createdAt)}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Créée le {formatDate(profile.createdAt)}
+              </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {canActivate && (
                   <button
                     type="button"
-                    onClick={() => handleAiStatusUpdate(profile.id, "active")}
+                    onClick={() => handleAiStatusUpdate(profile.id, 'active')}
                     disabled={isActionBusy}
                     className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
                   >
-                    {isActionBusy && aiAction?.type === "activate" ? "Activation..." : "Activer"}
+                    {isActionBusy && aiAction?.type === 'activate' ? 'Activation...' : 'Activer'}
                   </button>
                 )}
                 {canSuspend && (
                   <button
                     type="button"
-                    onClick={() => handleAiStatusUpdate(profile.id, "suspended")}
+                    onClick={() => handleAiStatusUpdate(profile.id, 'suspended')}
                     disabled={isActionBusy}
                     className="rounded-lg border border-sky-400/60 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-200 transition hover:border-sky-300 disabled:cursor-not-allowed"
                   >
-                    {isActionBusy && aiAction?.type === "suspend" ? "Suspension..." : "Suspendre"}
+                    {isActionBusy && aiAction?.type === 'suspend' ? 'Suspension...' : 'Suspendre'}
                   </button>
                 )}
                 {canDisable && (
                   <button
                     type="button"
-                    onClick={() => handleAiStatusUpdate(profile.id, "disabled")}
+                    onClick={() => handleAiStatusUpdate(profile.id, 'disabled')}
                     disabled={isActionBusy}
                     className="rounded-lg border border-rose-400/60 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed"
                   >
-                    {isActionBusy && aiAction?.type === "disable" ? "Désactivation..." : "Désactiver"}
+                    {isActionBusy && aiAction?.type === 'disable'
+                      ? 'Désactivation...'
+                      : 'Désactiver'}
                   </button>
                 )}
                 <button
@@ -154,7 +160,7 @@ export const AiManagementSection = ({
                   onClick={() => (isEditing ? handleAiEditCancel() : startAiEdit(profile))}
                   className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
                 >
-                  {isEditing ? "Fermer" : "Modifier"}
+                  {isEditing ? 'Fermer' : 'Modifier'}
                 </button>
               </div>
               {isEditing && (
@@ -162,7 +168,7 @@ export const AiManagementSection = ({
                   <div className="space-y-1 md:col-span-2">
                     <label className="text-xs uppercase tracking-wide text-slate-400">Nom</label>
                     <input
-                      value={aiEditForm.name ?? ""}
+                      value={aiEditForm.name ?? ''}
                       onChange={(event) =>
                         setAiEditForm((prev) => ({ ...prev, name: event.target.value }))
                       }
@@ -171,25 +177,27 @@ export const AiManagementSection = ({
                     />
                   </div>
                   {[
-                    { label: "Mentalité", key: "mentality" },
-                    { label: "Voix", key: "voice" },
-                    { label: "Genre", key: "gender" },
-                    { label: "Peau", key: "skin" },
-                    { label: "Cheveux", key: "hair" },
-                    { label: "Couleur cheveux", key: "hairColor" },
-                    { label: "Couleur yeux", key: "eyeColor" },
-                    { label: "Age", key: "age", type: "number" },
-                    { label: "Taille", key: "height", type: "number" },
-                    { label: "Morphologie", key: "bodyType" },
-                    { label: "Pilosité", key: "facialHair" },
-                    { label: "Maquillage", key: "makeup" },
-                    { label: "Lunettes", key: "glasses" },
+                    { label: 'Mentalité', key: 'mentality' },
+                    { label: 'Voix', key: 'voice' },
+                    { label: 'Genre', key: 'gender' },
+                    { label: 'Peau', key: 'skin' },
+                    { label: 'Cheveux', key: 'hair' },
+                    { label: 'Couleur cheveux', key: 'hairColor' },
+                    { label: 'Couleur yeux', key: 'eyeColor' },
+                    { label: 'Age', key: 'age', type: 'number' },
+                    { label: 'Taille', key: 'height', type: 'number' },
+                    { label: 'Morphologie', key: 'bodyType' },
+                    { label: 'Pilosité', key: 'facialHair' },
+                    { label: 'Maquillage', key: 'makeup' },
+                    { label: 'Lunettes', key: 'glasses' },
                   ].map((field) => (
                     <div className="space-y-1" key={field.key}>
-                      <label className="text-xs uppercase tracking-wide text-slate-400">{field.label}</label>
+                      <label className="text-xs uppercase tracking-wide text-slate-400">
+                        {field.label}
+                      </label>
                       <input
-                        type={field.type ?? "text"}
-                        value={aiEditForm[field.key] ?? ""}
+                        type={field.type ?? 'text'}
+                        value={aiEditForm[field.key] ?? ''}
                         onChange={(event) =>
                           setAiEditForm((prev) => ({ ...prev, [field.key]: event.target.value }))
                         }
@@ -199,9 +207,11 @@ export const AiManagementSection = ({
                     </div>
                   ))}
                   <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs uppercase tracking-wide text-slate-400">Détails</label>
+                    <label className="text-xs uppercase tracking-wide text-slate-400">
+                      Détails
+                    </label>
                     <textarea
-                      value={aiEditForm.details ?? ""}
+                      value={aiEditForm.details ?? ''}
                       onChange={(event) =>
                         setAiEditForm((prev) => ({ ...prev, details: event.target.value }))
                       }
@@ -215,7 +225,7 @@ export const AiManagementSection = ({
                     disabled={aiEditLoading}
                     className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/40 md:col-span-2"
                   >
-                    {aiEditLoading ? "Sauvegarde..." : "Sauvegarder"}
+                    {aiEditLoading ? 'Sauvegarde...' : 'Sauvegarder'}
                   </button>
                 </div>
               )}
@@ -228,9 +238,9 @@ export const AiManagementSection = ({
 );
 
 const normalizeStatusLabel = (status?: string) => {
-  const normalized = status?.toLowerCase() ?? "pending";
-  if (["pending", "active", "suspended", "disabled", "rejected"].includes(normalized)) {
+  const normalized = status?.toLowerCase() ?? 'pending';
+  if (['pending', 'active', 'suspended', 'disabled', 'rejected'].includes(normalized)) {
     return normalized;
   }
-  return "pending";
+  return 'pending';
 };

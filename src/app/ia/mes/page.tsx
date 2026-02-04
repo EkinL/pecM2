@@ -1,20 +1,17 @@
 'use client';
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
+import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   auth,
   fetchAiProfilesByOwnerRealTime,
   fetchUtilisateurById,
   updateAiProfileForOwner,
-} from "../../indexFirebase";
-import {
-  OwnerAiCard,
-  OwnerAiHeader,
-} from "./components";
-import { hasActiveSubscription, SubscriptionAwareProfile } from "../../utils/subscriptionUtils";
-import type { AiProfile } from "../types";
+} from '../../indexFirebase';
+import { OwnerAiCard, OwnerAiHeader } from './components';
+import { hasActiveSubscription, SubscriptionAwareProfile } from '../../utils/subscriptionUtils';
+import type { AiProfile } from '../types';
 
 type Utilisateur = SubscriptionAwareProfile & {
   id: string;
@@ -33,7 +30,7 @@ const ownerLabelFor = (owner: Utilisateur | null, userId: string | null) => {
   if (userId) {
     return `Mon IA (${userId.slice(0, 5)})`;
   }
-  return "Mes IA";
+  return 'Mes IA';
 };
 
 export default function MyAiListPage() {
@@ -45,10 +42,7 @@ export default function MyAiListPage() {
   const [error, setError] = useState<string | null>(null);
   const [accessUpdatingId, setAccessUpdatingId] = useState<string | null>(null);
   const [accessErrors, setAccessErrors] = useState<Record<string, string>>({});
-  const hasSubscription = useMemo(
-    () => hasActiveSubscription(owner),
-    [owner]
-  );
+  const hasSubscription = useMemo(() => hasActiveSubscription(owner), [owner]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -68,9 +62,9 @@ export default function MyAiListPage() {
         setOwner(fetched);
         setError(null);
       } catch (err) {
-        console.error("Impossible de recuperer le profil createur", err);
+        console.error('Impossible de recuperer le profil createur', err);
         setOwner(null);
-        setError("Profil createur indisponible.");
+        setError('Profil createur indisponible.');
       } finally {
         setOwnerLoading(false);
       }
@@ -89,16 +83,16 @@ export default function MyAiListPage() {
     setLoading(true);
     const unsubscribe = fetchAiProfilesByOwnerRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setLoading(false);
         setError(null);
       },
-      (err) => {
-        console.error("Impossible de recuperer les IA", err);
-        setError("Impossible de recuperer vos IA.");
+      (err: unknown) => {
+        console.error('Impossible de recuperer les IA', err);
+        setError('Impossible de recuperer vos IA.');
         setLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -118,7 +112,7 @@ export default function MyAiListPage() {
 
   const handleAccessUpdate = async (
     profileId: string,
-    updates: { visibility?: "public" | "private"; accessType?: "free" | "paid" }
+    updates: { visibility?: 'public' | 'private'; accessType?: 'free' | 'paid' },
   ) => {
     setAccessUpdatingId(profileId);
     setAccessError(profileId, null);
@@ -126,9 +120,7 @@ export default function MyAiListPage() {
       await updateAiProfileForOwner({ profileId, updates });
     } catch (err) {
       const message =
-        err instanceof Error
-          ? err.message
-          : "Impossible de mettre à jour la configuration.";
+        err instanceof Error ? err.message : 'Impossible de mettre à jour la configuration.';
       setAccessError(profileId, message);
     } finally {
       setAccessUpdatingId(null);
@@ -136,19 +128,16 @@ export default function MyAiListPage() {
   };
 
   const sortedProfiles = useMemo(
-    () =>
-      [...aiProfiles].sort(
-        (a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
-      ),
-    [aiProfiles]
+    () => [...aiProfiles].sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)),
+    [aiProfiles],
   );
 
   const ownerLabel = ownerLabelFor(owner, userId);
 
   const handleVisibilitySelection = (
     profileId: string,
-    nextValue: "public" | "private",
-    currentValue: "public" | "private"
+    nextValue: 'public' | 'private',
+    currentValue: 'public' | 'private',
   ) => {
     if (nextValue === currentValue) {
       return;
@@ -158,17 +147,14 @@ export default function MyAiListPage() {
 
   const handleAccessTypeSelection = (
     profileId: string,
-    nextValue: "free" | "paid",
-    currentValue: "free" | "paid"
+    nextValue: 'free' | 'paid',
+    currentValue: 'free' | 'paid',
   ) => {
     if (nextValue === currentValue) {
       return;
     }
-    if (nextValue === "paid" && !hasSubscription) {
-      setAccessError(
-        profileId,
-        "Un abonnement premium est requis pour activer l'option payante."
-      );
+    if (nextValue === 'paid' && !hasSubscription) {
+      setAccessError(profileId, "Un abonnement premium est requis pour activer l'option payante.");
       return;
     }
     handleAccessUpdate(profileId, { accessType: nextValue });
@@ -206,9 +192,7 @@ export default function MyAiListPage() {
           ) : error ? (
             <p className="text-sm text-rose-300">{error}</p>
           ) : sortedProfiles.length === 0 ? (
-            <p className="text-sm text-slate-400">
-              Vous n&apos;avez encore créé aucune IA.
-            </p>
+            <p className="text-sm text-slate-400">Vous n&apos;avez encore créé aucune IA.</p>
           ) : (
             <div className="space-y-4">
               {sortedProfiles.map((profile) => (
@@ -222,14 +206,14 @@ export default function MyAiListPage() {
                     handleVisibilitySelection(
                       profile.id,
                       value,
-                      (profile.visibility ?? "public") as "public" | "private"
+                      (profile.visibility ?? 'public') as 'public' | 'private',
                     )
                   }
                   onAccessTypeChange={(value) =>
                     handleAccessTypeSelection(
                       profile.id,
                       value,
-                      (profile.accessType ?? "free") as "free" | "paid"
+                      (profile.accessType ?? 'free') as 'free' | 'paid',
                     )
                   }
                 />

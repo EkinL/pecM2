@@ -1,14 +1,9 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import {
-  addAiProfile,
-  auth,
-  fetchUtilisateurById,
-  signOutUser,
-} from "../../indexFirebase";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
+import { addAiProfile, auth, fetchUtilisateurById, signOutUser } from '../../indexFirebase';
 import {
   ethnicityOptions,
   genderOptions,
@@ -18,7 +13,7 @@ import {
   skinOptions,
   voiceRhythms,
   voiceStyles,
-} from "../aiOptions";
+} from '../aiOptions';
 import {
   countryLabelByCode,
   countryOptions,
@@ -26,11 +21,8 @@ import {
   normalizeCountryCodeInput,
   readStoredManualCountry,
   writeStoredManualCountry,
-} from "../../data/countries";
-import {
-  hasActiveSubscription,
-  SubscriptionAwareProfile,
-} from "../../utils/subscriptionUtils";
+} from '../../data/countries';
+import { hasActiveSubscription, SubscriptionAwareProfile } from '../../utils/subscriptionUtils';
 
 const toLookPayload = (values: Record<string, string>) => {
   const look = Object.entries(values).reduce<Record<string, string>>((acc, [key, value]) => {
@@ -45,7 +37,7 @@ const toLookPayload = (values: Record<string, string>) => {
 };
 
 const resolveCustomValue = (choice: string, custom: string) =>
-  choice === "Autre" ? custom : choice;
+  choice === 'Autre' ? custom : choice;
 
 const LOCATION_FAILURE_THRESHOLD = 3;
 
@@ -56,54 +48,49 @@ export default function CreateAiPage() {
   const [profileRole, setProfileRole] = useState<string | null>(null);
   const [profileRoleLoading, setProfileRoleLoading] = useState(true);
   const [profileRoleError, setProfileRoleError] = useState<string | null>(null);
-  const [ownerProfile, setOwnerProfile] =
-    useState<SubscriptionAwareProfile | null>(null);
-  const [locationStatus, setLocationStatus] = useState<"pending" | "ready" | "error">(
-    "pending"
-  );
+  const [ownerProfile, setOwnerProfile] = useState<SubscriptionAwareProfile | null>(null);
+  const [locationStatus, setLocationStatus] = useState<'pending' | 'ready' | 'error'>('pending');
   const [locationError, setLocationError] = useState<string | null>(null);
   const [locationFailures, setLocationFailures] = useState(0);
-  const [manualCountry, setManualCountry] = useState<{ code: string; label: string } | null>(
-    null
-  );
-  const [manualCountrySelect, setManualCountrySelect] = useState("");
-  const [manualCountryInput, setManualCountryInput] = useState("");
+  const [manualCountry, setManualCountry] = useState<{ code: string; label: string } | null>(null);
+  const [manualCountrySelect, setManualCountrySelect] = useState('');
+  const [manualCountryInput, setManualCountryInput] = useState('');
   const [manualCountryError, setManualCountryError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
-  const [name, setName] = useState("");
-  const [mentality, setMentality] = useState("");
-  const [voice, setVoice] = useState("");
-  const [voiceRhythm, setVoiceRhythm] = useState("");
-  const [genderChoice, setGenderChoice] = useState("");
-  const [genderCustom, setGenderCustom] = useState("");
-  const [skinChoice, setSkinChoice] = useState("");
-  const [skinCustom, setSkinCustom] = useState("");
-  const [hairChoice, setHairChoice] = useState("");
-  const [hairCustom, setHairCustom] = useState("");
-  const [outfitChoice, setOutfitChoice] = useState("");
-  const [outfitCustom, setOutfitCustom] = useState("");
-  const [ethnicityChoice, setEthnicityChoice] = useState("");
-  const [ethnicityCustom, setEthnicityCustom] = useState("");
-  const [physicalDetails, setPhysicalDetails] = useState("");
+  const [name, setName] = useState('');
+  const [mentality, setMentality] = useState('');
+  const [voice, setVoice] = useState('');
+  const [voiceRhythm, setVoiceRhythm] = useState('');
+  const [genderChoice, setGenderChoice] = useState('');
+  const [genderCustom, setGenderCustom] = useState('');
+  const [skinChoice, setSkinChoice] = useState('');
+  const [skinCustom, setSkinCustom] = useState('');
+  const [hairChoice, setHairChoice] = useState('');
+  const [hairCustom, setHairCustom] = useState('');
+  const [outfitChoice, setOutfitChoice] = useState('');
+  const [outfitCustom, setOutfitCustom] = useState('');
+  const [ethnicityChoice, setEthnicityChoice] = useState('');
+  const [ethnicityCustom, setEthnicityCustom] = useState('');
+  const [physicalDetails, setPhysicalDetails] = useState('');
   const [showAdvancedLook, setShowAdvancedLook] = useState(false);
-  const [hairColor, setHairColor] = useState("");
-  const [eyeColor, setEyeColor] = useState("");
-  const [age, setAge] = useState("");
-  const [height, setHeight] = useState("");
-  const [bodyType, setBodyType] = useState("");
-  const [facialHair, setFacialHair] = useState("");
-  const [makeup, setMakeup] = useState("");
-  const [glasses, setGlasses] = useState("");
-  const [accessories, setAccessories] = useState("");
-  const [piercings, setPiercings] = useState("");
-  const [tattoos, setTattoos] = useState("");
-  const [scars, setScars] = useState("");
-  const [visibility, setVisibility] = useState<"public" | "private">("public");
-  const [accessType, setAccessType] = useState<"free" | "paid">("free");
+  const [hairColor, setHairColor] = useState('');
+  const [eyeColor, setEyeColor] = useState('');
+  const [age, setAge] = useState('');
+  const [height, setHeight] = useState('');
+  const [bodyType, setBodyType] = useState('');
+  const [facialHair, setFacialHair] = useState('');
+  const [makeup, setMakeup] = useState('');
+  const [glasses, setGlasses] = useState('');
+  const [accessories, setAccessories] = useState('');
+  const [piercings, setPiercings] = useState('');
+  const [tattoos, setTattoos] = useState('');
+  const [scars, setScars] = useState('');
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
+  const [accessType, setAccessType] = useState<'free' | 'paid'>('free');
 
   const lookPayload = useMemo(
     () =>
@@ -151,13 +138,13 @@ export default function CreateAiPage() {
       ethnicityChoice,
       ethnicityCustom,
       physicalDetails,
-    ]
+    ],
   );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
-        router.replace("/auth");
+        router.replace('/auth');
         setCheckingAuth(false);
         return;
       }
@@ -177,29 +164,26 @@ export default function CreateAiPage() {
 
     setProfileRoleLoading(true);
     fetchUtilisateurById(authUser.uid)
-      .then((profile) => {
-        setOwnerProfile(profile);
-        setProfileRole(profile?.role ?? null);
+      .then((profile: unknown) => {
+        setOwnerProfile(profile as any);
+        setProfileRole((profile as any)?.role ?? null);
         setProfileRoleError(null);
       })
       .catch((authError) => {
-        console.error("Impossible de charger le profil", authError);
+        console.error('Impossible de charger le profil', authError);
         setOwnerProfile(null);
-        setProfileRoleError("Profil utilisateur introuvable.");
+        setProfileRoleError('Profil utilisateur introuvable.');
       })
       .finally(() => {
         setProfileRoleLoading(false);
       });
   }, [authUser]);
 
-  const roleMismatch = Boolean(authUser && profileRole && profileRole !== "client");
+  const roleMismatch = Boolean(authUser && profileRole && profileRole !== 'client');
   const locationRequired = Boolean(authUser) && !roleMismatch;
-  const locationReady = locationStatus === "ready" || Boolean(manualCountry);
+  const locationReady = locationStatus === 'ready' || Boolean(manualCountry);
   const locationBlocked = locationRequired && !locationReady;
-  const hasSubscription = useMemo(
-    () => hasActiveSubscription(ownerProfile),
-    [ownerProfile]
-  );
+  const hasSubscription = useMemo(() => hasActiveSubscription(ownerProfile), [ownerProfile]);
 
   useEffect(() => {
     const stored = readStoredManualCountry();
@@ -209,39 +193,39 @@ export default function CreateAiPage() {
   }, []);
 
   const requestLocation = useCallback(() => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setLocationStatus("error");
-      setLocationError("Geolocalisation indisponible.");
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationStatus('error');
+      setLocationError('Geolocalisation indisponible.');
       setLocationFailures((prev) => Math.max(prev, LOCATION_FAILURE_THRESHOLD));
       return;
     }
 
     setLocationError(null);
-    setLocationStatus("pending");
+    setLocationStatus('pending');
     navigator.geolocation.getCurrentPosition(
       () => {
-        setLocationStatus("ready");
+        setLocationStatus('ready');
         setLocationError(null);
         setLocationFailures(0);
       },
       () => {
-        setLocationStatus("error");
-        setLocationError("Localisation requise pour creer une IA.");
+        setLocationStatus('error');
+        setLocationError('Localisation requise pour creer une IA.');
         setLocationFailures((prev) => prev + 1);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 },
     );
   }, []);
 
   useEffect(() => {
     if (!locationRequired) {
-      setLocationStatus("pending");
+      setLocationStatus('pending');
       setLocationError(null);
       setLocationFailures(0);
       return;
     }
     if (manualCountry) {
-      setLocationStatus("ready");
+      setLocationStatus('ready');
       setLocationError(null);
       return;
     }
@@ -250,24 +234,24 @@ export default function CreateAiPage() {
 
   const applyManualCountry = () => {
     const selectedCode =
-      manualCountrySelect === "custom"
+      manualCountrySelect === 'custom'
         ? normalizeCountryCodeInput(manualCountryInput)
         : normalizeCountryCodeInput(manualCountrySelect);
 
     if (!isValidCountryCode(selectedCode)) {
-      setManualCountryError("Selectionnez un pays ou un code ISO valide.");
+      setManualCountryError('Selectionnez un pays ou un code ISO valide.');
       return;
     }
 
     const label = countryLabelByCode[selectedCode] ?? `Pays ${selectedCode}`;
     writeStoredManualCountry(selectedCode, label);
     setManualCountry({ code: selectedCode, label });
-    setLocationStatus("ready");
+    setLocationStatus('ready');
     setLocationError(null);
     setLocationFailures(0);
     setManualCountryError(null);
-    setManualCountrySelect("");
-    setManualCountryInput("");
+    setManualCountrySelect('');
+    setManualCountryInput('');
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -277,11 +261,11 @@ export default function CreateAiPage() {
     setCreatedId(null);
 
     if (!authUser) {
-      setError("Session invalide. Merci de vous reconnecter.");
+      setError('Session invalide. Merci de vous reconnecter.');
       return;
     }
     if (locationBlocked) {
-      setError("Localisation requise pour creer une IA.");
+      setError('Localisation requise pour creer une IA.');
       requestLocation();
       return;
     }
@@ -300,38 +284,38 @@ export default function CreateAiPage() {
       });
 
       setCreatedId(docRef.id);
-      setSuccess("IA creee. En attente de validation admin. Avatar genere apres validation.");
-      setName("");
-      setMentality("");
-      setVoice("");
-      setVoiceRhythm("");
-      setGenderChoice("");
-      setGenderCustom("");
-      setSkinChoice("");
-      setSkinCustom("");
-      setHairChoice("");
-      setHairCustom("");
-      setOutfitChoice("");
-      setOutfitCustom("");
-      setEthnicityChoice("");
-      setEthnicityCustom("");
-      setPhysicalDetails("");
-      setHairColor("");
-      setEyeColor("");
-      setAge("");
-      setHeight("");
-      setBodyType("");
-      setFacialHair("");
-      setMakeup("");
-      setGlasses("");
-      setAccessories("");
-      setPiercings("");
-      setTattoos("");
-      setScars("");
-      setVisibility("public");
-      setAccessType("free");
+      setSuccess('IA creee. En attente de validation admin. Avatar genere apres validation.');
+      setName('');
+      setMentality('');
+      setVoice('');
+      setVoiceRhythm('');
+      setGenderChoice('');
+      setGenderCustom('');
+      setSkinChoice('');
+      setSkinCustom('');
+      setHairChoice('');
+      setHairCustom('');
+      setOutfitChoice('');
+      setOutfitCustom('');
+      setEthnicityChoice('');
+      setEthnicityCustom('');
+      setPhysicalDetails('');
+      setHairColor('');
+      setEyeColor('');
+      setAge('');
+      setHeight('');
+      setBodyType('');
+      setFacialHair('');
+      setMakeup('');
+      setGlasses('');
+      setAccessories('');
+      setPiercings('');
+      setTattoos('');
+      setScars('');
+      setVisibility('public');
+      setAccessType('free');
     } catch (submitError) {
-      const message = submitError instanceof Error ? submitError.message : "Creation impossible.";
+      const message = submitError instanceof Error ? submitError.message : 'Creation impossible.';
       setError(message);
     } finally {
       setLoading(false);
@@ -340,7 +324,7 @@ export default function CreateAiPage() {
 
   const handleSignOut = async () => {
     await signOutUser();
-    router.replace("/auth");
+    router.replace('/auth');
   };
 
   if (checkingAuth) {
@@ -359,12 +343,10 @@ export default function CreateAiPage() {
         <div className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-6 py-12">
           <div className="w-full max-w-lg space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-2xl">
             <h1 className="text-2xl font-semibold">Acces reserve aux clients</h1>
-            <p className="text-sm text-slate-400">
-              Ce module est reserve aux comptes client.
-            </p>
+            <p className="text-sm text-slate-400">Ce module est reserve aux comptes client.</p>
             <button
               type="button"
-              onClick={() => router.replace("/demandes/client")}
+              onClick={() => router.replace('/demandes/client')}
               className="mt-2 inline-flex items-center rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
             >
               Aller aux demandes client
@@ -380,24 +362,20 @@ export default function CreateAiPage() {
       <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-6 py-12">
         <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-2xl">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Creation IA
-            </p>
-            <h1 className="text-3xl font-semibold">
-              Configurer une nouvelle IA
-            </h1>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Creation IA</p>
+            <h1 className="text-3xl font-semibold">Configurer une nouvelle IA</h1>
             <p className="text-sm text-slate-400">
               Renseignez la personnalite et l apparence. Un admin validera la demande.
             </p>
           </div>
           <div className="flex items-center gap-3 text-xs text-slate-400">
-            <span>{authUser?.email ?? "Compte actif"}</span>
+            <span>{authUser?.email ?? 'Compte actif'}</span>
             {profileRoleLoading ? (
               <span>Role...</span>
             ) : profileRoleError ? (
               <span className="text-rose-300">{profileRoleError}</span>
             ) : (
-              <span>Role: {profileRole ?? "non defini"}</span>
+              <span>Role: {profileRole ?? 'non defini'}</span>
             )}
             <button
               type="button"
@@ -438,8 +416,8 @@ export default function CreateAiPage() {
                     onClick={() => setMentality(item)}
                     className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                       mentality === item
-                        ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-200"
-                        : "border-slate-800/80 bg-slate-950/40 text-slate-300 hover:border-slate-700"
+                        ? 'border-emerald-400/70 bg-emerald-500/20 text-emerald-200'
+                        : 'border-slate-800/80 bg-slate-950/40 text-slate-300 hover:border-slate-700'
                     }`}
                   >
                     {item}
@@ -473,7 +451,10 @@ export default function CreateAiPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <label htmlFor="voiceRhythm" className="text-xs uppercase tracking-wide text-slate-400">
+              <label
+                htmlFor="voiceRhythm"
+                className="text-xs uppercase tracking-wide text-slate-400"
+              >
                 Rythme vocal
               </label>
               <select
@@ -493,9 +474,9 @@ export default function CreateAiPage() {
             {locationBlocked && (
               <div className="rounded-2xl border border-amber-400/40 bg-amber-500/10 p-4 text-xs text-amber-200">
                 <p>
-                  {locationStatus === "pending"
-                    ? "Localisation en cours..."
-                    : "Localisation requise pour creer une IA."}
+                  {locationStatus === 'pending'
+                    ? 'Localisation en cours...'
+                    : 'Localisation requise pour creer une IA.'}
                 </p>
                 <button
                   type="button"
@@ -506,10 +487,7 @@ export default function CreateAiPage() {
                 </button>
                 {locationFailures >= LOCATION_FAILURE_THRESHOLD && (
                   <div className="mt-3 space-y-2 rounded-xl border border-amber-400/30 bg-slate-950/40 p-3 text-[11px] text-amber-100">
-                    <p>
-                      Geolocalisation echouee plusieurs fois. Choisissez un pays
-                      manuellement.
-                    </p>
+                    <p>Geolocalisation echouee plusieurs fois. Choisissez un pays manuellement.</p>
                     <div className="flex flex-wrap items-end gap-2">
                       <div className="space-y-1">
                         <label className="text-[10px] uppercase tracking-wide text-slate-400">
@@ -520,8 +498,8 @@ export default function CreateAiPage() {
                           onChange={(event) => {
                             setManualCountrySelect(event.target.value);
                             setManualCountryError(null);
-                            if (event.target.value !== "custom") {
-                              setManualCountryInput("");
+                            if (event.target.value !== 'custom') {
+                              setManualCountryInput('');
                             }
                           }}
                           className="rounded-lg border border-slate-800/80 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-100"
@@ -535,7 +513,7 @@ export default function CreateAiPage() {
                           <option value="custom">Autre (code ISO)</option>
                         </select>
                       </div>
-                      {manualCountrySelect === "custom" && (
+                      {manualCountrySelect === 'custom' && (
                         <div className="space-y-1">
                           <label className="text-[10px] uppercase tracking-wide text-slate-400">
                             Code ISO
@@ -576,7 +554,7 @@ export default function CreateAiPage() {
                 {createdId && <p>ID: {createdId}</p>}
                 <button
                   type="button"
-                  onClick={() => router.replace("/")}
+                  onClick={() => router.replace('/')}
                   className="mt-2 rounded-full border border-emerald-400/70 px-4 py-2 text-xs font-semibold text-emerald-200 hover:border-emerald-300"
                 >
                   Aller au tableau de bord
@@ -586,9 +564,7 @@ export default function CreateAiPage() {
           </div>
 
           <div className="space-y-4 rounded-2xl border border-slate-800/70 bg-slate-950/40 p-5">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Apparence
-            </p>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Apparence</p>
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
                 <label htmlFor="gender" className="text-xs uppercase tracking-wide text-slate-400">
@@ -600,8 +576,8 @@ export default function CreateAiPage() {
                   onChange={(event) => {
                     const value = event.target.value;
                     setGenderChoice(value);
-                    if (value !== "Autre") {
-                      setGenderCustom("");
+                    if (value !== 'Autre') {
+                      setGenderCustom('');
                     }
                   }}
                   className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100"
@@ -613,7 +589,7 @@ export default function CreateAiPage() {
                     </option>
                   ))}
                 </select>
-                {genderChoice === "Autre" && (
+                {genderChoice === 'Autre' && (
                   <input
                     value={genderCustom}
                     onChange={(event) => setGenderCustom(event.target.value)}
@@ -632,8 +608,8 @@ export default function CreateAiPage() {
                   onChange={(event) => {
                     const value = event.target.value;
                     setSkinChoice(value);
-                    if (value !== "Autre") {
-                      setSkinCustom("");
+                    if (value !== 'Autre') {
+                      setSkinCustom('');
                     }
                   }}
                   className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100"
@@ -645,7 +621,7 @@ export default function CreateAiPage() {
                     </option>
                   ))}
                 </select>
-                {skinChoice === "Autre" && (
+                {skinChoice === 'Autre' && (
                   <input
                     value={skinCustom}
                     onChange={(event) => setSkinCustom(event.target.value)}
@@ -664,8 +640,8 @@ export default function CreateAiPage() {
                   onChange={(event) => {
                     const value = event.target.value;
                     setHairChoice(value);
-                    if (value !== "Autre") {
-                      setHairCustom("");
+                    if (value !== 'Autre') {
+                      setHairCustom('');
                     }
                   }}
                   className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100"
@@ -677,7 +653,7 @@ export default function CreateAiPage() {
                     </option>
                   ))}
                 </select>
-                {hairChoice === "Autre" && (
+                {hairChoice === 'Autre' && (
                   <input
                     value={hairCustom}
                     onChange={(event) => setHairCustom(event.target.value)}
@@ -696,8 +672,8 @@ export default function CreateAiPage() {
                   onChange={(event) => {
                     const value = event.target.value;
                     setOutfitChoice(value);
-                    if (value !== "Autre") {
-                      setOutfitCustom("");
+                    if (value !== 'Autre') {
+                      setOutfitCustom('');
                     }
                   }}
                   className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100"
@@ -709,7 +685,7 @@ export default function CreateAiPage() {
                     </option>
                   ))}
                 </select>
-                {outfitChoice === "Autre" && (
+                {outfitChoice === 'Autre' && (
                   <input
                     value={outfitCustom}
                     onChange={(event) => setOutfitCustom(event.target.value)}
@@ -719,7 +695,10 @@ export default function CreateAiPage() {
                 )}
               </div>
               <div className="space-y-2 md:col-span-2">
-                <label htmlFor="ethnicity" className="text-xs uppercase tracking-wide text-slate-400">
+                <label
+                  htmlFor="ethnicity"
+                  className="text-xs uppercase tracking-wide text-slate-400"
+                >
                   Ethnie
                 </label>
                 <select
@@ -728,8 +707,8 @@ export default function CreateAiPage() {
                   onChange={(event) => {
                     const value = event.target.value;
                     setEthnicityChoice(value);
-                    if (value !== "Autre") {
-                      setEthnicityCustom("");
+                    if (value !== 'Autre') {
+                      setEthnicityCustom('');
                     }
                   }}
                   className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100"
@@ -741,7 +720,7 @@ export default function CreateAiPage() {
                     </option>
                   ))}
                 </select>
-                {ethnicityChoice === "Autre" && (
+                {ethnicityChoice === 'Autre' && (
                   <input
                     value={ethnicityCustom}
                     onChange={(event) => setEthnicityCustom(event.target.value)}
@@ -772,7 +751,7 @@ export default function CreateAiPage() {
                   onClick={() => setShowAdvancedLook((prev) => !prev)}
                   className="rounded-xl border border-slate-700/70 bg-slate-950/40 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
                 >
-                  {showAdvancedLook ? "Masquer les filtres avances" : "Filtres avances"}
+                  {showAdvancedLook ? 'Masquer les filtres avances' : 'Filtres avances'}
                 </button>
               </div>
               {showAdvancedLook && (
@@ -800,9 +779,7 @@ export default function CreateAiPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs uppercase tracking-wide text-slate-400">
-                      Age
-                    </label>
+                    <label className="text-xs uppercase tracking-wide text-slate-400">Age</label>
                     <input
                       type="number"
                       min={0}
@@ -916,16 +893,14 @@ export default function CreateAiPage() {
                 </>
               )}
               <div className="space-y-2 border-t border-slate-800/70 pt-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                  Diffusion
-                </p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Diffusion</p>
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="space-y-1 text-[11px] text-slate-400">
                     <span className="font-semibold uppercase tracking-wide">Visibilité</span>
                     <select
                       value={visibility}
                       onChange={(event) => {
-                        const value = event.target.value === "private" ? "private" : "public";
+                        const value = event.target.value === 'private' ? 'private' : 'public';
                         setVisibility(value);
                       }}
                       className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
@@ -939,7 +914,7 @@ export default function CreateAiPage() {
                     <select
                       value={accessType}
                       onChange={(event) => {
-                        const value = event.target.value === "paid" ? "paid" : "free";
+                        const value = event.target.value === 'paid' ? 'paid' : 'free';
                         setAccessType(value);
                       }}
                       className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm text-slate-100"
@@ -968,7 +943,7 @@ export default function CreateAiPage() {
               disabled={loading || locationBlocked}
               className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
             >
-              {loading ? "Creation..." : locationBlocked ? "Localisation requise" : "Creer l IA"}
+              {loading ? 'Creation...' : locationBlocked ? 'Localisation requise' : 'Creer l IA'}
             </button>
           </div>
         </form>

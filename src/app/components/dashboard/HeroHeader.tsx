@@ -1,5 +1,5 @@
-import Link from "next/link";
-import { ReactNode } from "react";
+import Link from 'next/link';
+import { ReactNode } from 'react';
 
 type HeroHeaderProps = {
   adminChecking: boolean;
@@ -30,8 +30,8 @@ export const HeroHeader = ({
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-        <span>{adminChecking ? "Connexion..." : adminUser?.mail ?? "Compte actif"}</span>
-        <span>{profile?.mail ?? "Profil non chargé"}</span>
+        <span>{adminChecking ? 'Connexion...' : (adminUser?.mail ?? 'Compte actif')}</span>
+        <span>{profile?.mail ?? 'Profil non chargé'}</span>
         <span>{profile?.tokens ?? 0} tokens</span>
         <Link
           href="/demandes/client"
@@ -45,17 +45,15 @@ export const HeroHeader = ({
           disabled={signOutLoading}
           className={`rounded-full border px-4 py-2 text-xs font-semibold transition ${
             signOutLoading
-              ? "border-rose-500 text-rose-300 bg-rose-500/10 cursor-wait"
-              : "border-white/20 text-slate-200 bg-slate-900/60 hover:border-white/40"
+              ? 'border-rose-500 text-rose-300 bg-rose-500/10 cursor-wait'
+              : 'border-white/20 text-slate-200 bg-slate-900/60 hover:border-white/40'
           }`}
         >
-          {signOutLoading ? "Déconnexion..." : "Déconnecter"}
+          {signOutLoading ? 'Déconnexion...' : 'Déconnecter'}
         </button>
       </div>
     </div>
-    {signOutError && (
-      <p className="text-xs text-rose-300">{signOutError}</p>
-    )}
+    {signOutError && <p className="text-xs text-rose-300">{signOutError}</p>}
     {children}
   </header>
 );

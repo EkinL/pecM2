@@ -20,44 +20,37 @@ export type AiLook = {
 };
 
 export const mentalities = [
-  "Coach",
-  "Amoureux",
-  "Sarcastique",
-  "Philosophe",
-  "Motivant",
-  "Zen",
-  "Protecteur",
-  "Ludique",
+  'Coach',
+  'Amoureux',
+  'Sarcastique',
+  'Philosophe',
+  'Motivant',
+  'Zen',
+  'Protecteur',
+  'Ludique',
 ];
 
-export const voiceStyles = [
-  "Calme",
-  "Energique",
-  "Chaleureuse",
-  "Grave",
-  "Posee",
-  "Rythmee",
-];
+export const voiceStyles = ['Calme', 'Energique', 'Chaleureuse', 'Grave', 'Posee', 'Rythmee'];
 
-export const voiceRhythms = ["Lent", "Modere", "Rapide", "Percutant", "Progressif"];
+export const voiceRhythms = ['Lent', 'Modere', 'Rapide', 'Percutant', 'Progressif'];
 
-export const genderOptions = ["Femme", "Homme", "Neutre", "Autre"];
-export const skinOptions = ["Claire", "Halee", "Foncee", "Ebene", "Autre"];
-export const hairOptions = ["Court", "Long", "Boucle", "Lisse", "Afro", "Tresse", "Autre"];
-export const outfitOptions = ["Casual", "Chic", "Sport", "Tech", "Minimal", "Autre"];
+export const genderOptions = ['Femme', 'Homme', 'Neutre', 'Autre'];
+export const skinOptions = ['Claire', 'Halee', 'Foncee', 'Ebene', 'Autre'];
+export const hairOptions = ['Court', 'Long', 'Boucle', 'Lisse', 'Afro', 'Tresse', 'Autre'];
+export const outfitOptions = ['Casual', 'Chic', 'Sport', 'Tech', 'Minimal', 'Autre'];
 export const ethnicityOptions = [
-  "Europeenne",
-  "Latine",
-  "Africaine",
-  "Asiatique",
-  "Moyen-Orient",
-  "Mixte",
-  "Autre",
+  'Europeenne',
+  'Latine',
+  'Africaine',
+  'Asiatique',
+  'Moyen-Orient',
+  'Mixte',
+  'Autre',
 ];
 
 export const formatLookSummary = (look?: AiLook | null) => {
   if (!look) {
-    return "Apparence non definie";
+    return 'Apparence non definie';
   }
   const parts = [
     look.gender && `Genre ${look.gender}`,
@@ -72,5 +65,5 @@ export const formatLookSummary = (look?: AiLook | null) => {
     look.ethnicity && `Ethnie ${look.ethnicity}`,
   ].filter(Boolean);
 
-  return parts.join(" · ") || "Apparence non definie";
+  return parts.join(' · ') || 'Apparence non definie';
 };
