@@ -1,4 +1,4 @@
-export { auth } from "./firebase/init";
+export { auth, firestore } from "./firebase/init";
 export * from "./firebase/services/auth";
 export * from "./firebase/services/users";
 export * from "./firebase/services/courses";
