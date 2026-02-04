@@ -89,12 +89,12 @@ export default function MyAiListPage() {
     setLoading(true);
     const unsubscribe = fetchAiProfilesByOwnerRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setLoading(false);
         setError(null);
       },
-      (err) => {
+      (err: unknown) => {
         console.error("Impossible de recuperer les IA", err);
         setError("Impossible de recuperer vos IA.");
         setLoading(false);

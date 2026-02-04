@@ -43,7 +43,7 @@ export const fetchUtilisateurs = async () => {
   }
 };
 
-export const addUtilisateur = async ({ mail, pseudo, adult }) => {
+export const addUtilisateur = async ({ mail, pseudo, adult }: any) => {
   const payload = {
     mail: normalizeRequiredString(mail, "Mail"),
     pseudo: normalizeRequiredString(pseudo, "Pseudo"),
@@ -54,12 +54,12 @@ export const addUtilisateur = async ({ mail, pseudo, adult }) => {
   return addDoc(utilisateurs, payload);
 };
 
-export const fetchUtilisateursRealTime = (onData, onError) =>
+export const fetchUtilisateursRealTime = (onData: any, onError: any) =>
   createRealtimeListener(
     utilisateurs,
-    (data) => {
+    (data: any) => {
       const normalized = Array.isArray(data)
-        ? data.map((user) => normalizeUtilisateurRole(user))
+        ? data.map((user: any) => normalizeUtilisateurRole(user))
         : data;
       onData?.(normalized);
     },
@@ -67,7 +67,7 @@ export const fetchUtilisateursRealTime = (onData, onError) =>
     "utilisateurs"
   );
 
-export const fetchUtilisateurById = async (uid) => {
+export const fetchUtilisateurById = async (uid: any) => {
   const normalizedId = normalizeRequiredString(uid, "UID");
   const docRef = doc(utilisateurs, normalizedId);
   const snapshot = await getDoc(docRef);
@@ -82,7 +82,7 @@ export const fetchUtilisateurById = async (uid) => {
   });
 };
 
-export const fetchUtilisateurByIdRealTime = (uid, onData, onError) => {
+export const fetchUtilisateurByIdRealTime = (uid: any, onData: any, onError: any) => {
   try {
     const normalizedId = normalizeRequiredString(uid, "UID");
     const docRef = doc(utilisateurs, normalizedId);
@@ -112,7 +112,7 @@ export const fetchUtilisateurByIdRealTime = (uid, onData, onError) => {
   }
 };
 
-export const ensureUtilisateurProfile = async ({ user, role, pseudo }) => {
+export const ensureUtilisateurProfile = async ({ user, role, pseudo }: any) => {
   if (!user?.uid) {
     throw new Error("Utilisateur Firebase manquant.");
   }
@@ -124,7 +124,7 @@ export const ensureUtilisateurProfile = async ({ user, role, pseudo }) => {
   const snapshot = await getDoc(docRef);
   const mail = normalizeOptionalString(user.email ?? "");
   const providerIds = (user.providerData ?? [])
-    .map((provider) => provider?.providerId)
+    .map((provider: any) => provider?.providerId)
     .filter(Boolean);
   const fallbackPseudo = mail ? mail.split("@")[0] : undefined;
 
@@ -154,23 +154,23 @@ export const ensureUtilisateurProfile = async ({ user, role, pseudo }) => {
   }
 
   const existing = snapshot.data();
-  const updates = {
+  const updates: any = {
     updatedAt: serverTimestamp(),
   };
 
-  if (effectiveRole && !existing.role) {
+  if (effectiveRole && !(existing as any).role) {
     updates.role = effectiveRole;
   }
-  if (existing.role === "prestataire") {
+  if ((existing as any).role === "prestataire") {
     updates.role = "client";
   }
-  if (mail && !existing.mail) {
+  if (mail && !(existing as any).mail) {
     updates.mail = mail;
   }
-  if ((normalizedPseudo ?? fallbackPseudo) && !existing.pseudo) {
+  if ((normalizedPseudo ?? fallbackPseudo) && !(existing as any).pseudo) {
     updates.pseudo = normalizedPseudo ?? fallbackPseudo;
   }
-  if (providerIds.length > 0 && !existing.providerIds) {
+  if (providerIds.length > 0 && !(existing as any).providerIds) {
     updates.providerIds = providerIds;
   }
 
@@ -188,14 +188,14 @@ export const ensureUtilisateurProfile = async ({ user, role, pseudo }) => {
   };
 };
 
-export const updateUtilisateur = async (id) => {
+export const updateUtilisateur = async (id: any) => {
   const normalizedId = normalizeRequiredString(id, "ID");
   const docRef = doc(utilisateurs, normalizedId);
 
   return updateDoc(docRef, { adult: true });
 };
 
-export const updateUtilisateurRole = async ({ userId, role, adminId, adminMail }) => {
+export const updateUtilisateurRole = async ({ userId, role, adminId, adminMail }: any) => {
   const normalizedId = normalizeRequiredString(userId, "Utilisateur ID");
   const normalizedRole = normalizeRequiredString(role, "Role");
   const allowedRoles = ["client", "admin"];
@@ -231,7 +231,7 @@ export const grantUserTokensWithPassword = async ({
   adminId,
   adminMail,
   adminPassword,
-}) => {
+}: any) => {
   const normalizedId = normalizeRequiredString(targetUserId, "Utilisateur ID");
   const normalizedAmount = normalizeOptionalNumber(amount);
   const password = normalizeRequiredPassword(adminPassword);

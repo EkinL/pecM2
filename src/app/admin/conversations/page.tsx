@@ -154,7 +154,7 @@ export default function AdminConversationsPage() {
       setAdminUser({ uid: user.uid, mail: user.email });
 
       try {
-        const profile = await fetchUtilisateurById(user.uid);
+        const profile = await fetchUtilisateurById(user.uid) as { role?: string } | null;
         if (profile?.role === "admin") {
           setIsAdmin(true);
           setAdminError(null);
@@ -180,7 +180,7 @@ export default function AdminConversationsPage() {
     }
 
     const unsubUsers = fetchUtilisateursRealTime(
-      (data) => {
+      (data: unknown) => {
         setUsers(data as Utilisateur[]);
         setUsersLoading(false);
         setUsersError(null);
@@ -191,7 +191,7 @@ export default function AdminConversationsPage() {
       }
     );
     const unsubAiProfiles = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiLoading(false);
         setAiError(null);
@@ -202,7 +202,7 @@ export default function AdminConversationsPage() {
       }
     );
     const unsubConversations = fetchConversationsRealTime(
-      (data) => {
+      (data: unknown) => {
         setConversations(data as Conversation[]);
         setConversationsLoading(false);
         setConversationsError(null);

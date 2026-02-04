@@ -181,7 +181,7 @@ export default function ClientHistoriquePage() {
   useEffect(() => {
     setAiProfilesLoading(true);
     const unsubscribe = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiProfilesLoading(false);
         setAiProfilesError(null);
@@ -205,7 +205,7 @@ export default function ClientHistoriquePage() {
     setConversationsLoading(true);
     const unsubscribe = fetchConversationsForUserRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setConversations(data as Conversation[]);
         setConversationsLoading(false);
         setConversationsError(null);
@@ -229,7 +229,7 @@ export default function ClientHistoriquePage() {
     setEvaluationsLoading(true);
     const unsubscribe = fetchAiEvaluationsForUserRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setEvaluations(data as AiEvaluation[]);
         setEvaluationsLoading(false);
         setEvaluationsError(null);

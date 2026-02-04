@@ -177,9 +177,9 @@ export default function CreateAiPage() {
 
     setProfileRoleLoading(true);
     fetchUtilisateurById(authUser.uid)
-      .then((profile) => {
-        setOwnerProfile(profile);
-        setProfileRole(profile?.role ?? null);
+      .then((profile: unknown) => {
+        setOwnerProfile(profile as any);
+        setProfileRole((profile as any)?.role ?? null);
         setProfileRoleError(null);
       })
       .catch((authError) => {

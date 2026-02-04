@@ -114,19 +114,24 @@ const formatAccuracy = (accuracy?: number) => {
 
 const buildMapEmbedUrl = (location: GeoLocation) => {
   const delta = 0.02;
-  const left = location.lng - delta;
-  const right = location.lng + delta;
-  const top = location.lat + delta;
-  const bottom = location.lat - delta;
+  const lng = location.lng ?? 0;
+  const lat = location.lat ?? 0;
+  const left = lng - delta;
+  const right = lng + delta;
+  const top = lat + delta;
+  const bottom = lat - delta;
   const bbox = `${left},${bottom},${right},${top}`;
 
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
     bbox
-  )}&layer=mapnik&marker=${location.lat}%2C${location.lng}`;
+  )}&layer=mapnik&marker=${lat}%2C${lng}`;
 };
 
-const buildMapLink = (location: GeoLocation) =>
-  `https://www.openstreetmap.org/?mlat=${location.lat}&mlon=${location.lng}#map=16/${location.lat}/${location.lng}`;
+const buildMapLink = (location: GeoLocation) => {
+  const lng = location.lng ?? 0;
+  const lat = location.lat ?? 0;
+  return `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`;
+};
 
 const buildEmptyCountryPricing = (codes: string[]) =>
   codes.reduce<Record<string, { text: string; image: string }>>((acc, code) => {
@@ -202,7 +207,7 @@ export default function AdminTokenPricingPage() {
       setAdminUser({ uid: user.uid, mail: user.email });
 
       try {
-        const profile = await fetchUtilisateurById(user.uid);
+        const profile = await fetchUtilisateurById(user.uid) as { role?: string } | null;
         if (profile?.role === "admin") {
           setIsAdmin(true);
           setAdminError(null);
@@ -228,7 +233,7 @@ export default function AdminTokenPricingPage() {
     }
 
     const unsubUsers = fetchUtilisateursRealTime(
-      (data) => {
+      (data: unknown) => {
         setUsers(data as Utilisateur[]);
         setUsersLoading(false);
         setUsersError(null);
@@ -239,7 +244,7 @@ export default function AdminTokenPricingPage() {
       }
     );
     const unsubAiProfiles = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiLoading(false);
         setAiError(null);
@@ -250,7 +255,7 @@ export default function AdminTokenPricingPage() {
       }
     );
     const unsubConversations = fetchConversationsRealTime(
-      (data) => {
+      (data: unknown) => {
         setConversations(data as Conversation[]);
         setConversationsLoading(false);
         setConversationsError(null);
@@ -275,7 +280,7 @@ export default function AdminTokenPricingPage() {
 
     setSettingsLoading(true);
     const unsubscribe = fetchTokenPricingSettingsRealTime(
-      (data) => {
+      (data: unknown) => {
         const settings = data as TokenPricingSettings | null;
         setTokenSettings(settings);
         setSettingsLoading(false);
@@ -304,7 +309,7 @@ export default function AdminTokenPricingPage() {
             image:
               typeof settings?.base?.image === "number" ? String(settings.base.image) : "",
           },
-          countries: resolvedCountryCodes.reduce(
+          countries: resolvedCountryCodes.reduce<Record<string, { text: string; image: string }>>(
             (acc, code) => {
               const current =
                 (rawCountries as Record<string, TokenPricing>)[code] ??

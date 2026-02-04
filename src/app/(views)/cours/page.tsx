@@ -101,7 +101,7 @@ export default function Home() {
                       </p>
                     ) : null}
                     <p className="text-xs text-gray-500">
-                      Nom du prof: {cour.prof}
+                      Nom du prof: {String(cour.prof ?? '')}
                     </p>
                     <p className="text-xs text-gray-500">
                       ID: {cour.id}

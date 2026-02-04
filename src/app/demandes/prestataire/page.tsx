@@ -203,7 +203,7 @@ export default function AdminDemandesPage() {
 
     const unsubscribe = fetchDemandesForPrestataireRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setDemandes(data as Demande[]);
         setDemandesLoading(false);
         setDemandesError(null);

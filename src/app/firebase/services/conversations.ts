@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
@@ -39,10 +40,10 @@ import {
 
 const allowedStatuses = ["pending", "running", "completed"];
 
-export const fetchConversationsRealTime = (onData, onError) =>
+export const fetchConversationsRealTime = (onData: any, onError: any) =>
   createRealtimeListener(conversations, onData, onError, "conversations");
 
-export const fetchConversationsForUserRealTime = (userId, onData, onError) => {
+export const fetchConversationsForUserRealTime = (userId: any, onData: any, onError: any) => {
   try {
     const normalizedId = normalizeRequiredString(userId, "User ID");
     const ref = query(conversations, where("userId", "==", normalizedId));
@@ -54,7 +55,7 @@ export const fetchConversationsForUserRealTime = (userId, onData, onError) => {
   }
 };
 
-export const fetchConversationById = async (conversationId) => {
+export const fetchConversationById = async (conversationId: any) => {
   try {
     const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
     const snapshot = await getDoc(doc(conversations, normalizedId));
@@ -73,7 +74,7 @@ export const fetchConversationById = async (conversationId) => {
   }
 };
 
-export const updateConversationStatus = async ({ conversationId, status, note }) => {
+export const updateConversationStatus = async ({ conversationId, status, note }: any) => {
   const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
   const normalizedStatus = normalizeRequiredString(status, "Statut");
   if (!allowedStatuses.includes(normalizedStatus)) {
@@ -86,7 +87,7 @@ export const updateConversationStatus = async ({ conversationId, status, note })
   });
 };
 
-export const deleteConversationWithMessages = async ({ conversationId, adminId, adminMail }) => {
+export const deleteConversationWithMessages = async ({ conversationId, adminId, adminMail }: any) => {
   const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
   const messagesRef = conversationMessages(normalizedId);
   const batchSize = 400;
@@ -94,7 +95,7 @@ export const deleteConversationWithMessages = async ({ conversationId, adminId, 
   let deletedMessages = 0;
 
   while (true) {
-    const constraints = [orderBy("__name__"), limit(batchSize)];
+    const constraints: any[] = [orderBy("__name__"), limit(batchSize)];
     if (lastDoc) {
       constraints.splice(1, 0, startAfter(lastDoc));
     }
@@ -134,7 +135,7 @@ export const deleteConversationWithMessages = async ({ conversationId, adminId, 
   return { messagesDeleted: deletedMessages };
 };
 
-export const updateConversationLocation = async ({ conversationId, location }) => {
+export const updateConversationLocation = async ({ conversationId, location }: any) => {
   const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
   const normalizedLocation = normalizeOptionalLocation(location);
 
@@ -149,7 +150,7 @@ export const updateConversationLocation = async ({ conversationId, location }) =
   });
 };
 
-export const updateConversationCountry = async ({ conversationId, countryCode, countryLabel }) => {
+export const updateConversationCountry = async ({ conversationId, countryCode, countryLabel }: any) => {
   const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
   const normalizedCode = normalizeCountryCode(countryCode);
 
@@ -171,7 +172,7 @@ export const updateConversationTokenPricing = async ({
   adminId,
   adminMail,
   note,
-}) => {
+}: any) => {
   const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
   const normalizedPricing = normalizeOptionalTokenPricing(pricing);
 
@@ -197,7 +198,7 @@ export const addConversationMessage = async ({
   kind = "text",
   metadata,
   tokenCost,
-}) => {
+}: any) => {
   const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");
   const normalizedContent = normalizeRequiredString(content, "Message");
   const normalizedKind = sanitizeOptionalString(kind) ?? "text";
@@ -236,7 +237,7 @@ export const addConversationMessage = async ({
   };
 };
 
-export const createConversation = async ({ userId, aiId, status = "running" }) => {
+export const createConversation = async ({ userId, aiId, status = "running" }: any) => {
   const normalizedUserId = normalizeRequiredString(userId, "User ID");
   const normalizedAiId = normalizeRequiredString(aiId, "IA ID");
   const normalizedStatus = sanitizeOptionalString(status) ?? "running";
@@ -283,7 +284,7 @@ export const sendConversationMessageWithTokens = async ({
   kind = "text",
   metadata,
   tokenCost,
-}) => {
+}: any) => {
   const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");
   const normalizedUserId = normalizeRequiredString(userId, "User ID");
   const normalizedContent = normalizeRequiredString(content, "Message");
@@ -337,15 +338,15 @@ export const sendConversationMessageWithTokens = async ({
         ? settingsData.countries?.[countryCode] ?? {}
         : {};
 
-    const baseCosts = {
+    const baseCosts: Record<string, number> = {
       text: 1,
       image: 5,
     };
     const overrideCost = normalizeOptionalNumber(
       conversationData?.tokenPricing?.[normalizedKind]
     );
-    const countryCost = normalizeOptionalNumber(countryPricing?.[normalizedKind]);
-    const baseCost = normalizeOptionalNumber(basePricing?.[normalizedKind]);
+    const countryCost = normalizeOptionalNumber((countryPricing as any)?.[normalizedKind]);
+    const baseCost = normalizeOptionalNumber((basePricing as any)?.[normalizedKind]);
     const fallbackCost = baseCosts[normalizedKind] ?? normalizedTokenCost;
     const finalTokenCost = overrideCost ?? countryCost ?? baseCost ?? fallbackCost;
 
@@ -397,7 +398,7 @@ export const sendConversationMessageWithTokens = async ({
 };
 
 export const fetchConversationMessagesRealTime = (
-  { conversationId, pageSize = 25, onData, onError } = {}
+  { conversationId, pageSize = 25, onData, onError }: any = {}
 ) => {
   try {
     const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");
@@ -426,11 +427,11 @@ export const fetchConversationMessagesPage = async ({
   conversationId,
   pageSize = 25,
   cursor,
-} = {}) => {
+}: any = {}) => {
   try {
     const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");
     const messagesRef = conversationMessages(normalizedConversationId);
-    const constraints = [orderBy("createdAt", "desc"), limit(pageSize)];
+    const constraints: any[] = [orderBy("createdAt", "desc"), limit(pageSize)];
 
     if (cursor) {
       constraints.push(startAfter(cursor));

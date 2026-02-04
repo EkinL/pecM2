@@ -10,5 +10,5 @@ export const adminLogs = collection(firestore, "adminLogs");
 export const aiEvaluations = collection(firestore, "aiEvaluations");
 export const settings = collection(firestore, "settings");
 
-export const conversationMessages = (conversationId) =>
+export const conversationMessages = (conversationId: string) =>
   collection(firestore, "conversations", conversationId, "messages");

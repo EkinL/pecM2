@@ -19,14 +19,14 @@ export const signInWithApple = async () => {
   return signInWithPopup(auth, provider);
 };
 
-export const signUpWithEmail = async ({ email, password }) => {
+export const signUpWithEmail = async ({ email, password }: any) => {
   const normalizedEmail = normalizeRequiredString(email, "Email");
   const normalizedPassword = normalizeRequiredPassword(password);
 
   return createUserWithEmailAndPassword(auth, normalizedEmail, normalizedPassword);
 };
 
-export const signInWithEmail = async ({ email, password }) => {
+export const signInWithEmail = async ({ email, password }: any) => {
   const normalizedEmail = normalizeRequiredString(email, "Email");
   const normalizedPassword = normalizeRequiredPassword(password);
 

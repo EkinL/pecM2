@@ -9,7 +9,7 @@ import {
 import { settings } from "../collections";
 import { auth } from "../init";
 
-export const fetchTokenPricingSettingsRealTime = (onData, onError) => {
+export const fetchTokenPricingSettingsRealTime = (onData: any, onError: any) => {
   try {
     const docRef = doc(settings, "tokenPricingIdf");
     return onSnapshot(
@@ -33,7 +33,7 @@ export const fetchTokenPricingSettingsRealTime = (onData, onError) => {
   }
 };
 
-export const updateTokenPricingSettings = async ({ base, countries, adminId, adminMail }) => {
+export const updateTokenPricingSettings = async ({ base, countries, adminId, adminMail }: any) => {
   const normalizedBase = normalizeOptionalTokenPricing(base);
   const normalizedCountries = normalizeCountryPricingMap(countries);
   const docRef = doc(settings, "tokenPricingIdf");
@@ -55,7 +55,7 @@ export const updateTokenPricingSettings = async ({ base, countries, adminId, adm
   );
 };
 
-export const getTokenPrice = async ({ lat, lng, currency, zoneId } = {}) => {
+export const getTokenPrice = async ({ lat, lng, currency, zoneId }: any = {}) => {
   const payload = omitUndefinedFields({
     lat: normalizeOptionalNumber(lat),
     lng: normalizeOptionalNumber(lng),

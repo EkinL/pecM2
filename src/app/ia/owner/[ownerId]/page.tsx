@@ -99,13 +99,13 @@ export default function OwnerAiPage() {
     let isActive = true;
     setOwnerLoading(true);
     fetchUtilisateurById(ownerId)
-      .then((data) => {
+      .then((data: unknown) => {
         if (isActive) {
           setOwner(data as Utilisateur | null);
           setError(null);
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error("Impossible de charger le createur", err);
         if (isActive) {
           setOwner(null);
@@ -133,12 +133,12 @@ export default function OwnerAiPage() {
     setLoading(true);
     const unsubscribe = fetchAiProfilesByOwnerRealTime(
       ownerId,
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setLoading(false);
         setError(null);
       },
-      (err) => {
+      (err: unknown) => {
         console.error("Impossible de recuperer les IA du createur", err);
         setError("Impossible de recuperer les IA.");
         setLoading(false);

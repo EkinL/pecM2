@@ -160,7 +160,7 @@ export default function AdminIaPage() {
       setAdminUser({ uid: user.uid, mail: user.email });
 
       try {
-        const profile = await fetchUtilisateurById(user.uid);
+        const profile = await fetchUtilisateurById(user.uid) as { role?: string } | null;
         if (profile?.role === "admin") {
           setIsAdmin(true);
           setAdminError(null);
@@ -186,7 +186,7 @@ export default function AdminIaPage() {
     }
 
     const unsubUsers = fetchUtilisateursRealTime(
-      (data) => {
+      (data: unknown) => {
         setUsers(data as Utilisateur[]);
         setUsersLoading(false);
         setUsersError(null);
@@ -197,7 +197,7 @@ export default function AdminIaPage() {
       }
     );
     const unsubAiProfiles = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiLoading(false);
         setAiError(null);
@@ -282,6 +282,7 @@ export default function AdminIaPage() {
         status: "active",
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
+        note: undefined,
       });
       if (!hasAvatar) {
         const { imageUrl: generatedImageUrl, updateError } =
@@ -331,6 +332,7 @@ export default function AdminIaPage() {
         status: "rejected",
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
+        note: undefined,
       });
       setAiActionSuccess("IA refusee.");
     } catch (error) {

@@ -226,7 +226,7 @@ export default function ConversationPage() {
     setProfileLoading(true);
     const unsubscribe = fetchUtilisateurByIdRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setProfile(data as Profil | null);
         setProfileError(null);
         setProfileLoading(false);
@@ -243,7 +243,7 @@ export default function ConversationPage() {
   useEffect(() => {
     setAiProfilesLoading(true);
     const unsubscribe = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiProfilesLoading(false);
         setAiProfilesError(null);
@@ -260,7 +260,7 @@ export default function ConversationPage() {
   useEffect(() => {
     setTokenPricingLoading(true);
     const unsubscribe = fetchTokenPricingSettingsRealTime(
-      (data) => {
+      (data: unknown) => {
         setTokenPricingSettings(
           data && typeof data === "object"
             ? {
@@ -293,13 +293,13 @@ export default function ConversationPage() {
 
     setConversationLoading(true);
     fetchConversationById(conversationId)
-      .then((data) => {
+      .then((data: unknown) => {
         if (!data) {
           setConversationError("Conversation introuvable.");
           setConversation(null);
           return;
         }
-        if (!isAdmin && data.userId && data.userId !== userId) {
+        if (!isAdmin && (data as { userId?: string }).userId && (data as { userId: string }).userId !== userId) {
           setConversationError("Acces refuse.");
           setConversation(null);
           return;
@@ -324,7 +324,7 @@ export default function ConversationPage() {
     const unsubscribe = fetchConversationMessagesRealTime({
       conversationId,
       pageSize: 50,
-      onData: (data) => {
+      onData: (data: unknown) => {
         setMessages(data as Message[]);
         setMessagesLoading(false);
         setMessagesError(null);
@@ -333,7 +333,7 @@ export default function ConversationPage() {
         setMessagesError("Impossible de recuperer les messages.");
         setMessagesLoading(false);
       },
-    });
+    } as { conversationId: string; pageSize: number; onData: (data: unknown) => void; onError: () => void });
 
     return () => unsubscribe?.();
   }, [conversationId, userId, conversationError, roleMismatch]);
@@ -823,6 +823,7 @@ export default function ConversationPage() {
         content: trimmed,
         kind: messageKind,
         tokenCost: messageCost,
+        metadata: {},
       });
       setDraft("");
       setSendSuccess("Message envoye.");

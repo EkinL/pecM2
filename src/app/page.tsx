@@ -254,9 +254,9 @@ export default function AdminDashboard() {
       setAdminUser({ uid: user.uid, mail: user.email });
 
       try {
-        const profileData = await fetchUtilisateurById(user.uid);
+        const profileData = await fetchUtilisateurById(user.uid) as { role?: string } | null;
         const role = typeof profileData?.role === "string" ? profileData.role : null;
-        setProfile(profileData ?? null);
+        setProfile(profileData ?? null as any);
         setUserRole(role);
         if (role === "admin") {
           setIsAdmin(true);
@@ -285,7 +285,7 @@ export default function AdminDashboard() {
 
     setAiLoading(true);
     const unsubAiProfiles = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiLoading(false);
         setAiError(null);
@@ -309,7 +309,7 @@ export default function AdminDashboard() {
     setClientConversationsLoading(true);
     const unsub = fetchConversationsForUserRealTime(
       adminUser.uid,
-      (data) => {
+      (data: unknown) => {
         setClientConversations(data as Conversation[]);
         setClientConversationsLoading(false);
         setClientConversationsError(null);
@@ -329,7 +329,7 @@ export default function AdminDashboard() {
     }
 
     const unsubUsers = fetchUtilisateursRealTime(
-      (data) => {
+      (data: unknown) => {
         setUsers(data as Utilisateur[]);
         setUsersLoading(false);
         setUsersError(null);
@@ -340,7 +340,7 @@ export default function AdminDashboard() {
       }
     );
     const unsubConversations = fetchConversationsRealTime(
-      (data) => {
+      (data: unknown) => {
         setConversations(data as Conversation[]);
         setConversationsLoading(false);
         setConversationsError(null);
@@ -351,7 +351,7 @@ export default function AdminDashboard() {
       }
     );
     const unsubAiProfiles = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiLoading(false);
         setAiError(null);
@@ -483,6 +483,7 @@ export default function AdminDashboard() {
         status: "active",
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
+        note: undefined,
       });
       if (!hasAvatar) {
         const { imageUrl: generatedImageUrl, updateError } =
@@ -532,6 +533,7 @@ export default function AdminDashboard() {
         status: "rejected",
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
+        note: undefined,
       });
       setAiActionSuccess("IA refusee.");
     } catch (error) {
@@ -568,6 +570,7 @@ export default function AdminDashboard() {
         status,
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
+        note: undefined,
       });
       if (status === "active") {
         const targetProfile = aiProfiles.find((profile) => profile.id === profileId);
@@ -1311,7 +1314,7 @@ export default function AdminDashboard() {
               startAiEdit={startAiEdit}
               handleAiEditCancel={handleAiEditCancel}
               aiEditForm={aiEditForm}
-              setAiEditForm={setAiEditForm}
+              setAiEditForm={setAiEditForm as any}
               aiEditLoading={aiEditLoading}
               handleAiEditSave={handleAiEditSave}
               formatUserLabel={formatUserLabel}

@@ -30,10 +30,10 @@ import {
   sanitizeOptionalString,
 } from "../helpers";
 
-export const fetchAiProfilesRealTime = (onData, onError) =>
+export const fetchAiProfilesRealTime = (onData: any, onError: any) =>
   createRealtimeListener(iaProfiles, onData, onError, "profils IA");
 
-export const fetchAiProfilesByOwnerRealTime = (ownerId, onData, onError) => {
+export const fetchAiProfilesByOwnerRealTime = (ownerId: any, onData: any, onError: any) => {
   try {
     const normalizedId = normalizeRequiredString(ownerId, "Owner ID");
     const ref = query(iaProfiles, where("ownerId", "==", normalizedId));
@@ -45,10 +45,10 @@ export const fetchAiProfilesByOwnerRealTime = (ownerId, onData, onError) => {
   }
 };
 
-export const fetchAiEvaluationsRealTime = (onData, onError) =>
+export const fetchAiEvaluationsRealTime = (onData: any, onError: any) =>
   createRealtimeListener(aiEvaluations, onData, onError, "evaluations IA");
 
-export const fetchAiProfileById = async (profileId) => {
+export const fetchAiProfileById = async (profileId: any) => {
   try {
     const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
     const snapshot = await getDoc(doc(iaProfiles, normalizedId));
@@ -67,7 +67,7 @@ export const fetchAiProfileById = async (profileId) => {
   }
 };
 
-export const fetchAiEvaluationsForUserRealTime = (userId, onData, onError) => {
+export const fetchAiEvaluationsForUserRealTime = (userId: any, onData: any, onError: any) => {
   try {
     const normalizedId = normalizeRequiredString(userId, "User ID");
     const ref = query(aiEvaluations, where("userId", "==", normalizedId));
@@ -87,7 +87,7 @@ export const addAiProfile = async ({
   look,
   visibility,
   accessType,
-} = {}) => {
+}: any = {}) => {
   const currentUser = auth.currentUser;
   if (!currentUser) {
     throw new Error("Session utilisateur invalide.");
@@ -113,7 +113,7 @@ export const addAiProfile = async ({
 
 const allowedStatuses = ["pending", "active", "rejected", "suspended", "disabled"];
 
-export const updateAiProfileStatus = async ({ profileId, status, adminId, adminMail, note }) => {
+export const updateAiProfileStatus = async ({ profileId, status, adminId, adminMail, note }: any) => {
   const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
   const normalizedStatus = normalizeRequiredString(status, "Statut");
 
@@ -158,7 +158,7 @@ export const flagAiProfileSafetyViolation = async ({
   note,
   adminId,
   adminMail,
-}) => {
+}: any) => {
   const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
   const sanitizedWarning =
     sanitizeOptionalString(warning) ??
@@ -194,7 +194,7 @@ export const flagAiProfileSafetyViolation = async ({
   return batch.commit();
 };
 
-export const updateAiProfileDetails = async ({ profileId, updates, adminId, adminMail }) => {
+export const updateAiProfileDetails = async ({ profileId, updates, adminId, adminMail }: any) => {
   const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
   const normalizedUpdates = {
     name: sanitizeOptionalString(updates?.name),
@@ -234,7 +234,7 @@ export const updateAiProfileDetails = async ({ profileId, updates, adminId, admi
   return batch.commit();
 };
 
-export const updateAiProfileForOwner = async ({ profileId, updates }) => {
+export const updateAiProfileForOwner = async ({ profileId, updates }: any) => {
   const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
   const normalizedUpdates = {
     name: sanitizeOptionalString(updates?.name),
@@ -260,7 +260,7 @@ export const updateAiProfileForOwner = async ({ profileId, updates }) => {
   return updateDoc(docRef, updatePayload);
 };
 
-export const deleteAiProfile = async ({ profileId, adminId, adminMail }) => {
+export const deleteAiProfile = async ({ profileId, adminId, adminMail }: any) => {
   const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
   const docRef = doc(iaProfiles, normalizedId);
 
@@ -272,6 +272,7 @@ export const deleteAiProfile = async ({ profileId, adminId, adminMail }) => {
     targetId: normalizedId,
     adminId,
     adminMail,
+    details: {},
   });
 
   try {
@@ -281,7 +282,7 @@ export const deleteAiProfile = async ({ profileId, adminId, adminMail }) => {
   }
 };
 
-export const deleteAiProfileAndConversations = async ({ profileId, adminId, adminMail }) => {
+export const deleteAiProfileAndConversations = async ({ profileId, adminId, adminMail }: any) => {
   const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
   let deletedConversations = 0;
   let deletedMessages = 0;
@@ -328,7 +329,7 @@ export const deleteAiProfileAndConversations = async ({ profileId, adminId, admi
   return { conversationsDeleted: deletedConversations, messagesDeleted: deletedMessages };
 };
 
-export const resetAiProfile = async ({ profileId }) => {
+export const resetAiProfile = async ({ profileId }: any) => {
   const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
   const docRef = doc(iaProfiles, normalizedId);
 
@@ -349,7 +350,7 @@ export const addAiEvaluation = async ({
   rating,
   comment,
   tags,
-}) => {
+}: any) => {
   const normalizedUserId = normalizeRequiredString(userId, "User ID");
   const normalizedAiId = normalizeRequiredString(aiId, "IA ID");
   const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");

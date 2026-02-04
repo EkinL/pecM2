@@ -145,8 +145,11 @@ export default function IaProfilePage() {
     }
 
     setProfileLoading(true);
-    const unsubscribe = fetchUtilisateurByIdRealTime(userId, (data) => {
+    const unsubscribe = fetchUtilisateurByIdRealTime(userId, (data: unknown) => {
       setProfile(data as Profil | null);
+      setProfileLoading(false);
+    }, () => {
+      setProfile(null);
       setProfileLoading(false);
     });
 
@@ -201,9 +204,9 @@ export default function IaProfilePage() {
           </div>
         </header>
 
-        {aiProfile?.ownerNotification && isOwner && (
+        {Boolean(aiProfile?.ownerNotification) && isOwner && (
           <section className="rounded-3xl border border-amber-400/60 bg-amber-500/5 p-6 text-amber-200">
-            <p className="text-sm font-semibold">{aiProfile.ownerNotification}</p>
+            <p className="text-sm font-semibold">{String(aiProfile?.ownerNotification)}</p>
             <p className="mt-2 text-xs text-amber-100">
               Cette IA est masquée du catalogue public. Modifiez votre description ou contactez un admin pour lever l&apos;avertissement.
             </p>

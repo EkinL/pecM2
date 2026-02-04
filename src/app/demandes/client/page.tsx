@@ -235,7 +235,7 @@ export default function ClientDemandesPage() {
 
     const unsubscribe = fetchDemandesForClientRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setDemandes(data as Demande[]);
         setDemandesLoading(false);
         setDemandesError(null);

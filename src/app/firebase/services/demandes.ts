@@ -11,10 +11,10 @@ import {
   pickRandomItem,
 } from "../helpers";
 
-export const fetchDemandesRealTime = (onData, onError) =>
+export const fetchDemandesRealTime = (onData: any, onError: any) =>
   createRealtimeListener(demandes, onData, onError, "demandes");
 
-export const fetchDemandesForClientRealTime = (clientId, onData, onError) => {
+export const fetchDemandesForClientRealTime = (clientId: any, onData: any, onError: any) => {
   try {
     const normalizedId = normalizeRequiredString(clientId, "Client ID");
     const ref = query(demandes, where("clientId", "==", normalizedId));
@@ -26,7 +26,7 @@ export const fetchDemandesForClientRealTime = (clientId, onData, onError) => {
   }
 };
 
-export const fetchDemandesForPrestataireRealTime = (prestataireId, onData, onError) => {
+export const fetchDemandesForPrestataireRealTime = (prestataireId: any, onData: any, onError: any) => {
   try {
     const normalizedId = normalizeRequiredString(prestataireId, "Client ID");
     const ref = query(demandes, where("prestataireId", "==", normalizedId));
@@ -49,7 +49,7 @@ export const addDemande = async ({
   city,
   availability,
   location,
-}) => {
+}: any) => {
   const normalizedClientId = normalizeRequiredString(clientId, "Client ID");
   const normalizedTitle = normalizeRequiredString(title, "Titre");
   const normalizedDescription = normalizeRequiredString(description, "Description");
@@ -85,7 +85,7 @@ export const addDemande = async ({
   return addDoc(demandes, omitUndefinedFields(payload));
 };
 
-export const updateDemandeLocation = async ({ demandeId, location }) => {
+export const updateDemandeLocation = async ({ demandeId, location }: any) => {
   const normalizedDemandeId = normalizeRequiredString(demandeId, "Demande ID");
   const normalizedLocation = normalizeOptionalLocation(location);
 
@@ -100,7 +100,7 @@ export const updateDemandeLocation = async ({ demandeId, location }) => {
   });
 };
 
-export const acceptDemande = async ({ demandeId, prestataireId }) => {
+export const acceptDemande = async ({ demandeId, prestataireId }: any) => {
   const normalizedDemandeId = normalizeRequiredString(demandeId, "Demande ID");
   const normalizedPrestataireId = normalizeRequiredString(prestataireId, "Prestataire ID");
 
@@ -112,7 +112,7 @@ export const acceptDemande = async ({ demandeId, prestataireId }) => {
   });
 };
 
-export const cancelDemande = async ({ demandeId, reason }) => {
+export const cancelDemande = async ({ demandeId, reason }: any) => {
   const normalizedDemandeId = normalizeRequiredString(demandeId, "Demande ID");
 
   return updateDoc(doc(demandes, normalizedDemandeId), {

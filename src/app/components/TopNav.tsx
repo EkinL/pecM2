@@ -40,8 +40,8 @@ export default function TopNav() {
 
     const unsubscribe = fetchUtilisateurByIdRealTime(
       userId,
-      (data) => {
-        setRole(typeof data?.role === "string" ? data.role : null);
+      (data: unknown) => {
+        setRole(typeof (data as { role?: string })?.role === "string" ? (data as { role: string }).role : null);
       },
       () => {
         setRole(null);

@@ -28,7 +28,15 @@ if (missingKeys.length > 0) {
   throw new Error(`Missing ${missingKeys.join(", ")}. Define it in .env.local.`);
 }
 
-const firebaseConfig = {
+const firebaseConfig: {
+  apiKey: string | undefined;
+  authDomain: string | undefined;
+  projectId: string | undefined;
+  storageBucket: string | undefined;
+  messagingSenderId: string | undefined;
+  appId: string | undefined;
+  measurementId?: string | undefined;
+} = {
   apiKey: firebaseEnv.apiKey,
   authDomain: firebaseEnv.authDomain,
   projectId: firebaseEnv.projectId,
@@ -55,4 +63,4 @@ export const analyticsPromise = isAnalyticsSupported()
   })
   .catch(() => null);
 
-export { app, db as firestore, functions };
+export { app, functions };

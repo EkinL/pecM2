@@ -355,11 +355,11 @@ const extractSafetyViolationInfo = (data: unknown): SafetyViolationInfo | null =
     return null;
   }
   const violations = violationsCandidate.filter((value) => typeof value === "string") as string[];
-  const message =
+  const message: string =
     typeof errorObject?.message === "string"
-      ? errorObject.message
+      ? (errorObject.message as string)
       : typeof (data as { message?: string }).message === "string"
-        ? (data as { message?: string }).message
+        ? ((data as { message?: string }).message as string)
         : "Requête rejetée par le système de sécurité OpenAI.";
   return { message, violations };
 };
@@ -396,7 +396,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Parametres invalides." }, { status: 400 });
       }
 
-      const conversation = await fetchConversationById(conversationId);
+      const conversation = await fetchConversationById(conversationId) as { id: string; userId?: string; aiId?: string } | null;
       if (!conversation) {
         return NextResponse.json({ error: "Conversation introuvable." }, { status: 404 });
       }
@@ -484,6 +484,8 @@ export async function POST(request: Request) {
             profileId: aiId,
             warning: note,
             note: safetyInfo.message,
+            adminId: undefined,
+            adminMail: undefined,
           });
         } catch (flagError) {
           console.error("Erreur en signalant la violation de sécurité IA", flagError);

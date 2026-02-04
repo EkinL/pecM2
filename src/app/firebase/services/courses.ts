@@ -13,8 +13,8 @@ export const fetchCours = async () => {
   }
 };
 
-export const addCours = async ({ coursName, prof, hours }) => {
-  const payload = {
+export const addCours = async ({ coursName, prof, hours }: any) => {
+  const payload: any = {
     coursName: normalizeRequiredString(coursName, "Cours"),
     prof: normalizeRequiredString(prof, "Professeur"),
     dateOfCreate: serverTimestamp(),
@@ -28,7 +28,7 @@ export const addCours = async ({ coursName, prof, hours }) => {
   return addDoc(cours, payload);
 };
 
-export const deleteCours = async (id) => {
+export const deleteCours = async (id: any) => {
   const normalizedId = normalizeRequiredString(id, "ID");
   const docRef = doc(cours, normalizedId);
 

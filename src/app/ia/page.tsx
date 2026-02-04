@@ -310,7 +310,7 @@ export default function IaCataloguePage() {
     setProfileLoading(true);
     const unsubscribe = fetchUtilisateurByIdRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setProfile(data as Profil | null);
         setProfileError(null);
         setProfileLoading(false);
@@ -364,7 +364,7 @@ export default function IaCataloguePage() {
   useEffect(() => {
     setAiLoading(true);
     const unsubscribe = fetchAiProfilesRealTime(
-      (data) => {
+      (data: unknown) => {
         setAiProfiles(data as AiProfile[]);
         setAiLoading(false);
         setAiError(null);
@@ -381,12 +381,12 @@ export default function IaCataloguePage() {
   useEffect(() => {
     setUsersLoading(true);
     const unsubscribe = fetchUtilisateursRealTime(
-      (data) => {
+      (data: unknown) => {
         setUsers(data as Utilisateur[]);
         setUsersLoading(false);
         setUsersError(null);
       },
-      (error) => {
+      (error: unknown) => {
         console.error("Impossible de recuperer les createurs IA", error);
         setUsersError("Impossible de recuperer les createurs.");
         setUsersLoading(false);
@@ -399,7 +399,7 @@ export default function IaCataloguePage() {
   useEffect(() => {
     setEvaluationsLoading(true);
     const unsubscribe = fetchAiEvaluationsRealTime(
-      (data) => {
+      (data: unknown) => {
         setEvaluations(data as AiEvaluation[]);
         setEvaluationsLoading(false);
         setEvaluationsError(null);
@@ -423,7 +423,7 @@ export default function IaCataloguePage() {
     setConversationsLoading(true);
     const unsubscribe = fetchConversationsForUserRealTime(
       userId,
-      (data) => {
+      (data: unknown) => {
         setConversations(data as Conversation[]);
         setConversationsLoading(false);
         setConversationsError(null);
@@ -787,15 +787,10 @@ export default function IaCataloguePage() {
                         </select>
                       </div>
                       <div className="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-[0.2em] text-slate-400">
-                        {visibilityValue === "private" && (
-                          <span className="rounded-full border border-slate-700/80 bg-slate-900/60 px-3 py-1 text-xs font-semibold text-slate-200">
-                            Privée
-                          </span>
-                        )}
                         <span
-                          className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${accessBadgeClass}`}
+                          className="rounded-full border border-slate-700/80 bg-slate-900/60 px-3 py-1 text-xs font-semibold text-slate-200"
                         >
-                          {accessTypeValue === "paid" ? "Payante" : "Gratuite"}
+                          En cours de création
                         </span>
                       </div>
                       {manualCountrySelect === "custom" && (

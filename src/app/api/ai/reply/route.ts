@@ -19,6 +19,7 @@ type AiProfile = {
   voice?: string;
   voiceRhythm?: string;
   imageUrl?: string;
+  status?: string;
   look?: {
     gender?: string;
     skin?: string;
@@ -157,7 +158,7 @@ const extractOpenAiText = (data: unknown) => {
     typeof data === "object" &&
     data &&
     Array.isArray((data as { choices?: unknown[] }).choices) &&
-    (data as { choices?: unknown[] }).choices.length > 0
+    ((data as { choices?: unknown[] }).choices?.length ?? 0) > 0
   ) {
     const choice = (data as { choices: Array<{ message?: { content?: string } }> }).choices[0];
     if (typeof choice?.message?.content === "string") {
@@ -179,7 +180,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Parametres invalides." }, { status: 400 });
     }
 
-    const conversation = await fetchConversationById(conversationId);
+    const conversation = await fetchConversationById(conversationId) as { id: string; userId?: string; aiId?: string } | null;
     if (!conversation) {
       return NextResponse.json({ error: "Conversation introuvable." }, { status: 404 });
     }

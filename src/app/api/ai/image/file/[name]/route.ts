@@ -35,7 +35,7 @@ export async function GET(
   const filePath = path.join(IMAGE_CACHE_DIR, safeName);
   try {
     const file = await fs.readFile(filePath);
-    return new Response(file, {
+    return new Response(new Uint8Array(file), {
       status: 200,
       headers: {
         "Content-Type": contentTypeFor(safeName),
