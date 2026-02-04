@@ -1,8 +1,8 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { onAuthStateChanged } from "firebase/auth";
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   addAiEvaluation,
   auth,
@@ -10,7 +10,7 @@ import {
   fetchAiProfilesRealTime,
   fetchConversationsForUserRealTime,
   fetchUtilisateurById,
-} from "../../indexFirebase";
+} from '../../indexFirebase';
 
 type Timestamp = {
   seconds?: number;
@@ -54,68 +54,71 @@ type AiEvaluation = {
 };
 
 const evaluationTags = [
-  "Empathie",
-  "Pertinence",
-  "Clarte",
-  "Vitesse",
-  "Creativite",
-  "Voix naturelle",
+  'Empathie',
+  'Pertinence',
+  'Clarte',
+  'Vitesse',
+  'Creativite',
+  'Voix naturelle',
 ];
 const MIN_MESSAGES_FOR_EVALUATION = 10;
 const canEvaluateConversation = (conversation: Conversation) =>
-  Boolean(conversation.aiId) &&
-  (conversation.messageCount ?? 0) > MIN_MESSAGES_FOR_EVALUATION;
+  Boolean(conversation.aiId) && (conversation.messageCount ?? 0) > MIN_MESSAGES_FOR_EVALUATION;
 
 const statusBucket = (status?: string) => {
-  const normalized = status?.toLowerCase() ?? "";
-  if (["pending", "nouveau", "queued", "en attente", ""].includes(normalized)) {
-    return "pending";
+  const normalized = status?.toLowerCase() ?? '';
+  if (['pending', 'nouveau', 'queued', 'en attente', ''].includes(normalized)) {
+    return 'pending';
   }
-  if (["in progress", "en cours", "ongoing", "matched", "actif", "accepted"].includes(normalized)) {
-    return "running";
+  if (['in progress', 'en cours', 'ongoing', 'matched', 'actif', 'accepted'].includes(normalized)) {
+    return 'running';
   }
-  if (["completed", "done", "termine", "terminee", "closed", "ended", "cancelled"].includes(normalized)) {
-    return "completed";
+  if (
+    ['completed', 'done', 'termine', 'terminee', 'closed', 'ended', 'cancelled'].includes(
+      normalized,
+    )
+  ) {
+    return 'completed';
   }
-  return "other";
+  return 'other';
 };
 
 const statusLabels: Record<string, string> = {
-  pending: "Ouverte",
-  running: "Ouverte",
-  completed: "Fermee",
-  other: "Ouverte",
+  pending: 'Ouverte',
+  running: 'Ouverte',
+  completed: 'Fermee',
+  other: 'Ouverte',
 };
 
 const statusStyles: Record<string, string> = {
-  pending: "bg-amber-100/80 text-amber-700 border border-amber-400/70",
-  running: "bg-emerald-100/80 text-emerald-700 border border-emerald-400/70",
-  completed: "bg-sky-100/80 text-sky-700 border border-sky-400/70",
-  other: "bg-slate-100/80 text-slate-700 border border-slate-300/80",
+  pending: 'bg-amber-100/80 text-amber-700 border border-amber-400/70',
+  running: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
+  completed: 'bg-sky-100/80 text-sky-700 border border-sky-400/70',
+  other: 'bg-slate-100/80 text-slate-700 border border-slate-300/80',
 };
 
 const formatDate = (value?: Timestamp | string) => {
   if (!value) {
-    return "—";
+    return '—';
   }
-  if (typeof value === "string") {
-    return new Date(value).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'string') {
+    return new Date(value).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  if (typeof value === "object" && value?.seconds) {
-    return new Date(value.seconds * 1000).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'object' && value?.seconds) {
+    return new Date(value.seconds * 1000).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  return "—";
+  return '—';
 };
 
 const formatRating = (rating?: number) => {
   if (!rating) {
-    return "Non note";
+    return 'Non note';
   }
   return `${rating}/5`;
 };
@@ -139,15 +142,15 @@ export default function ClientHistoriquePage() {
   const [evaluationsLoading, setEvaluationsLoading] = useState(true);
   const [evaluationsError, setEvaluationsError] = useState<string | null>(null);
 
-  const [missionView, setMissionView] = useState<"running" | "completed">("running");
-  const [selectedConversationId, setSelectedConversationId] = useState("");
+  const [missionView, setMissionView] = useState<'running' | 'completed'>('running');
+  const [selectedConversationId, setSelectedConversationId] = useState('');
   const [rating, setRating] = useState(5);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [comment, setComment] = useState("");
+  const [comment, setComment] = useState('');
   const [evaluationLoading, setEvaluationLoading] = useState(false);
   const [evaluationError, setEvaluationError] = useState<string | null>(null);
   const [evaluationSuccess, setEvaluationSuccess] = useState<string | null>(null);
-  const roleMismatch = Boolean(userId && profile?.role && profile.role !== "client");
+  const roleMismatch = Boolean(userId && profile?.role && profile.role !== 'client');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -168,8 +171,8 @@ export default function ClientHistoriquePage() {
         setProfile(profileData);
         setProfileError(null);
       } catch (error) {
-        console.error("Impossible de charger le profil", error);
-        setProfileError("Profil utilisateur introuvable.");
+        console.error('Impossible de charger le profil', error);
+        setProfileError('Profil utilisateur introuvable.');
       } finally {
         setProfileLoading(false);
       }
@@ -187,9 +190,9 @@ export default function ClientHistoriquePage() {
         setAiProfilesError(null);
       },
       () => {
-        setAiProfilesError("Impossible de recuperer les IA.");
+        setAiProfilesError('Impossible de recuperer les IA.');
         setAiProfilesLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -211,9 +214,9 @@ export default function ClientHistoriquePage() {
         setConversationsError(null);
       },
       () => {
-        setConversationsError("Impossible de recuperer les chats IA.");
+        setConversationsError('Impossible de recuperer les chats IA.');
         setConversationsLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -235,9 +238,9 @@ export default function ClientHistoriquePage() {
         setEvaluationsError(null);
       },
       () => {
-        setEvaluationsError("Impossible de recuperer les evaluations.");
+        setEvaluationsError('Impossible de recuperer les evaluations.');
         setEvaluationsLoading(false);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -255,10 +258,8 @@ export default function ClientHistoriquePage() {
 
   const sortedConversations = useMemo(
     () =>
-      [...conversations].sort(
-        (a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0)
-      ),
-    [conversations]
+      [...conversations].sort((a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0)),
+    [conversations],
   );
 
   const missionCounters = useMemo(() => {
@@ -268,26 +269,27 @@ export default function ClientHistoriquePage() {
         acc[bucket] = (acc[bucket] ?? 0) + 1;
         return acc;
       },
-      { pending: 0, running: 0, completed: 0, other: 0 } as Record<string, number>
+      { pending: 0, running: 0, completed: 0, other: 0 } as Record<string, number>,
     );
   }, [sortedConversations]);
 
   const runningMissions = useMemo(
-    () => sortedConversations.filter((conversation) => statusBucket(conversation.status) === "running"),
-    [sortedConversations]
+    () =>
+      sortedConversations.filter((conversation) => statusBucket(conversation.status) === 'running'),
+    [sortedConversations],
   );
   const completedMissions = useMemo(
     () =>
       sortedConversations.filter(
-        (conversation) => statusBucket(conversation.status) === "completed"
+        (conversation) => statusBucket(conversation.status) === 'completed',
       ),
-    [sortedConversations]
+    [sortedConversations],
   );
 
-  const missionList = missionView === "running" ? runningMissions : completedMissions;
+  const missionList = missionView === 'running' ? runningMissions : completedMissions;
   const eligibleConversations = useMemo(
     () => sortedConversations.filter(canEvaluateConversation),
-    [sortedConversations]
+    [sortedConversations],
   );
 
   const evaluationsByConversation = useMemo(() => {
@@ -304,12 +306,10 @@ export default function ClientHistoriquePage() {
     () =>
       eligibleConversations.find((conversation) => conversation.id === selectedConversationId) ??
       null,
-    [eligibleConversations, selectedConversationId]
+    [eligibleConversations, selectedConversationId],
   );
 
-  const selectedAi = selectedConversation?.aiId
-    ? aiLookup[selectedConversation.aiId]
-    : undefined;
+  const selectedAi = selectedConversation?.aiId ? aiLookup[selectedConversation.aiId] : undefined;
 
   const selectedEvaluation = selectedConversationId
     ? evaluationsByConversation[selectedConversationId]
@@ -317,10 +317,8 @@ export default function ClientHistoriquePage() {
 
   const sortedEvaluations = useMemo(
     () =>
-      [...evaluations].sort(
-        (a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
-      ),
-    [evaluations]
+      [...evaluations].sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)),
+    [evaluations],
   );
 
   useEffect(() => {
@@ -331,7 +329,7 @@ export default function ClientHistoriquePage() {
       selectedConversationId &&
       !eligibleConversations.some((conversation) => conversation.id === selectedConversationId)
     ) {
-      setSelectedConversationId(eligibleConversations[0]?.id ?? "");
+      setSelectedConversationId(eligibleConversations[0]?.id ?? '');
     }
   }, [eligibleConversations, selectedConversationId]);
 
@@ -342,7 +340,7 @@ export default function ClientHistoriquePage() {
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag],
     );
   };
 
@@ -352,12 +350,12 @@ export default function ClientHistoriquePage() {
     setEvaluationSuccess(null);
 
     if (!userId) {
-      setEvaluationError("Connectez-vous pour evaluer une IA.");
+      setEvaluationError('Connectez-vous pour evaluer une IA.');
       return;
     }
 
     if (!selectedConversation) {
-      setEvaluationError("Selectionnez un chat IA eligible.");
+      setEvaluationError('Selectionnez un chat IA eligible.');
       return;
     }
 
@@ -367,7 +365,7 @@ export default function ClientHistoriquePage() {
     }
 
     if (selectedEvaluation) {
-      setEvaluationError("Vous avez deja evalue ce chat IA.");
+      setEvaluationError('Vous avez deja evalue ce chat IA.');
       return;
     }
 
@@ -383,10 +381,10 @@ export default function ClientHistoriquePage() {
         comment,
         tags: selectedTags,
       });
-      setEvaluationSuccess("Merci pour votre evaluation.");
+      setEvaluationSuccess('Merci pour votre evaluation.');
       setRating(5);
       setSelectedTags([]);
-      setComment("");
+      setComment('');
     } catch (error) {
       console.error("Erreur lors de l'evaluation", error);
       setEvaluationError("Impossible d'envoyer l'evaluation.");
@@ -400,18 +398,14 @@ export default function ClientHistoriquePage() {
       <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 md:px-6 lg:px-8">
         <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-900 to-slate-950/80 p-6 shadow-2xl shadow-slate-900/40 backdrop-blur">
           <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Historique client
-            </p>
-            <h1 className="text-3xl font-semibold md:text-4xl">
-              Chats IA & evaluations
-            </h1>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Historique client</p>
+            <h1 className="text-3xl font-semibold md:text-4xl">Chats IA & evaluations</h1>
             <p className="text-sm text-slate-400 md:text-base">
               Suivez vos chats IA en cours, termines et partagez votre ressenti.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-            <span>{profile?.mail ?? authMail ?? "Compte actif"}</span>
+            <span>{profile?.mail ?? authMail ?? 'Compte actif'}</span>
             <Link
               href="/demandes/client"
               className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
@@ -478,19 +472,17 @@ export default function ClientHistoriquePage() {
                           <option value="">Aucun chat IA eligible</option>
                         )}
                         {eligibleConversations.map((conversation) => {
-                          const aiRef = conversation.aiId
-                            ? aiLookup[conversation.aiId]
-                            : undefined;
+                          const aiRef = conversation.aiId ? aiLookup[conversation.aiId] : undefined;
                           return (
                             <option key={conversation.id} value={conversation.id}>
-                              {aiRef?.name ?? `IA ${conversation.aiId?.slice(0, 5) ?? "?"}`} ·{" "}
+                              {aiRef?.name ?? `IA ${conversation.aiId?.slice(0, 5) ?? '?'}`} ·{' '}
                               {formatDate(conversation.updatedAt)}
                             </option>
                           );
                         })}
                       </select>
                       <p className="text-[11px] text-slate-500">
-                        IA selectionnee: {selectedAi?.name ?? "Non definie"}
+                        IA selectionnee: {selectedAi?.name ?? 'Non definie'}
                       </p>
                     </div>
 
@@ -504,8 +496,8 @@ export default function ClientHistoriquePage() {
                             onClick={() => setRating(value)}
                             className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
                               rating === value
-                                ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-200"
-                                : "border-slate-800/80 bg-slate-950/40 text-slate-300 hover:border-slate-600"
+                                ? 'border-emerald-400/70 bg-emerald-500/20 text-emerald-200'
+                                : 'border-slate-800/80 bg-slate-950/40 text-slate-300 hover:border-slate-600'
                             }`}
                           >
                             {value}
@@ -526,8 +518,8 @@ export default function ClientHistoriquePage() {
                             onClick={() => toggleTag(tag)}
                             className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition ${
                               selectedTags.includes(tag)
-                                ? "border-sky-400/70 bg-sky-500/20 text-sky-200"
-                                : "border-slate-800/80 bg-slate-950/40 text-slate-400 hover:border-slate-600"
+                                ? 'border-sky-400/70 bg-sky-500/20 text-sky-200'
+                                : 'border-slate-800/80 bg-slate-950/40 text-slate-400 hover:border-slate-600'
                             }`}
                           >
                             {tag}
@@ -549,16 +541,13 @@ export default function ClientHistoriquePage() {
                       />
                     </div>
 
-                    {evaluationError && (
-                      <p className="text-sm text-rose-300">{evaluationError}</p>
-                    )}
+                    {evaluationError && <p className="text-sm text-rose-300">{evaluationError}</p>}
                     {evaluationSuccess && (
                       <p className="text-sm text-emerald-300">{evaluationSuccess}</p>
                     )}
                     {selectedEvaluation && (
                       <p className="text-xs text-slate-500">
-                        Evaluation deja enregistree le{" "}
-                        {formatDate(selectedEvaluation.createdAt)}.
+                        Evaluation deja enregistree le {formatDate(selectedEvaluation.createdAt)}.
                       </p>
                     )}
 
@@ -567,7 +556,7 @@ export default function ClientHistoriquePage() {
                       disabled={evaluationLoading || eligibleConversations.length === 0}
                       className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/40"
                     >
-                      {evaluationLoading ? "Envoi..." : "Envoyer l'evaluation"}
+                      {evaluationLoading ? 'Envoi...' : "Envoyer l'evaluation"}
                     </button>
                   </form>
                 </div>
@@ -577,7 +566,7 @@ export default function ClientHistoriquePage() {
                     <div>
                       <h2 className="text-lg font-semibold">Historique des evaluations</h2>
                       <p className="text-xs text-slate-400">
-                        {evaluationsLoading ? "Chargement..." : `${evaluations.length} avis`}
+                        {evaluationsLoading ? 'Chargement...' : `${evaluations.length} avis`}
                       </p>
                     </div>
                     {(aiProfilesLoading || evaluationsLoading) && (
@@ -593,9 +582,7 @@ export default function ClientHistoriquePage() {
 
                   <div className="mt-4 space-y-3">
                     {sortedEvaluations.length === 0 ? (
-                      <p className="text-sm text-slate-400">
-                        Aucune evaluation pour le moment.
-                      </p>
+                      <p className="text-sm text-slate-400">Aucune evaluation pour le moment.</p>
                     ) : (
                       sortedEvaluations.slice(0, 6).map((evaluation) => {
                         const aiRef = evaluation.aiId ? aiLookup[evaluation.aiId] : undefined;
@@ -606,7 +593,7 @@ export default function ClientHistoriquePage() {
                           >
                             <div className="flex items-center justify-between">
                               <p className="text-sm font-semibold">
-                                {aiRef?.name ?? `IA ${evaluation.aiId?.slice(0, 5) ?? "?"}`}
+                                {aiRef?.name ?? `IA ${evaluation.aiId?.slice(0, 5) ?? '?'}`}
                               </p>
                               <span className="text-xs text-emerald-200">
                                 {formatRating(evaluation.rating)}
@@ -614,13 +601,11 @@ export default function ClientHistoriquePage() {
                             </div>
                             {evaluation.tags && evaluation.tags.length > 0 && (
                               <p className="mt-1 text-[11px] text-slate-400">
-                                {evaluation.tags.join(" · ")}
+                                {evaluation.tags.join(' · ')}
                               </p>
                             )}
                             {evaluation.comment && (
-                              <p className="mt-2 text-xs text-slate-500">
-                                {evaluation.comment}
-                              </p>
+                              <p className="mt-2 text-xs text-slate-500">{evaluation.comment}</p>
                             )}
                             <p className="mt-2 text-[11px] text-slate-500">
                               {formatDate(evaluation.createdAt)}
@@ -635,13 +620,9 @@ export default function ClientHistoriquePage() {
             </section>
 
             {(profileLoading || aiProfilesLoading) && (
-              <p className="text-xs text-slate-500">
-                Synchronisation des donnees en cours...
-              </p>
+              <p className="text-xs text-slate-500">Synchronisation des donnees en cours...</p>
             )}
-            {profileError && (
-              <p className="text-xs text-rose-300">{profileError}</p>
-            )}
+            {profileError && <p className="text-xs text-rose-300">{profileError}</p>}
           </>
         )}
       </div>

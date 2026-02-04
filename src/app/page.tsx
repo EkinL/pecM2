@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   auth,
   fetchUtilisateurById,
@@ -17,75 +17,74 @@ import {
   updateAiProfileStatus,
   updateConversationStatus,
   updateUtilisateurRole,
-} from "./indexFirebase";
-import { HeroHeader } from "./components/dashboard/HeroHeader";
-import { RoadmapSection } from "./components/dashboard/RoadmapSection";
-import { FocusSection } from "./components/dashboard/FocusSection";
-import { UsersSection } from "./components/dashboard/UsersSection";
-import { AiValidationSection } from "./components/dashboard/AiValidationSection";
-import { AiProfilesSection } from "./components/dashboard/AiProfilesSection";
-import { AiManagementSection } from "./components/dashboard/AiManagementSection";
+} from './indexFirebase';
+import { HeroHeader } from './components/dashboard/HeroHeader';
+import { RoadmapSection } from './components/dashboard/RoadmapSection';
+import { FocusSection } from './components/dashboard/FocusSection';
+import { UsersSection } from './components/dashboard/UsersSection';
+import { AiValidationSection } from './components/dashboard/AiValidationSection';
+import { AiProfilesSection } from './components/dashboard/AiProfilesSection';
+import { AiManagementSection } from './components/dashboard/AiManagementSection';
 import {
   roadmapPhases,
   uxFocusDefinition,
   iaFunctionality,
   monetizationItems,
-} from "./data/dashboardContent";
-import { AiProfile, Conversation, Timestamp, Utilisateur } from "./types/dashboard";
-
+} from './data/dashboardContent';
+import { AiProfile, Conversation, Timestamp, Utilisateur } from './types/dashboard';
 
 const statusBucket = (status?: string) => {
-  const normalized = status?.toLowerCase() ?? "";
-  if (["pending", "nouveau", "queued", "en attente", ""].includes(normalized)) {
-    return "pending";
+  const normalized = status?.toLowerCase() ?? '';
+  if (['pending', 'nouveau', 'queued', 'en attente', ''].includes(normalized)) {
+    return 'pending';
   }
-  if (["in progress", "en cours", "ongoing", "matched", "actif", "accepted"].includes(normalized)) {
-    return "running";
+  if (['in progress', 'en cours', 'ongoing', 'matched', 'actif', 'accepted'].includes(normalized)) {
+    return 'running';
   }
-  if (["completed", "done", "terminé", "closed", "ended", "cancelled"].includes(normalized)) {
-    return "completed";
+  if (['completed', 'done', 'terminé', 'closed', 'ended', 'cancelled'].includes(normalized)) {
+    return 'completed';
   }
-  return "other";
+  return 'other';
 };
 
 const statusLabels: Record<string, string> = {
-  pending: "Ouverte",
-  running: "Ouverte",
-  completed: "Fermee",
-  other: "Ouverte",
+  pending: 'Ouverte',
+  running: 'Ouverte',
+  completed: 'Fermee',
+  other: 'Ouverte',
 };
 
 const statusBadgeStyles: Record<string, string> = {
-  pending: "bg-amber-100/80 text-amber-700 border border-amber-400/70",
-  running: "bg-emerald-100/80 text-emerald-700 border border-emerald-400/70",
-  completed: "bg-sky-100/80 text-sky-700 border border-sky-400/70",
-  other: "bg-slate-100/80 text-slate-700 border border-slate-300/80",
+  pending: 'bg-amber-100/80 text-amber-700 border border-amber-400/70',
+  running: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
+  completed: 'bg-sky-100/80 text-sky-700 border border-sky-400/70',
+  other: 'bg-slate-100/80 text-slate-700 border border-slate-300/80',
 };
 
 const formatDate = (value?: Timestamp | string) => {
   if (!value) {
-    return "—";
+    return '—';
   }
-  if (typeof value === "string") {
-    return new Date(value).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'string') {
+    return new Date(value).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  if (typeof value === "object" && value?.seconds) {
-    return new Date(value.seconds * 1000).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'object' && value?.seconds) {
+    return new Date(value.seconds * 1000).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  return "—";
+  return '—';
 };
 
 const formatUserLabel = (user: Utilisateur) => {
   if (user.pseudo) {
     return user.pseudo;
   }
-  if (typeof user.mail === "string" && user.mail.length > 0) {
+  if (typeof user.mail === 'string' && user.mail.length > 0) {
     return user.mail;
   }
   return `Utilisateur ${user.id.slice(0, 5)}`;
@@ -93,7 +92,7 @@ const formatUserLabel = (user: Utilisateur) => {
 
 const formatLookSummary = (profile: AiProfile) => {
   if (!profile.look) {
-    return "Apparence en attente";
+    return 'Apparence en attente';
   }
   const parts = [
     profile.look.gender && `Genre ${profile.look.gender}`,
@@ -103,44 +102,41 @@ const formatLookSummary = (profile: AiProfile) => {
     profile.look.ethnicity && `Ethnie ${profile.look.ethnicity}`,
   ].filter(Boolean);
 
-  return parts.join(" · ") || "Apparence partiellement renseignée";
+  return parts.join(' · ') || 'Apparence partiellement renseignée';
 };
 
 const normalizeAiStatus = (status?: string) => {
-  const normalized = status?.toLowerCase() ?? "pending";
-  if (["pending", "active", "suspended", "disabled", "rejected"].includes(normalized)) {
+  const normalized = status?.toLowerCase() ?? 'pending';
+  if (['pending', 'active', 'suspended', 'disabled', 'rejected'].includes(normalized)) {
     return normalized;
   }
-  return "pending";
+  return 'pending';
 };
 
 const aiStatusLabels: Record<string, string> = {
-  pending: "En attente",
-  active: "Active",
-  suspended: "Suspendue",
-  disabled: "Desactivee",
-  rejected: "Refusee",
+  pending: 'En attente',
+  active: 'Active',
+  suspended: 'Suspendue',
+  disabled: 'Desactivee',
+  rejected: 'Refusee',
 };
 
 const aiStatusStyles: Record<string, string> = {
-  pending: "bg-amber-100/80 text-amber-700 border border-amber-400/70",
-  active: "bg-emerald-100/80 text-emerald-700 border border-emerald-400/70",
-  suspended: "bg-sky-100/80 text-sky-700 border border-sky-400/70",
-  disabled: "bg-slate-100/80 text-slate-700 border border-slate-300/80",
-  rejected: "bg-rose-100/80 text-rose-700 border border-rose-400/70",
+  pending: 'bg-amber-100/80 text-amber-700 border border-amber-400/70',
+  active: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
+  suspended: 'bg-sky-100/80 text-sky-700 border border-sky-400/70',
+  disabled: 'bg-slate-100/80 text-slate-700 border border-slate-300/80',
+  rejected: 'bg-rose-100/80 text-rose-700 border border-rose-400/70',
 };
 
 const buildLookPayload = (values: Record<string, string>) => {
-  const next = Object.entries(values).reduce<Record<string, string>>(
-    (acc, [key, value]) => {
-      const trimmed = value.trim();
-      if (trimmed) {
-        acc[key] = trimmed;
-      }
-      return acc;
-    },
-    {}
-  );
+  const next = Object.entries(values).reduce<Record<string, string>>((acc, [key, value]) => {
+    const trimmed = value.trim();
+    if (trimmed) {
+      acc[key] = trimmed;
+    }
+    return acc;
+  }, {});
 
   return Object.keys(next).length ? next : undefined;
 };
@@ -151,9 +147,7 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [adminError, setAdminError] = useState<string | null>(null);
-  const [adminUser, setAdminUser] = useState<null | { uid: string; mail?: string | null }>(
-    null
-  );
+  const [adminUser, setAdminUser] = useState<null | { uid: string; mail?: string | null }>(null);
   const [profile, setProfile] = useState<Utilisateur | null>(null);
   const [adminHasPassword, setAdminHasPassword] = useState(false);
   const [users, setUsers] = useState<Utilisateur[]>([]);
@@ -162,53 +156,49 @@ export default function AdminDashboard() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationsLoading, setConversationsLoading] = useState(true);
   const [conversationsError, setConversationsError] = useState<string | null>(null);
-  const [conversationSearch, setConversationSearch] = useState("");
-  const [conversationStatusFilter, setConversationStatusFilter] = useState("all");
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [conversationStatusFilter, setConversationStatusFilter] = useState('all');
   const [conversationPage, setConversationPage] = useState(1);
   const [conversationAction, setConversationAction] = useState<{
     id: string;
-    type: "open" | "close";
+    type: 'open' | 'close';
   } | null>(null);
-  const [conversationActionError, setConversationActionError] = useState<string | null>(
-    null
-  );
-  const [conversationActionSuccess, setConversationActionSuccess] = useState<string | null>(
-    null
-  );
+  const [conversationActionError, setConversationActionError] = useState<string | null>(null);
+  const [conversationActionSuccess, setConversationActionSuccess] = useState<string | null>(null);
   const [closeConversationDialog, setCloseConversationDialog] = useState<null | {
     id: string;
     label: string;
   }>(null);
   const [aiAction, setAiAction] = useState<{
     id: string;
-    type: "approve" | "reject" | "activate" | "suspend" | "disable";
+    type: 'approve' | 'reject' | 'activate' | 'suspend' | 'disable';
   } | null>(null);
   const [aiActionError, setAiActionError] = useState<string | null>(null);
   const [aiActionSuccess, setAiActionSuccess] = useState<string | null>(null);
   const [aiActionImageUrl, setAiActionImageUrl] = useState<string | null>(null);
   const [aiEditId, setAiEditId] = useState<string | null>(null);
   const [aiEditForm, setAiEditForm] = useState({
-    name: "",
-    mentality: "",
-    voice: "",
-    gender: "",
-    skin: "",
-    hair: "",
-    hairColor: "",
-    eyeColor: "",
-    age: "",
-    height: "",
-    bodyType: "",
-    facialHair: "",
-    makeup: "",
-    glasses: "",
-    accessories: "",
-    piercings: "",
-    tattoos: "",
-    scars: "",
-    outfit: "",
-    ethnicity: "",
-    details: "",
+    name: '',
+    mentality: '',
+    voice: '',
+    gender: '',
+    skin: '',
+    hair: '',
+    hairColor: '',
+    eyeColor: '',
+    age: '',
+    height: '',
+    bodyType: '',
+    facialHair: '',
+    makeup: '',
+    glasses: '',
+    accessories: '',
+    piercings: '',
+    tattoos: '',
+    scars: '',
+    outfit: '',
+    ethnicity: '',
+    details: '',
   });
   const [aiEditLoading, setAiEditLoading] = useState(false);
   const [aiEditError, setAiEditError] = useState<string | null>(null);
@@ -218,7 +208,7 @@ export default function AdminDashboard() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [userRoleAction, setUserRoleAction] = useState<{
     id: string;
-    status: "loading" | "success" | "error";
+    status: 'loading' | 'success' | 'error';
     message?: string;
   } | null>(null);
   const [tokenGrantInputs, setTokenGrantInputs] = useState<
@@ -226,7 +216,7 @@ export default function AdminDashboard() {
   >({});
   const [tokenGrantAction, setTokenGrantAction] = useState<{
     id: string;
-    status: "loading" | "success" | "error";
+    status: 'loading' | 'success' | 'error';
     message?: string;
   } | null>(null);
   const [clientConversations, setClientConversations] = useState<Conversation[]>([]);
@@ -243,33 +233,33 @@ export default function AdminDashboard() {
         setIsAdmin(false);
         setUserRole(null);
         setAdminChecking(false);
-        router.replace("/auth");
+        router.replace('/auth');
         return;
       }
 
       const providerIds = (user.providerData ?? [])
         .map((provider) => provider?.providerId)
         .filter(Boolean);
-      setAdminHasPassword(providerIds.includes("password"));
+      setAdminHasPassword(providerIds.includes('password'));
       setAdminUser({ uid: user.uid, mail: user.email });
 
       try {
-        const profileData = await fetchUtilisateurById(user.uid) as { role?: string } | null;
-        const role = typeof profileData?.role === "string" ? profileData.role : null;
-        setProfile(profileData ?? null as any);
+        const profileData = (await fetchUtilisateurById(user.uid)) as { role?: string } | null;
+        const role = typeof profileData?.role === 'string' ? profileData.role : null;
+        setProfile(profileData ?? (null as any));
         setUserRole(role);
-        if (role === "admin") {
+        if (role === 'admin') {
           setIsAdmin(true);
           setAdminError(null);
         } else {
           setIsAdmin(false);
-          setAdminError(role ? null : "Acces reserve aux admins.");
+          setAdminError(role ? null : 'Acces reserve aux admins.');
         }
       } catch (error) {
-        console.error("Erreur lors de la verification du role admin", error);
+        console.error('Erreur lors de la verification du role admin', error);
         setIsAdmin(false);
         setUserRole(null);
-        setAdminError("Impossible de verifier le role admin.");
+        setAdminError('Impossible de verifier le role admin.');
       } finally {
         setAdminChecking(false);
       }
@@ -279,7 +269,7 @@ export default function AdminDashboard() {
   }, [router]);
 
   useEffect(() => {
-    if (userRole !== "client") {
+    if (userRole !== 'client') {
       return;
     }
 
@@ -291,16 +281,16 @@ export default function AdminDashboard() {
         setAiError(null);
       },
       () => {
-        setAiError("Impossible de récupérer les IA créées.");
+        setAiError('Impossible de récupérer les IA créées.');
         setAiLoading(false);
-      }
+      },
     );
 
     return () => unsubAiProfiles?.();
   }, [userRole]);
 
   useEffect(() => {
-    if (!adminUser?.uid || userRole !== "client") {
+    if (!adminUser?.uid || userRole !== 'client') {
       setClientConversations([]);
       setClientConversationsLoading(false);
       return;
@@ -315,9 +305,9 @@ export default function AdminDashboard() {
         setClientConversationsError(null);
       },
       () => {
-        setClientConversationsError("Impossible de récupérer vos chats IA.");
+        setClientConversationsError('Impossible de récupérer vos chats IA.');
         setClientConversationsLoading(false);
-      }
+      },
     );
 
     return () => unsub?.();
@@ -335,9 +325,9 @@ export default function AdminDashboard() {
         setUsersError(null);
       },
       () => {
-        setUsersError("Impossible de récupérer les utilisateurs.");
+        setUsersError('Impossible de récupérer les utilisateurs.');
         setUsersLoading(false);
-      }
+      },
     );
     const unsubConversations = fetchConversationsRealTime(
       (data: unknown) => {
@@ -346,9 +336,9 @@ export default function AdminDashboard() {
         setConversationsError(null);
       },
       () => {
-        setConversationsError("Impossible de récupérer les conversations.");
+        setConversationsError('Impossible de récupérer les conversations.');
         setConversationsLoading(false);
-      }
+      },
     );
     const unsubAiProfiles = fetchAiProfilesRealTime(
       (data: unknown) => {
@@ -357,9 +347,9 @@ export default function AdminDashboard() {
         setAiError(null);
       },
       () => {
-        setAiError("Impossible de récupérer les IA créées.");
+        setAiError('Impossible de récupérer les IA créées.');
         setAiLoading(false);
-      }
+      },
     );
 
     return () => {
@@ -379,10 +369,10 @@ export default function AdminDashboard() {
 
     try {
       await signOutUser();
-      router.replace("/auth");
+      router.replace('/auth');
     } catch (error) {
-      console.error("Erreur lors de la deconnexion", error);
-      setSignOutError("Impossible de se deconnecter.");
+      console.error('Erreur lors de la deconnexion', error);
+      setSignOutError('Impossible de se deconnecter.');
     } finally {
       setSignOutLoading(false);
     }
@@ -391,15 +381,15 @@ export default function AdminDashboard() {
   const handleOpenConversation = async (conversationId: string) => {
     setConversationActionError(null);
     setConversationActionSuccess(null);
-    setConversationAction({ id: conversationId, type: "open" });
+    setConversationAction({ id: conversationId, type: 'open' });
 
     try {
       await updateConversationStatus({
         conversationId,
-        status: "running",
-        note: "opened by admin",
+        status: 'running',
+        note: 'opened by admin',
       });
-      setConversationActionSuccess("Conversation ouverte.");
+      setConversationActionSuccess('Conversation ouverte.');
     } catch (error) {
       console.error("Erreur lors de l'ouverture", error);
       setConversationActionError("Impossible d'ouvrir la conversation.");
@@ -425,43 +415,43 @@ export default function AdminDashboard() {
   const handleCloseConversation = async (conversationId: string) => {
     setConversationActionError(null);
     setConversationActionSuccess(null);
-    setConversationAction({ id: conversationId, type: "close" });
+    setConversationAction({ id: conversationId, type: 'close' });
 
     try {
       await updateConversationStatus({
         conversationId,
-        status: "completed",
-        note: "closed by admin",
+        status: 'completed',
+        note: 'closed by admin',
       });
-      setConversationActionSuccess("Conversation fermee.");
+      setConversationActionSuccess('Conversation fermee.');
     } catch (error) {
-      console.error("Erreur lors de la fermeture", error);
-      setConversationActionError("Impossible de fermer la conversation.");
+      console.error('Erreur lors de la fermeture', error);
+      setConversationActionError('Impossible de fermer la conversation.');
     } finally {
       setConversationAction(null);
     }
   };
 
   const triggerAvatarGeneration = async (profileId: string) => {
-    const response = await fetch("/api/ai/image", {
-      method: "POST",
+    const response = await fetch('/api/ai/image', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       keepalive: true,
       body: JSON.stringify({
         aiId: profileId,
-        mode: "base",
+        mode: 'base',
       }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const errorMessage =
-        typeof data?.error === "string" ? data.error : "Erreur generation avatar IA.";
+        typeof data?.error === 'string' ? data.error : 'Erreur generation avatar IA.';
       throw new Error(errorMessage);
     }
-    const imageUrl = typeof data?.imageUrl === "string" ? data.imageUrl.trim() : "";
-    const updateError = typeof data?.updateError === "string" ? data.updateError : null;
+    const imageUrl = typeof data?.imageUrl === 'string' ? data.imageUrl.trim() : '';
+    const updateError = typeof data?.updateError === 'string' ? data.updateError : null;
     return {
       imageUrl: imageUrl || null,
       updateError,
@@ -472,7 +462,7 @@ export default function AdminDashboard() {
     setAiActionError(null);
     setAiActionSuccess(null);
     setAiActionImageUrl(null);
-    setAiAction({ id: profileId, type: "approve" });
+    setAiAction({ id: profileId, type: 'approve' });
 
     try {
       const targetProfile = aiProfiles.find((profile) => profile.id === profileId);
@@ -480,7 +470,7 @@ export default function AdminDashboard() {
 
       await updateAiProfileStatus({
         profileId,
-        status: "active",
+        status: 'active',
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
@@ -489,7 +479,7 @@ export default function AdminDashboard() {
         const { imageUrl: generatedImageUrl, updateError } =
           await triggerAvatarGeneration(profileId);
         if (!generatedImageUrl) {
-          throw new Error("Avatar indisponible.");
+          throw new Error('Avatar indisponible.');
         }
         setAiActionImageUrl(generatedImageUrl);
         if (updateError) {
@@ -497,20 +487,20 @@ export default function AdminDashboard() {
         }
         setAiActionSuccess(
           updateError
-            ? "IA validee. Avatar genere mais la mise a jour Firestore a echoue."
-            : "IA validee. Avatar genere."
+            ? 'IA validee. Avatar genere mais la mise a jour Firestore a echoue.'
+            : 'IA validee. Avatar genere.',
         );
         return;
       }
       const existingImageUrl =
-        typeof targetProfile?.imageUrl === "string" ? targetProfile.imageUrl.trim() : "";
+        typeof targetProfile?.imageUrl === 'string' ? targetProfile.imageUrl.trim() : '';
       if (existingImageUrl) {
         setAiActionImageUrl(existingImageUrl);
       }
-      setAiActionSuccess("IA validee.");
+      setAiActionSuccess('IA validee.');
     } catch (error) {
-      console.error("Erreur lors de la validation IA", error);
-      const message = error instanceof Error ? error.message : "Impossible de valider l IA.";
+      console.error('Erreur lors de la validation IA', error);
+      const message = error instanceof Error ? error.message : 'Impossible de valider l IA.';
       setAiActionError(message);
     } finally {
       setAiAction(null);
@@ -518,38 +508,41 @@ export default function AdminDashboard() {
   };
 
   const handleRejectAi = async (profileId: string) => {
-    const confirmed = window.confirm("Refuser cette IA ?");
+    const confirmed = window.confirm('Refuser cette IA ?');
     if (!confirmed) {
       return;
     }
 
     setAiActionError(null);
     setAiActionSuccess(null);
-    setAiAction({ id: profileId, type: "reject" });
+    setAiAction({ id: profileId, type: 'reject' });
 
     try {
       await updateAiProfileStatus({
         profileId,
-        status: "rejected",
+        status: 'rejected',
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
       });
-      setAiActionSuccess("IA refusee.");
+      setAiActionSuccess('IA refusee.');
     } catch (error) {
-      console.error("Erreur lors du refus IA", error);
-      setAiActionError("Impossible de refuser l IA.");
+      console.error('Erreur lors du refus IA', error);
+      setAiActionError('Impossible de refuser l IA.');
     } finally {
       setAiAction(null);
     }
   };
 
-  const handleAiStatusUpdate = async (profileId: string, status: "active" | "suspended" | "disabled") => {
+  const handleAiStatusUpdate = async (
+    profileId: string,
+    status: 'active' | 'suspended' | 'disabled',
+  ) => {
     const confirmLabel =
-      status === "disabled"
-        ? "Desactiver cette IA ?"
-        : status === "suspended"
-          ? "Suspendre cette IA ?"
+      status === 'disabled'
+        ? 'Desactiver cette IA ?'
+        : status === 'suspended'
+          ? 'Suspendre cette IA ?'
           : null;
 
     if (confirmLabel && !window.confirm(confirmLabel)) {
@@ -561,7 +554,7 @@ export default function AdminDashboard() {
     setAiActionImageUrl(null);
     setAiAction({
       id: profileId,
-      type: status === "active" ? "activate" : status === "suspended" ? "suspend" : "disable",
+      type: status === 'active' ? 'activate' : status === 'suspended' ? 'suspend' : 'disable',
     });
 
     try {
@@ -572,14 +565,14 @@ export default function AdminDashboard() {
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
       });
-      if (status === "active") {
+      if (status === 'active') {
         const targetProfile = aiProfiles.find((profile) => profile.id === profileId);
         const hasAvatar = Boolean(targetProfile?.imageUrl);
         if (!hasAvatar) {
           const { imageUrl: generatedImageUrl, updateError } =
             await triggerAvatarGeneration(profileId);
           if (!generatedImageUrl) {
-            throw new Error("Avatar indisponible.");
+            throw new Error('Avatar indisponible.');
           }
           setAiActionImageUrl(generatedImageUrl);
           if (updateError) {
@@ -587,30 +580,30 @@ export default function AdminDashboard() {
           }
           setAiActionSuccess(
             updateError
-              ? "IA activee. Avatar genere mais la mise a jour Firestore a echoue."
-              : "IA activee. Avatar genere."
+              ? 'IA activee. Avatar genere mais la mise a jour Firestore a echoue.'
+              : 'IA activee. Avatar genere.',
           );
           return;
         }
         if (hasAvatar) {
           const existingImageUrl =
-            typeof targetProfile?.imageUrl === "string" ? targetProfile.imageUrl.trim() : "";
+            typeof targetProfile?.imageUrl === 'string' ? targetProfile.imageUrl.trim() : '';
           if (existingImageUrl) {
             setAiActionImageUrl(existingImageUrl);
           }
         }
       }
       setAiActionSuccess(
-        status === "active"
-          ? "IA activee."
-          : status === "suspended"
-            ? "IA suspendue."
-            : "IA desactivee."
+        status === 'active'
+          ? 'IA activee.'
+          : status === 'suspended'
+            ? 'IA suspendue.'
+            : 'IA desactivee.',
       );
     } catch (error) {
-      console.error("Erreur lors de la mise a jour IA", error);
+      console.error('Erreur lors de la mise a jour IA', error);
       const message =
-        error instanceof Error ? error.message : "Impossible de mettre a jour cette IA.";
+        error instanceof Error ? error.message : 'Impossible de mettre a jour cette IA.';
       setAiActionError(message);
     } finally {
       setAiAction(null);
@@ -622,45 +615,41 @@ export default function AdminDashboard() {
       return;
     }
 
-    const confirmed = window.confirm("Passer cet utilisateur en admin ?");
+    const confirmed = window.confirm('Passer cet utilisateur en admin ?');
     if (!confirmed) {
       return;
     }
 
-    setUserRoleAction({ id: userId, status: "loading" });
+    setUserRoleAction({ id: userId, status: 'loading' });
 
     try {
       await updateUtilisateurRole({
         userId,
-        role: "admin",
+        role: 'admin',
         adminId: adminUser.uid,
         adminMail: adminUser.mail ?? undefined,
       });
       setUserRoleAction({
         id: userId,
-        status: "success",
-        message: "Utilisateur promu admin.",
+        status: 'success',
+        message: 'Utilisateur promu admin.',
       });
     } catch (error) {
-      console.error("Erreur lors de la promotion admin", error);
+      console.error('Erreur lors de la promotion admin', error);
       setUserRoleAction({
         id: userId,
-        status: "error",
-        message: "Impossible de promouvoir cet utilisateur.",
+        status: 'error',
+        message: 'Impossible de promouvoir cet utilisateur.',
       });
     }
   };
 
-  const updateTokenGrantInput = (
-    userId: string,
-    field: "amount" | "password",
-    value: string
-  ) => {
+  const updateTokenGrantInput = (userId: string, field: 'amount' | 'password', value: string) => {
     setTokenGrantInputs((prev) => ({
       ...prev,
       [userId]: {
-        amount: prev[userId]?.amount ?? "",
-        password: prev[userId]?.password ?? "",
+        amount: prev[userId]?.amount ?? '',
+        password: prev[userId]?.password ?? '',
         [field]: value,
       },
     }));
@@ -671,28 +660,28 @@ export default function AdminDashboard() {
       return;
     }
 
-    const input = tokenGrantInputs[userId] ?? { amount: "", password: "" };
+    const input = tokenGrantInputs[userId] ?? { amount: '', password: '' };
     const amount = Number(input.amount);
     let password = input.password.trim();
 
     if (!input.amount || Number.isNaN(amount) || amount <= 0) {
       setTokenGrantAction({
         id: userId,
-        status: "error",
-        message: "Montant invalide.",
+        status: 'error',
+        message: 'Montant invalide.',
       });
       return;
     }
     if (!password) {
       const promptLabel = adminHasPassword
-        ? "Mot de passe admin requis pour confirmer."
-        : "Definissez un mot de passe admin pour securiser l action.";
+        ? 'Mot de passe admin requis pour confirmer.'
+        : 'Definissez un mot de passe admin pour securiser l action.';
       const prompted = window.prompt(promptLabel);
       if (!prompted) {
         setTokenGrantAction({
           id: userId,
-          status: "error",
-          message: "Mot de passe admin requis.",
+          status: 'error',
+          message: 'Mot de passe admin requis.',
         });
         return;
       }
@@ -700,14 +689,14 @@ export default function AdminDashboard() {
       if (!password) {
         setTokenGrantAction({
           id: userId,
-          status: "error",
-          message: "Mot de passe admin requis.",
+          status: 'error',
+          message: 'Mot de passe admin requis.',
         });
         return;
       }
     }
 
-    setTokenGrantAction({ id: userId, status: "loading" });
+    setTokenGrantAction({ id: userId, status: 'loading' });
 
     try {
       await grantUserTokensWithPassword({
@@ -719,19 +708,18 @@ export default function AdminDashboard() {
       });
       setTokenGrantAction({
         id: userId,
-        status: "success",
+        status: 'success',
         message: `${amount} tokens ajoutes.`,
       });
       setTokenGrantInputs((prev) => ({
         ...prev,
-        [userId]: { amount: "", password: "" },
+        [userId]: { amount: '', password: '' },
       }));
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Impossible d'ajouter des tokens.";
+      const message = error instanceof Error ? error.message : "Impossible d'ajouter des tokens.";
       setTokenGrantAction({
         id: userId,
-        status: "error",
+        status: 'error',
         message,
       });
     }
@@ -740,27 +728,27 @@ export default function AdminDashboard() {
   const startAiEdit = (profile: AiProfile) => {
     setAiEditId(profile.id);
     setAiEditForm({
-      name: profile.name ?? "",
-      mentality: profile.mentality ?? "",
-      voice: profile.voice ?? "",
-      gender: profile.look?.gender ?? "",
-      skin: profile.look?.skin ?? "",
-      hair: profile.look?.hair ?? "",
-      hairColor: profile.look?.hairColor ?? "",
-      eyeColor: profile.look?.eyeColor ?? "",
-      age: profile.look?.age ?? "",
-      height: profile.look?.height ?? "",
-      bodyType: profile.look?.bodyType ?? "",
-      facialHair: profile.look?.facialHair ?? "",
-      makeup: profile.look?.makeup ?? "",
-      glasses: profile.look?.glasses ?? "",
-      accessories: profile.look?.accessories ?? "",
-      piercings: profile.look?.piercings ?? "",
-      tattoos: profile.look?.tattoos ?? "",
-      scars: profile.look?.scars ?? "",
-      outfit: profile.look?.outfit ?? "",
-      ethnicity: profile.look?.ethnicity ?? "",
-      details: profile.look?.details ?? "",
+      name: profile.name ?? '',
+      mentality: profile.mentality ?? '',
+      voice: profile.voice ?? '',
+      gender: profile.look?.gender ?? '',
+      skin: profile.look?.skin ?? '',
+      hair: profile.look?.hair ?? '',
+      hairColor: profile.look?.hairColor ?? '',
+      eyeColor: profile.look?.eyeColor ?? '',
+      age: profile.look?.age ?? '',
+      height: profile.look?.height ?? '',
+      bodyType: profile.look?.bodyType ?? '',
+      facialHair: profile.look?.facialHair ?? '',
+      makeup: profile.look?.makeup ?? '',
+      glasses: profile.look?.glasses ?? '',
+      accessories: profile.look?.accessories ?? '',
+      piercings: profile.look?.piercings ?? '',
+      tattoos: profile.look?.tattoos ?? '',
+      scars: profile.look?.scars ?? '',
+      outfit: profile.look?.outfit ?? '',
+      ethnicity: profile.look?.ethnicity ?? '',
+      details: profile.look?.details ?? '',
     });
     setAiEditError(null);
     setAiEditSuccess(null);
@@ -806,10 +794,10 @@ export default function AdminDashboard() {
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
       });
-      setAiEditSuccess("IA mise a jour.");
+      setAiEditSuccess('IA mise a jour.');
     } catch (error) {
-      console.error("Erreur lors de la mise a jour IA", error);
-      setAiEditError("Impossible de mettre a jour l IA.");
+      console.error('Erreur lors de la mise a jour IA', error);
+      setAiEditError('Impossible de mettre a jour l IA.');
     } finally {
       setAiEditLoading(false);
     }
@@ -819,35 +807,32 @@ export default function AdminDashboard() {
     setAiEditId(null);
   };
 
-  const snapshotTime = new Date().toLocaleString("fr-FR", {
-    dateStyle: "short",
-    timeStyle: "short",
+  const snapshotTime = new Date().toLocaleString('fr-FR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
   });
 
   const totalTokens = useMemo(
     () =>
       users.reduce((acc, user) => {
-        const value = typeof user.tokens === "number" ? user.tokens : 0;
+        const value = typeof user.tokens === 'number' ? user.tokens : 0;
         return acc + value;
       }, 0),
-    [users]
+    [users],
   );
 
   const usersWithTokens = useMemo(
-    () => users.filter((user) => typeof user.tokens === "number").length,
-    [users]
+    () => users.filter((user) => typeof user.tokens === 'number').length,
+    [users],
   );
 
-  const averageTokens = usersWithTokens
-    ? Math.round(totalTokens / usersWithTokens)
-    : 0;
+  const averageTokens = usersWithTokens ? Math.round(totalTokens / usersWithTokens) : 0;
 
   const activeConversations = useMemo(
     () =>
-      conversations.filter(
-        (conversation) => statusBucket(conversation.status) === "running"
-      ).length,
-    [conversations]
+      conversations.filter((conversation) => statusBucket(conversation.status) === 'running')
+        .length,
+    [conversations],
   );
 
   const conversationBuckets = useMemo(() => {
@@ -869,23 +854,14 @@ export default function AdminDashboard() {
   const latestUsers = useMemo(
     () =>
       [...users]
-        .sort(
-          (a, b) =>
-            (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
-        )
+        .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0))
         .slice(0, 6),
-    [users]
+    [users],
   );
 
   const topAiProfiles = useMemo(
-    () =>
-      [...aiProfiles]
-        .sort(
-          (a, b) =>
-            (b.tokensSpent ?? 0) - (a.tokensSpent ?? 0)
-        )
-        .slice(0, 5),
-    [aiProfiles]
+    () => [...aiProfiles].sort((a, b) => (b.tokensSpent ?? 0) - (a.tokensSpent ?? 0)).slice(0, 5),
+    [aiProfiles],
   );
 
   const aiLookup = useMemo(() => {
@@ -910,12 +886,10 @@ export default function AdminDashboard() {
     const search = conversationSearch.trim().toLowerCase();
 
     return [...conversations]
-      .sort(
-        (a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0)
-      )
+      .sort((a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0))
       .filter((conversation) => {
         const bucket = statusBucket(conversation.status);
-        if (conversationStatusFilter !== "all" && bucket !== conversationStatusFilter) {
+        if (conversationStatusFilter !== 'all' && bucket !== conversationStatusFilter) {
           return false;
         }
         if (!search) {
@@ -926,26 +900,20 @@ export default function AdminDashboard() {
         const haystack = [
           conversation.id,
           conversation.status,
-          owner ? formatUserLabel(owner) : "",
-          aiRef ? aiRef.name ?? aiRef.id : conversation.aiId ?? "",
+          owner ? formatUserLabel(owner) : '',
+          aiRef ? (aiRef.name ?? aiRef.id) : (conversation.aiId ?? ''),
         ]
           .filter(Boolean)
-          .join(" ")
+          .join(' ')
           .toLowerCase();
         return haystack.includes(search);
       });
-  }, [
-    conversations,
-    conversationSearch,
-    conversationStatusFilter,
-    usersById,
-    aiLookup,
-  ]);
+  }, [conversations, conversationSearch, conversationStatusFilter, usersById, aiLookup]);
 
   const conversationsPageSize = 5;
   const totalConversationPages = Math.max(
     1,
-    Math.ceil(filteredConversations.length / conversationsPageSize)
+    Math.ceil(filteredConversations.length / conversationsPageSize),
   );
   const currentConversationPage = Math.min(conversationPage, totalConversationPages);
   const paginatedConversations = useMemo(() => {
@@ -957,22 +925,16 @@ export default function AdminDashboard() {
     () =>
       [...aiProfiles]
         .filter((profile) => {
-          const normalized = (profile.status ?? "").toLowerCase();
-          return !normalized || normalized === "pending";
+          const normalized = (profile.status ?? '').toLowerCase();
+          return !normalized || normalized === 'pending';
         })
-        .sort(
-          (a, b) =>
-            (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
-        ),
-    [aiProfiles]
+        .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)),
+    [aiProfiles],
   );
 
   const managedAiProfiles = useMemo(
-    () =>
-      [...aiProfiles].sort(
-        (a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)
-      ),
-    [aiProfiles]
+    () => [...aiProfiles].sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)),
+    [aiProfiles],
   );
 
   const clientAiLookup = useMemo(() => {
@@ -988,9 +950,9 @@ export default function AdminDashboard() {
   const clientSortedConversations = useMemo(
     () =>
       [...clientConversations].sort(
-        (a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0)
+        (a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0),
       ),
-    [clientConversations]
+    [clientConversations],
   );
 
   if (adminChecking) {
@@ -1003,22 +965,20 @@ export default function AdminDashboard() {
     );
   }
 
-  if (userRole === "client") {
+  if (userRole === 'client') {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
         <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 md:px-6 lg:px-8">
           <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-900 to-slate-950/80 p-6 shadow-2xl shadow-slate-900/40 backdrop-blur">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Accueil client
-              </p>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Accueil client</p>
               <h1 className="text-3xl font-semibold md:text-4xl">Chats IA</h1>
               <p className="text-sm text-slate-400 md:text-base">
                 Reprenez une discussion et continuez avec votre IA.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-              <span>{adminUser?.mail ?? "Compte actif"}</span>
+              <span>{adminUser?.mail ?? 'Compte actif'}</span>
               <Link
                 href="/ia"
                 className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
@@ -1033,13 +993,13 @@ export default function AdminDashboard() {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-semibold">Reprendre un chat IA</h2>
-                    <p className="text-sm text-slate-400">
+                  <p className="text-sm text-slate-400">
                     Continuez la conversation la ou vous l&apos;avez laissee.
                   </p>
                 </div>
                 <span className="text-xs text-slate-400">
                   {clientConversationsLoading
-                    ? "Chargement..."
+                    ? 'Chargement...'
                     : `${clientSortedConversations.length} chats IA`}
                 </span>
               </div>
@@ -1056,21 +1016,19 @@ export default function AdminDashboard() {
                 ) : (
                   clientSortedConversations.map((conversation) => {
                     const bucket = statusBucket(conversation.status);
-                    const aiRef = conversation.aiId
-                      ? clientAiLookup[conversation.aiId]
-                      : undefined;
+                    const aiRef = conversation.aiId ? clientAiLookup[conversation.aiId] : undefined;
                     const aiStatusKey = normalizeAiStatus(aiRef?.status);
-                    const canResume = aiStatusKey === "active";
+                    const canResume = aiStatusKey === 'active';
                     const aiStatusNote =
-                      aiStatusKey === "pending"
-                        ? "IA en attente de validation."
-                        : aiStatusKey === "suspended"
-                          ? "IA suspendue."
-                          : aiStatusKey === "disabled"
-                            ? "IA desactivee."
-                            : aiStatusKey === "rejected"
-                              ? "IA refusee."
-                              : "IA indisponible.";
+                      aiStatusKey === 'pending'
+                        ? 'IA en attente de validation.'
+                        : aiStatusKey === 'suspended'
+                          ? 'IA suspendue.'
+                          : aiStatusKey === 'disabled'
+                            ? 'IA desactivee.'
+                            : aiStatusKey === 'rejected'
+                              ? 'IA refusee.'
+                              : 'IA indisponible.';
                     return (
                       <div
                         key={conversation.id}
@@ -1078,7 +1036,7 @@ export default function AdminDashboard() {
                       >
                         <div className="flex items-center justify-between gap-3">
                           <p className="text-sm font-semibold">
-                            {aiRef?.name ?? `IA ${conversation.aiId?.slice(0, 5) ?? "?"}`}
+                            {aiRef?.name ?? `IA ${conversation.aiId?.slice(0, 5) ?? '?'}`}
                           </p>
                           <span
                             className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeStyles[bucket]}`}
@@ -1112,9 +1070,7 @@ export default function AdminDashboard() {
                             Voir l&apos;historique
                           </Link>
                           {!canResume && (
-                            <span className="text-[11px] text-slate-500">
-                              {aiStatusNote}
-                            </span>
+                            <span className="text-[11px] text-slate-500">{aiStatusNote}</span>
                           )}
                         </div>
                       </div>
@@ -1182,9 +1138,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-slate-950 text-slate-100">
         <div className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-6 py-12">
           <div className="w-full max-w-lg space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Acces refuse
-            </p>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Acces refuse</p>
             <h1 className="text-2xl font-semibold">Panel admin uniquement</h1>
             <p className="text-sm text-slate-400">
               {adminError ?? "Ce compte n'a pas les droits admin."}
@@ -1195,11 +1149,9 @@ export default function AdminDashboard() {
               disabled={signOutLoading}
               className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
             >
-              {signOutLoading ? "Deconnexion..." : "Se deconnecter"}
+              {signOutLoading ? 'Deconnexion...' : 'Se deconnecter'}
             </button>
-            {signOutError && (
-              <p className="text-xs text-rose-300">{signOutError}</p>
-            )}
+            {signOutError && <p className="text-xs text-rose-300">{signOutError}</p>}
           </div>
         </div>
       </div>
@@ -1218,45 +1170,44 @@ export default function AdminDashboard() {
           handleSignOut={handleSignOut}
         >
           <p className="text-sm text-slate-400 md:text-base">
-            Snapshot : {snapshotTime} · Synchronisation Firebase Auth + Firestore
-            (utilisateurs, conversations, IA).
+            Snapshot : {snapshotTime} · Synchronisation Firebase Auth + Firestore (utilisateurs,
+            conversations, IA).
           </p>
           <div className="grid gap-3 pt-6 md:grid-cols-4">
             <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-inner shadow-black/30">
               <p className="text-xs uppercase tracking-wide text-slate-400">Utilisateurs</p>
               <p className="mt-2 text-2xl font-semibold">
-                {usersLoading ? "…" : users.length.toLocaleString("fr-FR")}
+                {usersLoading ? '…' : users.length.toLocaleString('fr-FR')}
               </p>
-              <p className="text-xs text-slate-500">{usersError ?? "data temps réel"}</p>
+              <p className="text-xs text-slate-500">{usersError ?? 'data temps réel'}</p>
             </div>
             <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-inner shadow-black/30">
               <p className="text-xs uppercase tracking-wide text-slate-400">Conversations</p>
               <p className="mt-2 text-2xl font-semibold">
-                {conversationsLoading ? "…" : conversations.length}
+                {conversationsLoading ? '…' : conversations.length}
               </p>
               <p className="text-xs text-slate-500">
-                Actives : {conversationsLoading ? "…" : activeConversations}
+                Actives : {conversationsLoading ? '…' : activeConversations}
               </p>
             </div>
             <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-inner shadow-black/30">
               <p className="text-xs uppercase tracking-wide text-slate-400">IA créées</p>
-              <p className="mt-2 text-2xl font-semibold">{aiLoading ? "…" : aiProfiles.length}</p>
-              <p className="text-xs text-slate-500">{aiError ?? "matching & mémoire"}</p>
+              <p className="mt-2 text-2xl font-semibold">{aiLoading ? '…' : aiProfiles.length}</p>
+              <p className="text-xs text-slate-500">{aiError ?? 'matching & mémoire'}</p>
             </div>
             <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-4 shadow-inner shadow-black/30">
               <p className="text-xs uppercase tracking-wide text-slate-400">Tokens</p>
               <p className="mt-2 text-2xl font-semibold">
-                {usersLoading ? "…" : totalTokens.toLocaleString("fr-FR")}
+                {usersLoading ? '…' : totalTokens.toLocaleString('fr-FR')}
               </p>
               <p className="text-xs text-slate-500">
-                Moyenne :{" "}
-                {usersLoading ? "…" : `${averageTokens.toLocaleString("fr-FR")} tokens`}
+                Moyenne : {usersLoading ? '…' : `${averageTokens.toLocaleString('fr-FR')} tokens`}
               </p>
             </div>
           </div>
         </HeroHeader>
 
-                <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6">
             <UsersSection
               usersLoading={usersLoading}
@@ -1344,26 +1295,23 @@ export default function AdminDashboard() {
               s’abonner en temps réel et gérer les états <code>loading</code>/<code>error</code>.
             </li>
             <li>
-              3. Ajouter des cards ou listes dans la grille principale, en utilisant les
-              helpers <code>formatDate</code>, <code>formatUserLabel</code> et les buckets de statut.
+              3. Ajouter des cards ou listes dans la grille principale, en utilisant les helpers{' '}
+              <code>formatDate</code>, <code>formatUserLabel</code> et les buckets de statut.
             </li>
           </ul>
           <p className="mt-4 text-xs text-slate-500">
-            Exemple : pour intégrer les conversations push, fetchez la collection, affichez un badge de statut,
-            et enrichissez le tableau avec l’IA associée (grâce au lookup <code>aiLookup</code>).
+            Exemple : pour intégrer les conversations push, fetchez la collection, affichez un badge
+            de statut, et enrichissez le tableau avec l’IA associée (grâce au lookup{' '}
+            <code>aiLookup</code>).
           </p>
         </section>
       </div>
       {closeConversationDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4">
           <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-slate-900/95 p-6 text-slate-100 shadow-2xl">
-            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">
-              Confirmation
-            </p>
+            <p className="text-[11px] uppercase tracking-[0.2em] text-slate-400">Confirmation</p>
             <h3 className="mt-2 text-lg font-semibold">Fermer la conversation ?</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              {closeConversationDialog.label}
-            </p>
+            <p className="mt-1 text-sm text-slate-400">{closeConversationDialog.label}</p>
             <div className="mt-5 flex items-center justify-end gap-2">
               <button
                 type="button"

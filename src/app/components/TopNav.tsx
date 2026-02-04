@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth, fetchUtilisateurByIdRealTime, signOutUser } from "../indexFirebase";
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, fetchUtilisateurByIdRealTime, signOutUser } from '../indexFirebase';
 
 const isActivePath = (pathname: string, href: string, exact?: boolean) => {
   if (exact) {
@@ -14,7 +14,7 @@ const isActivePath = (pathname: string, href: string, exact?: boolean) => {
 };
 
 export default function TopNav() {
-  const pathname = usePathname() ?? "";
+  const pathname = usePathname() ?? '';
   const [userId, setUserId] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [signOutLoading, setSignOutLoading] = useState(false);
@@ -41,11 +41,15 @@ export default function TopNav() {
     const unsubscribe = fetchUtilisateurByIdRealTime(
       userId,
       (data: unknown) => {
-        setRole(typeof (data as { role?: string })?.role === "string" ? (data as { role: string }).role : null);
+        setRole(
+          typeof (data as { role?: string })?.role === 'string'
+            ? (data as { role: string }).role
+            : null,
+        );
       },
       () => {
         setRole(null);
-      }
+      },
     );
 
     return () => unsubscribe?.();
@@ -61,26 +65,26 @@ export default function TopNav() {
   };
 
   const navItems = useMemo(() => {
-    const normalizedRole = role === "prestataire" ? "client" : role;
-    if (normalizedRole === "admin") {
+    const normalizedRole = role === 'prestataire' ? 'client' : role;
+    if (normalizedRole === 'admin') {
       return [
-        { href: "/", label: "Dashboard", exact: true },
-        { href: "/admin/conversations", label: "Conversations" },
-        { href: "/demandes/prestataire", label: "Demandes admin" },
-        { href: "/admin/ia", label: "Validation IA" },
-        { href: "/admin/tokens", label: "Tarifs tokens" },
+        { href: '/', label: 'Dashboard', exact: true },
+        { href: '/admin/conversations', label: 'Conversations' },
+        { href: '/demandes/prestataire', label: 'Demandes admin' },
+        { href: '/admin/ia', label: 'Validation IA' },
+        { href: '/admin/tokens', label: 'Tarifs tokens' },
       ];
     }
-    if (normalizedRole === "client") {
+    if (normalizedRole === 'client') {
       return [
-        { href: "/", label: "Accueil", exact: true },
-        { href: "/ia", label: "Catalogue IA" },
-        { href: "/demandes/client", label: "Demandes client" },
-        { href: "/historique/client", label: "Historique" },
-        { href: "/ia/create", label: "Creer IA" },
+        { href: '/', label: 'Accueil', exact: true },
+        { href: '/ia', label: 'Catalogue IA' },
+        { href: '/demandes/client', label: 'Demandes client' },
+        { href: '/historique/client', label: 'Historique' },
+        { href: '/ia/create', label: 'Creer IA' },
       ];
     }
-    return [{ href: "/auth", label: "Connexion", exact: true }];
+    return [{ href: '/auth', label: 'Connexion', exact: true }];
   }, [role]);
 
   return (
@@ -103,11 +107,11 @@ export default function TopNav() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  aria-current={isActive ? "page" : undefined}
+                  aria-current={isActive ? 'page' : undefined}
                   className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
                     isActive
-                      ? "border-emerald-400/70 bg-emerald-500/20 text-emerald-200"
-                      : "border-slate-800/80 bg-slate-950/40 text-slate-300 hover:border-slate-600"
+                      ? 'border-emerald-400/70 bg-emerald-500/20 text-emerald-200'
+                      : 'border-slate-800/80 bg-slate-950/40 text-slate-300 hover:border-slate-600'
                   }`}
                 >
                   {item.label}
@@ -125,12 +129,10 @@ export default function TopNav() {
               disabled={signOutLoading}
               className="rounded-full border border-slate-800/80 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600 disabled:cursor-not-allowed disabled:text-slate-500"
             >
-              {signOutLoading ? "Deconnexion..." : "Se deconnecter"}
+              {signOutLoading ? 'Deconnexion...' : 'Se deconnecter'}
             </button>
           ) : null}
-          <span className="hidden text-xs text-slate-400 md:block">
-            Modules unifies
-          </span>
+          <span className="hidden text-xs text-slate-400 md:block">Modules unifies</span>
         </div>
       </div>
     </nav>

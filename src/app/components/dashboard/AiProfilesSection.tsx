@@ -1,4 +1,4 @@
-import { AiProfile, Timestamp, Utilisateur } from "../../types/dashboard";
+import { AiProfile, Timestamp, Utilisateur } from '../../types/dashboard';
 
 type AiProfilesSectionProps = {
   aiLoading: boolean;
@@ -23,7 +23,7 @@ export const AiProfilesSection = ({
     <div className="flex items-center justify-between">
       <h2 className="text-xl font-semibold">IA créées par utilisateur</h2>
       <span className="text-xs text-slate-400">
-        {aiLoading ? "Chargement…" : `${topAiProfiles.length} IA`}
+        {aiLoading ? 'Chargement…' : `${topAiProfiles.length} IA`}
       </span>
     </div>
     <div className="mt-5 grid gap-4">
@@ -47,22 +47,22 @@ export const AiProfilesSection = ({
                   {profile.name ?? `IA ${profile.id.slice(0, 5)}`}
                 </p>
                 <span className="text-xs text-slate-500">
-                  {profile.mentality ?? "Mentalité libre"}
+                  {profile.mentality ?? 'Mentalité libre'}
                 </span>
               </div>
               <p className="mt-1 text-xs text-slate-400">
-                Propriétaire : {owner ? formatUserLabel(owner) : "Inconnu"}
+                Propriétaire : {owner ? formatUserLabel(owner) : 'Inconnu'}
               </p>
               <p className="mt-1 text-xs text-slate-400">{formatLookSummary(profile)}</p>
-              <p className="mt-1 text-xs text-slate-400">
-                Voix : {profile.voice ?? "Non définie"}
-              </p>
+              <p className="mt-1 text-xs text-slate-400">Voix : {profile.voice ?? 'Non définie'}</p>
               <p className="mt-2 text-xs text-slate-500">
                 {profile.tokensSpent
-                  ? `${profile.tokensSpent.toLocaleString("fr-FR")} tokens dépensés`
-                  : "Aucune dépense enregistrée"}
+                  ? `${profile.tokensSpent.toLocaleString('fr-FR')} tokens dépensés`
+                  : 'Aucune dépense enregistrée'}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Créée le {formatDate(profile.createdAt)}</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Créée le {formatDate(profile.createdAt)}
+              </p>
             </div>
           );
         })

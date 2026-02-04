@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
 import {
   auth,
   fetchAiProfilesRealTime,
@@ -12,8 +12,8 @@ import {
   signOutUser,
   deleteAiProfileAndConversations,
   updateAiProfileStatus,
-} from "../../indexFirebase";
-import { formatLookSummary } from "../../ia/aiOptions";
+} from '../../indexFirebase';
+import { formatLookSummary } from '../../ia/aiOptions';
 
 type Timestamp = {
   seconds?: number;
@@ -65,51 +65,51 @@ type AiProfile = {
 };
 
 const statusLabels: Record<string, string> = {
-  pending: "En attente",
-  active: "Active",
-  suspended: "Suspendue",
-  disabled: "Desactivee",
-  rejected: "Refusee",
+  pending: 'En attente',
+  active: 'Active',
+  suspended: 'Suspendue',
+  disabled: 'Desactivee',
+  rejected: 'Refusee',
 };
 
 const statusStyles: Record<string, string> = {
-  pending: "bg-amber-100/80 text-amber-700 border border-amber-400/70",
-  active: "bg-emerald-100/80 text-emerald-700 border border-emerald-400/70",
-  suspended: "bg-sky-100/80 text-sky-700 border border-sky-400/70",
-  disabled: "bg-slate-100/80 text-slate-700 border border-slate-300/80",
-  rejected: "bg-rose-100/80 text-rose-700 border border-rose-400/70",
+  pending: 'bg-amber-100/80 text-amber-700 border border-amber-400/70',
+  active: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
+  suspended: 'bg-sky-100/80 text-sky-700 border border-sky-400/70',
+  disabled: 'bg-slate-100/80 text-slate-700 border border-slate-300/80',
+  rejected: 'bg-rose-100/80 text-rose-700 border border-rose-400/70',
 };
 
 const normalizeStatus = (status?: string) => {
-  const normalized = status?.toLowerCase() ?? "pending";
-  if (["pending", "active", "suspended", "disabled", "rejected"].includes(normalized)) {
+  const normalized = status?.toLowerCase() ?? 'pending';
+  if (['pending', 'active', 'suspended', 'disabled', 'rejected'].includes(normalized)) {
     return normalized;
   }
-  return "pending";
+  return 'pending';
 };
 
 const formatDate = (value?: Timestamp | string) => {
   if (!value) {
-    return "—";
+    return '—';
   }
-  if (typeof value === "string") {
-    return new Date(value).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'string') {
+    return new Date(value).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  if (typeof value === "object" && value?.seconds) {
-    return new Date(value.seconds * 1000).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'object' && value?.seconds) {
+    return new Date(value.seconds * 1000).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  return "—";
+  return '—';
 };
 
 const formatOwnerLabel = (owner?: Utilisateur) => {
   if (!owner) {
-    return "Inconnu";
+    return 'Inconnu';
   }
   if (owner.pseudo) {
     return owner.pseudo;
@@ -125,9 +125,7 @@ export default function AdminIaPage() {
   const [adminChecking, setAdminChecking] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminError, setAdminError] = useState<string | null>(null);
-  const [adminUser, setAdminUser] = useState<null | { uid: string; mail?: string | null }>(
-    null
-  );
+  const [adminUser, setAdminUser] = useState<null | { uid: string; mail?: string | null }>(null);
 
   const [users, setUsers] = useState<Utilisateur[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
@@ -139,7 +137,7 @@ export default function AdminIaPage() {
 
   const [aiAction, setAiAction] = useState<{
     id: string;
-    type: "approve" | "reject" | "delete";
+    type: 'approve' | 'reject' | 'delete';
   } | null>(null);
   const [aiActionError, setAiActionError] = useState<string | null>(null);
   const [aiActionSuccess, setAiActionSuccess] = useState<string | null>(null);
@@ -153,25 +151,25 @@ export default function AdminIaPage() {
         setAdminUser(null);
         setIsAdmin(false);
         setAdminChecking(false);
-        router.replace("/auth");
+        router.replace('/auth');
         return;
       }
 
       setAdminUser({ uid: user.uid, mail: user.email });
 
       try {
-        const profile = await fetchUtilisateurById(user.uid) as { role?: string } | null;
-        if (profile?.role === "admin") {
+        const profile = (await fetchUtilisateurById(user.uid)) as { role?: string } | null;
+        if (profile?.role === 'admin') {
           setIsAdmin(true);
           setAdminError(null);
         } else {
           setIsAdmin(false);
-          setAdminError("Acces reserve aux admins.");
+          setAdminError('Acces reserve aux admins.');
         }
       } catch (error) {
-        console.error("Erreur lors de la verification du role admin", error);
+        console.error('Erreur lors de la verification du role admin', error);
         setIsAdmin(false);
-        setAdminError("Impossible de verifier le role admin.");
+        setAdminError('Impossible de verifier le role admin.');
       } finally {
         setAdminChecking(false);
       }
@@ -192,9 +190,9 @@ export default function AdminIaPage() {
         setUsersError(null);
       },
       () => {
-        setUsersError("Impossible de recuperer les utilisateurs.");
+        setUsersError('Impossible de recuperer les utilisateurs.');
         setUsersLoading(false);
-      }
+      },
     );
     const unsubAiProfiles = fetchAiProfilesRealTime(
       (data: unknown) => {
@@ -203,9 +201,9 @@ export default function AdminIaPage() {
         setAiError(null);
       },
       () => {
-        setAiError("Impossible de recuperer les IA.");
+        setAiError('Impossible de recuperer les IA.');
         setAiLoading(false);
-      }
+      },
     );
 
     return () => {
@@ -226,41 +224,38 @@ export default function AdminIaPage() {
     () =>
       [...aiProfiles]
         .filter((profile) => {
-          const normalized = (profile.status ?? "").toLowerCase();
-          return !normalized || normalized === "pending";
+          const normalized = (profile.status ?? '').toLowerCase();
+          return !normalized || normalized === 'pending';
         })
         .sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)),
-    [aiProfiles]
+    [aiProfiles],
   );
 
   const allAiProfiles = useMemo(
-    () =>
-      [...aiProfiles].sort(
-        (a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0)
-      ),
-    [aiProfiles]
+    () => [...aiProfiles].sort((a, b) => (b.updatedAt?.seconds ?? 0) - (a.updatedAt?.seconds ?? 0)),
+    [aiProfiles],
   );
 
   const triggerAvatarGeneration = async (profileId: string) => {
-    const response = await fetch("/api/ai/image", {
-      method: "POST",
+    const response = await fetch('/api/ai/image', {
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
       },
       keepalive: true,
       body: JSON.stringify({
         aiId: profileId,
-        mode: "base",
+        mode: 'base',
       }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const errorMessage =
-        typeof data?.error === "string" ? data.error : "Erreur generation avatar IA.";
+        typeof data?.error === 'string' ? data.error : 'Erreur generation avatar IA.';
       throw new Error(errorMessage);
     }
-    const imageUrl = typeof data?.imageUrl === "string" ? data.imageUrl.trim() : "";
-    const updateError = typeof data?.updateError === "string" ? data.updateError : null;
+    const imageUrl = typeof data?.imageUrl === 'string' ? data.imageUrl.trim() : '';
+    const updateError = typeof data?.updateError === 'string' ? data.updateError : null;
     return {
       imageUrl: imageUrl || null,
       updateError,
@@ -271,7 +266,7 @@ export default function AdminIaPage() {
     setAiActionError(null);
     setAiActionSuccess(null);
     setAiActionImageUrl(null);
-    setAiAction({ id: profileId, type: "approve" });
+    setAiAction({ id: profileId, type: 'approve' });
 
     try {
       const targetProfile = aiProfiles.find((profile) => profile.id === profileId);
@@ -279,7 +274,7 @@ export default function AdminIaPage() {
 
       await updateAiProfileStatus({
         profileId,
-        status: "active",
+        status: 'active',
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
@@ -288,13 +283,13 @@ export default function AdminIaPage() {
         const { imageUrl: generatedImageUrl, updateError } =
           await triggerAvatarGeneration(profileId);
         if (!generatedImageUrl) {
-          throw new Error("Avatar indisponible.");
+          throw new Error('Avatar indisponible.');
         }
         setAiActionImageUrl(generatedImageUrl);
         setAiActionSuccess(
           updateError
-            ? "IA validee. Avatar genere mais la mise a jour Firestore a echoue."
-            : "IA validee. Avatar genere."
+            ? 'IA validee. Avatar genere mais la mise a jour Firestore a echoue.'
+            : 'IA validee. Avatar genere.',
         );
         if (updateError) {
           setAiActionError(updateError);
@@ -302,14 +297,14 @@ export default function AdminIaPage() {
         return;
       }
       const existingImageUrl =
-        typeof targetProfile?.imageUrl === "string" ? targetProfile.imageUrl.trim() : "";
+        typeof targetProfile?.imageUrl === 'string' ? targetProfile.imageUrl.trim() : '';
       if (existingImageUrl) {
         setAiActionImageUrl(existingImageUrl);
       }
-      setAiActionSuccess("IA validee.");
+      setAiActionSuccess('IA validee.');
     } catch (error) {
-      console.error("Erreur lors de la validation IA", error);
-      const message = error instanceof Error ? error.message : "Impossible de valider l IA.";
+      console.error('Erreur lors de la validation IA', error);
+      const message = error instanceof Error ? error.message : 'Impossible de valider l IA.';
       setAiActionError(message);
     } finally {
       setAiAction(null);
@@ -317,27 +312,27 @@ export default function AdminIaPage() {
   };
 
   const handleRejectAi = async (profileId: string) => {
-    const confirmed = window.confirm("Refuser cette IA ?");
+    const confirmed = window.confirm('Refuser cette IA ?');
     if (!confirmed) {
       return;
     }
 
     setAiActionError(null);
     setAiActionSuccess(null);
-    setAiAction({ id: profileId, type: "reject" });
+    setAiAction({ id: profileId, type: 'reject' });
 
     try {
       await updateAiProfileStatus({
         profileId,
-        status: "rejected",
+        status: 'rejected',
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
       });
-      setAiActionSuccess("IA refusee.");
+      setAiActionSuccess('IA refusee.');
     } catch (error) {
-      console.error("Erreur lors du refus IA", error);
-      setAiActionError("Impossible de refuser l IA.");
+      console.error('Erreur lors du refus IA', error);
+      setAiActionError('Impossible de refuser l IA.');
     } finally {
       setAiAction(null);
     }
@@ -345,7 +340,7 @@ export default function AdminIaPage() {
 
   const handleDeleteAi = async (profileId: string) => {
     const confirmed = window.confirm(
-      "Supprimer cette IA ? Les conversations et messages lies seront aussi supprimes."
+      'Supprimer cette IA ? Les conversations et messages lies seront aussi supprimes.',
     );
     if (!confirmed) {
       return;
@@ -353,7 +348,7 @@ export default function AdminIaPage() {
 
     setAiActionError(null);
     setAiActionSuccess(null);
-    setAiAction({ id: profileId, type: "delete" });
+    setAiAction({ id: profileId, type: 'delete' });
 
     try {
       await deleteAiProfileAndConversations({
@@ -361,10 +356,10 @@ export default function AdminIaPage() {
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
       });
-      setAiActionSuccess("IA supprimee avec ses conversations.");
+      setAiActionSuccess('IA supprimee avec ses conversations.');
     } catch (error) {
-      console.error("Erreur lors de la suppression IA", error);
-      setAiActionError("Impossible de supprimer l IA ou ses conversations.");
+      console.error('Erreur lors de la suppression IA', error);
+      setAiActionError('Impossible de supprimer l IA ou ses conversations.');
     } finally {
       setAiAction(null);
     }
@@ -375,10 +370,10 @@ export default function AdminIaPage() {
     setSignOutLoading(true);
     try {
       await signOutUser();
-      router.replace("/auth");
+      router.replace('/auth');
     } catch (error) {
-      console.error("Erreur de deconnexion", error);
-      setSignOutError("Impossible de se deconnecter.");
+      console.error('Erreur de deconnexion', error);
+      setSignOutError('Impossible de se deconnecter.');
     } finally {
       setSignOutLoading(false);
     }
@@ -399,9 +394,7 @@ export default function AdminIaPage() {
       <div className="min-h-screen bg-slate-950 text-slate-100">
         <div className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-6 py-12">
           <div className="w-full max-w-lg space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-2xl">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-              Acces refuse
-            </p>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Acces refuse</p>
             <h1 className="text-2xl font-semibold">Panel admin uniquement</h1>
             <p className="text-sm text-slate-400">
               {adminError ?? "Ce compte n'a pas les droits admin."}
@@ -412,11 +405,9 @@ export default function AdminIaPage() {
               disabled={signOutLoading}
               className="w-full rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
             >
-              {signOutLoading ? "Deconnexion..." : "Se deconnecter"}
+              {signOutLoading ? 'Deconnexion...' : 'Se deconnecter'}
             </button>
-            {signOutError && (
-              <p className="text-xs text-rose-300">{signOutError}</p>
-            )}
+            {signOutError && <p className="text-xs text-rose-300">{signOutError}</p>}
           </div>
         </div>
       </div>
@@ -435,7 +426,7 @@ export default function AdminIaPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-            <span>{adminUser?.mail ?? "Compte admin"}</span>
+            <span>{adminUser?.mail ?? 'Compte admin'}</span>
             <Link
               href="/"
               className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
@@ -455,7 +446,7 @@ export default function AdminIaPage() {
                 </p>
               </div>
               <span className="text-xs text-slate-400">
-                {aiLoading ? "Chargement…" : `${pendingAiProfiles.length} en attente`}
+                {aiLoading ? 'Chargement…' : `${pendingAiProfiles.length} en attente`}
               </span>
             </div>
             {(aiActionError || aiActionSuccess) && (
@@ -464,7 +455,7 @@ export default function AdminIaPage() {
                 {aiActionSuccess && <p className="text-emerald-300">{aiActionSuccess}</p>}
                 {aiActionImageUrl && (
                   <p className="text-emerald-200">
-                    Avatar URL:{" "}
+                    Avatar URL:{' '}
                     <a
                       href={aiActionImageUrl}
                       target="_blank"
@@ -488,14 +479,12 @@ export default function AdminIaPage() {
                 pendingAiProfiles.map((profile) => {
                   const owner = profile.ownerId ? usersById[profile.ownerId] : undefined;
                   const isBusy = aiAction?.id === profile.id;
-                  const warningCount =
-                    profile.safetyWarnings?.length ?? profile.warningCount ?? 0;
-                  const warningNote =
-                    profile.ownerNotification ?? profile.statusNote ?? undefined;
+                  const warningCount = profile.safetyWarnings?.length ?? profile.warningCount ?? 0;
+                  const warningNote = profile.ownerNotification ?? profile.statusNote ?? undefined;
                   const hasWarnings = warningCount > 0 || Boolean(warningNote);
                   const warningLabel =
                     warningCount === 1
-                      ? "1 avertissement de sécurité"
+                      ? '1 avertissement de sécurité'
                       : `${warningCount} avertissements de sécurité`;
 
                   return (
@@ -506,7 +495,7 @@ export default function AdminIaPage() {
                       {hasWarnings && (
                         <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-200">
                           ⚠️ {warningLabel}
-                          {warningNote ? ` · ${warningNote}` : ""}
+                          {warningNote ? ` · ${warningNote}` : ''}
                         </p>
                       )}
                       <div className="flex items-center justify-between">
@@ -521,7 +510,7 @@ export default function AdminIaPage() {
                         Proprietaire : {formatOwnerLabel(owner)}
                       </p>
                       <p className="mt-1 text-xs text-slate-400">
-                        {profile.mentality ?? "Mentalite libre"} · {formatLookSummary(profile.look)}
+                        {profile.mentality ?? 'Mentalite libre'} · {formatLookSummary(profile.look)}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         Creee le {formatDate(profile.createdAt)}
@@ -533,7 +522,7 @@ export default function AdminIaPage() {
                           disabled={isBusy}
                           className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
                         >
-                          {isBusy && aiAction?.type === "approve" ? "Validation..." : "Valider"}
+                          {isBusy && aiAction?.type === 'approve' ? 'Validation...' : 'Valider'}
                         </button>
                         <button
                           type="button"
@@ -541,7 +530,7 @@ export default function AdminIaPage() {
                           disabled={isBusy}
                           className="rounded-lg border border-rose-400/60 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed"
                         >
-                          {isBusy && aiAction?.type === "reject" ? "Refus..." : "Refuser"}
+                          {isBusy && aiAction?.type === 'reject' ? 'Refus...' : 'Refuser'}
                         </button>
                         <button
                           type="button"
@@ -549,9 +538,7 @@ export default function AdminIaPage() {
                           disabled={isBusy}
                           className="rounded-lg border border-rose-500/70 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-rose-100 transition hover:border-rose-400 disabled:cursor-not-allowed"
                         >
-                          {isBusy && aiAction?.type === "delete"
-                            ? "Suppression..."
-                            : "Supprimer"}
+                          {isBusy && aiAction?.type === 'delete' ? 'Suppression...' : 'Supprimer'}
                         </button>
                       </div>
                     </div>
@@ -565,18 +552,14 @@ export default function AdminIaPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-semibold">Toutes les IA</h2>
-                <p className="text-sm text-slate-400">
-                  Vue globale des IA et de leur statut.
-                </p>
+                <p className="text-sm text-slate-400">Vue globale des IA et de leur statut.</p>
               </div>
               <span className="text-xs text-slate-400">
-                {aiLoading ? "Chargement…" : `${allAiProfiles.length} IA`}
+                {aiLoading ? 'Chargement…' : `${allAiProfiles.length} IA`}
               </span>
             </div>
             {(usersError || aiError) && (
-              <p className="mt-3 text-sm text-rose-300">
-                {usersError ?? aiError}
-              </p>
+              <p className="mt-3 text-sm text-rose-300">{usersError ?? aiError}</p>
             )}
             <div className="mt-5 space-y-3">
               {aiLoading || usersLoading ? (
@@ -588,16 +571,14 @@ export default function AdminIaPage() {
                   const owner = profile.ownerId ? usersById[profile.ownerId] : undefined;
                   const statusKey = normalizeStatus(profile.status);
                   const isBusy = aiAction?.id === profile.id;
-                  const isPending = statusKey === "pending";
-                  const canActivate = statusKey !== "active";
-                  const warningCount =
-                    profile.safetyWarnings?.length ?? profile.warningCount ?? 0;
-                  const warningNote =
-                    profile.ownerNotification ?? profile.statusNote ?? undefined;
+                  const isPending = statusKey === 'pending';
+                  const canActivate = statusKey !== 'active';
+                  const warningCount = profile.safetyWarnings?.length ?? profile.warningCount ?? 0;
+                  const warningNote = profile.ownerNotification ?? profile.statusNote ?? undefined;
                   const hasWarnings = warningCount > 0 || Boolean(warningNote);
                   const warningLabel =
                     warningCount === 1
-                      ? "1 avertissement de sécurité"
+                      ? '1 avertissement de sécurité'
                       : `${warningCount} avertissements de sécurité`;
                   return (
                     <div
@@ -607,7 +588,7 @@ export default function AdminIaPage() {
                       {hasWarnings && (
                         <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-200">
                           ⚠️ {warningLabel}
-                          {warningNote ? ` · ${warningNote}` : ""}
+                          {warningNote ? ` · ${warningNote}` : ''}
                         </p>
                       )}
                       <div className="flex items-center justify-between">
@@ -624,7 +605,7 @@ export default function AdminIaPage() {
                         Proprietaire : {formatOwnerLabel(owner)}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        {profile.mentality ?? "Mentalite libre"} · {formatLookSummary(profile.look)}
+                        {profile.mentality ?? 'Mentalite libre'} · {formatLookSummary(profile.look)}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         Maj {formatDate(profile.updatedAt)}
@@ -637,11 +618,11 @@ export default function AdminIaPage() {
                             disabled={isBusy}
                             className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
                           >
-                            {isBusy && aiAction?.type === "approve"
-                              ? "Validation..."
+                            {isBusy && aiAction?.type === 'approve'
+                              ? 'Validation...'
                               : isPending
-                                ? "Valider"
-                                : "Activer"}
+                                ? 'Valider'
+                                : 'Activer'}
                           </button>
                         )}
                         {isPending && (
@@ -651,7 +632,7 @@ export default function AdminIaPage() {
                             disabled={isBusy}
                             className="rounded-lg border border-rose-400/60 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed"
                           >
-                            {isBusy && aiAction?.type === "reject" ? "Refus..." : "Refuser"}
+                            {isBusy && aiAction?.type === 'reject' ? 'Refus...' : 'Refuser'}
                           </button>
                         )}
                         <button
@@ -660,9 +641,7 @@ export default function AdminIaPage() {
                           disabled={isBusy}
                           className="rounded-lg border border-rose-500/70 bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-rose-100 transition hover:border-rose-400 disabled:cursor-not-allowed"
                         >
-                          {isBusy && aiAction?.type === "delete"
-                            ? "Suppression..."
-                            : "Supprimer"}
+                          {isBusy && aiAction?.type === 'delete' ? 'Suppression...' : 'Supprimer'}
                         </button>
                       </div>
                     </div>

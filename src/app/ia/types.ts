@@ -39,8 +39,8 @@ export type AiProfile = {
   hiddenFromCatalogue?: boolean;
   safetyWarnings?: string[];
   warningCount?: number;
-  visibility?: "public" | "private";
-  accessType?: "free" | "paid";
+  visibility?: 'public' | 'private';
+  accessType?: 'free' | 'paid';
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
   [key: string]: unknown;

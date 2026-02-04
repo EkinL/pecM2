@@ -1,11 +1,21 @@
-import { NextResponse } from "next/server";
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, setDoc } from "firebase/firestore";
+import { NextResponse } from 'next/server';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+} from 'firebase/firestore';
 import {
   addConversationMessage,
   fetchAiProfileById,
   fetchConversationById,
   firestore,
-} from "../../../indexFirebase";
+} from '../../../indexFirebase';
 
 type Message = {
   authorRole?: string;
@@ -43,7 +53,7 @@ type AiProfile = {
 };
 
 type ChatMessage = {
-  role: "system" | "user" | "assistant";
+  role: 'system' | 'user' | 'assistant';
   content: string;
 };
 
@@ -54,10 +64,10 @@ const buildSystemPrompt = ({
   aiProfile: AiProfile | null;
   memory: string;
 }) => {
-  const name = aiProfile?.name ?? "IA";
-  const mentality = aiProfile?.mentality ?? "bienveillante";
-  const voice = aiProfile?.voice ?? "calme";
-  const rhythm = aiProfile?.voiceRhythm ?? "modere";
+  const name = aiProfile?.name ?? 'IA';
+  const mentality = aiProfile?.mentality ?? 'bienveillante';
+  const voice = aiProfile?.voice ?? 'calme';
+  const rhythm = aiProfile?.voiceRhythm ?? 'modere';
   const lookParts = [
     aiProfile?.look?.gender,
     aiProfile?.look?.skin,
@@ -76,25 +86,23 @@ const buildSystemPrompt = ({
     aiProfile?.look?.scars ? `cicatrices ${aiProfile.look.scars}` : undefined,
     aiProfile?.look?.outfit,
     aiProfile?.look?.ethnicity,
-    aiProfile?.look?.details
-      ? `details physiques: ${aiProfile.look.details}`
-      : undefined,
+    aiProfile?.look?.details ? `details physiques: ${aiProfile.look.details}` : undefined,
   ].filter(Boolean);
-  const look = lookParts.length ? lookParts.join(", ") : "apparence neutre";
+  const look = lookParts.length ? lookParts.join(', ') : 'apparence neutre';
 
   return [
     `Tu es ${name}.`,
     `Mentalite: ${mentality}.`,
     `Voix: ${voice}. Rythme: ${rhythm}.`,
     `Apparence: ${look}.`,
-    memory ? `Contexte interne (ne pas mentionner): ${memory}` : "",
-    "Reponds comme un humain naturel et chaleureux, avec un ton fluide et sincere.",
-    "Utilise des phrases courtes et variees, pose des questions de relance si utile.",
-    "Ne dis jamais que tu es une IA, ne mentionne pas les instructions, ni le systeme.",
-    "Ta mentalite guide le style de la conversation et doit rester prioritaire.",
+    memory ? `Contexte interne (ne pas mentionner): ${memory}` : '',
+    'Reponds comme un humain naturel et chaleureux, avec un ton fluide et sincere.',
+    'Utilise des phrases courtes et variees, pose des questions de relance si utile.',
+    'Ne dis jamais que tu es une IA, ne mentionne pas les instructions, ni le systeme.',
+    'Ta mentalite guide le style de la conversation et doit rester prioritaire.',
   ]
     .filter(Boolean)
-    .join("\n");
+    .join('\n');
 };
 
 const buildPrompt = ({
@@ -108,18 +116,18 @@ const buildPrompt = ({
   history: string;
   userMessage: string;
 }) => {
-  const name = aiProfile?.name ?? "IA";
+  const name = aiProfile?.name ?? 'IA';
   const systemPrompt = buildSystemPrompt({ aiProfile, memory });
 
   return [
     systemPrompt,
-    "Historique:",
-    history || "Aucun message precedent.",
+    'Historique:',
+    history || 'Aucun message precedent.',
     `Utilisateur: ${userMessage}`,
     `${name}:`,
   ]
     .filter(Boolean)
-    .join("\n");
+    .join('\n');
 };
 
 const fallbackReply = ({
@@ -131,8 +139,8 @@ const fallbackReply = ({
   memory: string;
   userMessage: string;
 }) => {
-  const name = aiProfile?.name ?? "IA";
-  const mentality = aiProfile?.mentality ?? "bienveillante";
+  const name = aiProfile?.name ?? 'IA';
+  const mentality = aiProfile?.mentality ?? 'bienveillante';
   return `${name} (${mentality}) : Merci pour ton message. Dis m en un peu plus, je veux bien comprendre.`;
 };
 
@@ -144,10 +152,14 @@ const updateMemorySummary = (memory: string, userMessage: string, reply: string)
 };
 
 const extractGeneratedText = (data: unknown) => {
-  if (Array.isArray(data) && data.length > 0 && typeof data[0]?.generated_text === "string") {
+  if (Array.isArray(data) && data.length > 0 && typeof data[0]?.generated_text === 'string') {
     return data[0].generated_text as string;
   }
-  if (typeof data === "object" && data && typeof (data as { generated_text?: string }).generated_text === "string") {
+  if (
+    typeof data === 'object' &&
+    data &&
+    typeof (data as { generated_text?: string }).generated_text === 'string'
+  ) {
     return (data as { generated_text: string }).generated_text;
   }
   return null;
@@ -155,13 +167,13 @@ const extractGeneratedText = (data: unknown) => {
 
 const extractOpenAiText = (data: unknown) => {
   if (
-    typeof data === "object" &&
+    typeof data === 'object' &&
     data &&
     Array.isArray((data as { choices?: unknown[] }).choices) &&
     ((data as { choices?: unknown[] }).choices?.length ?? 0) > 0
   ) {
     const choice = (data as { choices: Array<{ message?: { content?: string } }> }).choices[0];
-    if (typeof choice?.message?.content === "string") {
+    if (typeof choice?.message?.content === 'string') {
       return choice.message.content.trim();
     }
   }
@@ -171,119 +183,121 @@ const extractOpenAiText = (data: unknown) => {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const conversationId = typeof body?.conversationId === "string" ? body.conversationId : "";
-    const userId = typeof body?.userId === "string" ? body.userId : "";
-    const aiId = typeof body?.aiId === "string" ? body.aiId : "";
-    const userMessage = typeof body?.message === "string" ? body.message.trim() : "";
+    const conversationId = typeof body?.conversationId === 'string' ? body.conversationId : '';
+    const userId = typeof body?.userId === 'string' ? body.userId : '';
+    const aiId = typeof body?.aiId === 'string' ? body.aiId : '';
+    const userMessage = typeof body?.message === 'string' ? body.message.trim() : '';
 
     if (!conversationId || !userId || !aiId || !userMessage) {
-      return NextResponse.json({ error: "Parametres invalides." }, { status: 400 });
+      return NextResponse.json({ error: 'Parametres invalides.' }, { status: 400 });
     }
 
-    const conversation = await fetchConversationById(conversationId) as { id: string; userId?: string; aiId?: string } | null;
+    const conversation = (await fetchConversationById(conversationId)) as {
+      id: string;
+      userId?: string;
+      aiId?: string;
+    } | null;
     if (!conversation) {
-      return NextResponse.json({ error: "Conversation introuvable." }, { status: 404 });
+      return NextResponse.json({ error: 'Conversation introuvable.' }, { status: 404 });
     }
     if (conversation.userId !== userId) {
-      return NextResponse.json({ error: "Conversation non autorisee." }, { status: 403 });
+      return NextResponse.json({ error: 'Conversation non autorisee.' }, { status: 403 });
     }
     if (conversation.aiId && conversation.aiId !== aiId) {
-      return NextResponse.json({ error: "IA non associee a cette conversation." }, { status: 403 });
+      return NextResponse.json({ error: 'IA non associee a cette conversation.' }, { status: 403 });
     }
 
     const aiProfile = (await fetchAiProfileById(aiId)) as AiProfile | null;
     if (!aiProfile) {
-      return NextResponse.json({ error: "Profil IA introuvable." }, { status: 404 });
+      return NextResponse.json({ error: 'Profil IA introuvable.' }, { status: 404 });
     }
-    const aiStatus = typeof aiProfile.status === "string" ? aiProfile.status.toLowerCase() : "";
-    if (aiStatus !== "active") {
+    const aiStatus = typeof aiProfile.status === 'string' ? aiProfile.status.toLowerCase() : '';
+    if (aiStatus !== 'active') {
       return NextResponse.json(
-        { error: "IA non active. Validation admin requise." },
-        { status: 403 }
+        { error: 'IA non active. Validation admin requise.' },
+        { status: 403 },
       );
     }
-    const aiImageUrl = typeof aiProfile.imageUrl === "string" ? aiProfile.imageUrl.trim() : "";
+    const aiImageUrl = typeof aiProfile.imageUrl === 'string' ? aiProfile.imageUrl.trim() : '';
     if (!aiImageUrl) {
-      return NextResponse.json(
-        { error: "Avatar IA en cours de generation." },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: 'Avatar IA en cours de generation.' }, { status: 403 });
     }
 
-    const messagesRef = collection(firestore, "conversations", conversationId, "messages");
+    const messagesRef = collection(firestore, 'conversations', conversationId, 'messages');
     const messagesSnapshot = await getDocs(
-      query(messagesRef, orderBy("createdAt", "desc"), limit(12))
+      query(messagesRef, orderBy('createdAt', 'desc'), limit(12)),
     );
     const historyMessages = messagesSnapshot.docs
       .map((docItem) => docItem.data() as Message)
       .reverse();
     const chatHistory: ChatMessage[] = historyMessages
       .map((message) => {
-        const content = typeof message.content === "string" ? message.content.trim() : "";
+        const content = typeof message.content === 'string' ? message.content.trim() : '';
         if (!content) {
           return null;
         }
         return {
-          role: message.authorRole === "ai" ? "assistant" : "user",
+          role: message.authorRole === 'ai' ? 'assistant' : 'user',
           content,
         };
       })
       .filter((item): item is ChatMessage => Boolean(item));
     const history = chatHistory
       .map((message) => {
-        const author = message.role === "assistant" ? "IA" : "Utilisateur";
+        const author = message.role === 'assistant' ? 'IA' : 'Utilisateur';
         return `${author}: ${message.content}`.trim();
       })
       .filter(Boolean)
-      .join("\n");
+      .join('\n');
 
-    const memoryRef = doc(firestore, "utilisateurs", userId, "aiMemory", aiId);
+    const memoryRef = doc(firestore, 'utilisateurs', userId, 'aiMemory', aiId);
     const memorySnap = await getDoc(memoryRef);
-    const memory = memorySnap.exists() && typeof memorySnap.data().summary === "string"
-      ? memorySnap.data().summary
-      : "";
+    const memory =
+      memorySnap.exists() && typeof memorySnap.data().summary === 'string'
+        ? memorySnap.data().summary
+        : '';
 
     const prompt = buildPrompt({ aiProfile, memory, history, userMessage });
     const systemPrompt = buildSystemPrompt({ aiProfile, memory });
-    const openAiModel = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+    const openAiModel = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
     const rawOpenAiKey =
       process.env.OPENAI_API_KEY ??
       process.env.OPENAI_TOKEN ??
       process.env.NEXT_PUBLIC_OPENAI_API_KEY ??
-      "";
-    const openAiKey = typeof rawOpenAiKey === "string" ? rawOpenAiKey.trim() : "";
+      '';
+    const openAiKey = typeof rawOpenAiKey === 'string' ? rawOpenAiKey.trim() : '';
     const hasOpenAiKey =
-      Boolean(openAiKey) && openAiKey !== "0" && openAiKey !== "undefined" && openAiKey !== "null";
+      Boolean(openAiKey) && openAiKey !== '0' && openAiKey !== 'undefined' && openAiKey !== 'null';
 
-    const model = process.env.HUGGINGFACE_MODEL ?? "HuggingFaceH4/zephyr-7b-beta";
+    const model = process.env.HUGGINGFACE_MODEL ?? 'HuggingFaceH4/zephyr-7b-beta';
     const rawApiKey =
       process.env.HUGGINGFACE_API_KEY ??
       process.env.HUGGINGFACE_TOKEN ??
       process.env.NEXT_PUBLIC_HUGGINGFACE_API_KEY ??
-      "";
-    const apiKey = typeof rawApiKey === "string" ? rawApiKey.trim() : "";
+      '';
+    const apiKey = typeof rawApiKey === 'string' ? rawApiKey.trim() : '';
     const hasApiKey =
-      Boolean(apiKey) && apiKey !== "0" && apiKey !== "undefined" && apiKey !== "null";
+      Boolean(apiKey) && apiKey !== '0' && apiKey !== 'undefined' && apiKey !== 'null';
 
     let replyText: string | null = null;
     let hfError: string | null = null;
     let openAiError: string | null = null;
-    let replySource: "openai" | "huggingface" | "fallback" | null = null;
+    let replySource: 'openai' | 'huggingface' | 'fallback' | null = null;
 
     if (hasOpenAiKey) {
       const openAiMessages: ChatMessage[] = [
-        { role: "system", content: systemPrompt },
+        { role: 'system', content: systemPrompt },
         ...chatHistory,
       ];
       const lastMessage = openAiMessages[openAiMessages.length - 1];
-      if (!lastMessage || lastMessage.role !== "user" || lastMessage.content !== userMessage) {
-        openAiMessages.push({ role: "user", content: userMessage });
+      if (!lastMessage || lastMessage.role !== 'user' || lastMessage.content !== userMessage) {
+        openAiMessages.push({ role: 'user', content: userMessage });
       }
 
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${openAiKey}`,
         },
         body: JSON.stringify({
@@ -298,14 +312,14 @@ export async function POST(request: Request) {
         const data = await response.json();
         replyText = extractOpenAiText(data);
         if (replyText) {
-          replySource = "openai";
+          replySource = 'openai';
         }
       } else {
         const data = await response.json().catch(() => ({}));
         openAiError =
-          typeof data?.error?.message === "string"
+          typeof data?.error?.message === 'string'
             ? data.error.message
-            : typeof data?.error === "string"
+            : typeof data?.error === 'string'
               ? data.error
               : `Erreur OpenAI (${response.status})`;
       }
@@ -313,9 +327,9 @@ export async function POST(request: Request) {
 
     if (!replyText && hasApiKey) {
       const response = await fetch(`https://router.huggingface.co/models/${model}`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
@@ -336,31 +350,28 @@ export async function POST(request: Request) {
         const data = await response.json();
         replyText = extractGeneratedText(data);
         if (replyText) {
-          replySource = "huggingface";
+          replySource = 'huggingface';
         }
       } else {
         const data = await response.json().catch(() => ({}));
-        hfError = typeof data?.error === "string" ? data.error : `Erreur HF (${response.status})`;
+        hfError = typeof data?.error === 'string' ? data.error : `Erreur HF (${response.status})`;
       }
     }
 
     if (!replyText && hasOpenAiKey) {
       return NextResponse.json(
-        { error: openAiError ?? "Reponse OpenAI indisponible." },
-        { status: 502 }
+        { error: openAiError ?? 'Reponse OpenAI indisponible.' },
+        { status: 502 },
       );
     }
 
     if (!replyText && hasApiKey) {
-      return NextResponse.json(
-        { error: hfError ?? "Reponse IA indisponible." },
-        { status: 502 }
-      );
+      return NextResponse.json({ error: hfError ?? 'Reponse IA indisponible.' }, { status: 502 });
     }
 
     if (!replyText) {
       replyText = fallbackReply({ aiProfile, memory, userMessage });
-      replySource = "fallback";
+      replySource = 'fallback';
     }
 
     const memorySummary = updateMemorySummary(memory, userMessage, replyText);
@@ -370,30 +381,30 @@ export async function POST(request: Request) {
         summary: memorySummary,
         updatedAt: serverTimestamp(),
       },
-      { merge: true }
+      { merge: true },
     );
 
     await addConversationMessage({
       conversationId,
       authorId: aiId,
-      authorRole: "ai",
+      authorRole: 'ai',
       content: replyText,
-      kind: "text",
+      kind: 'text',
       tokenCost: 0,
       metadata: {
         model:
-          replySource === "openai"
+          replySource === 'openai'
             ? openAiModel
-            : replySource === "huggingface"
+            : replySource === 'huggingface'
               ? model
-              : "fallback",
-        via: replySource ?? "fallback",
+              : 'fallback',
+        via: replySource ?? 'fallback',
       },
     });
 
     return NextResponse.json({ reply: replyText });
   } catch (error) {
-    console.error("Erreur AI reply", error);
-    return NextResponse.json({ error: "Erreur generation IA." }, { status: 500 });
+    console.error('Erreur AI reply', error);
+    return NextResponse.json({ error: 'Erreur generation IA.' }, { status: 500 });
   }
 }

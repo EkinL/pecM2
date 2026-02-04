@@ -1,7 +1,7 @@
 'use client';
 
-import { FormEvent, useState } from "react";
-import { addUtilisateur, updateUtilisateur } from "../../indexFirebase";
+import { FormEvent, useState } from 'react';
+import { addUtilisateur, updateUtilisateur } from '../../indexFirebase';
 
 export default function UsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,8 +31,8 @@ export default function UsersPage() {
       form.reset();
       setSuccess('Utilisateur ajouté avec succès.');
     } catch (err) {
-      console.error('Erreur lors de la création de l\'utilisateur', err);
-      setError('Impossible d\'ajouter l\'utilisateur, veuillez réessayer.');
+      console.error("Erreur lors de la création de l'utilisateur", err);
+      setError("Impossible d'ajouter l'utilisateur, veuillez réessayer.");
     } finally {
       setIsSubmitting(false);
     }
@@ -48,7 +48,7 @@ export default function UsersPage() {
     const id = formData.get('id')?.toString().trim();
 
     if (!id) {
-      setError('L\'ID est obligatoire.');
+      setError("L'ID est obligatoire.");
       return;
     }
 
@@ -59,8 +59,8 @@ export default function UsersPage() {
       form.reset();
       setSuccess('Utilisateur modifié avec succès.');
     } catch (err) {
-      console.error('Erreur lors de la modification de l\'utilisateur', err);
-      setError('Impossible de modifier l\'utilisateur, veuillez réessayer.');
+      console.error("Erreur lors de la modification de l'utilisateur", err);
+      setError("Impossible de modifier l'utilisateur, veuillez réessayer.");
     } finally {
       setIsSubmitting(false);
     }

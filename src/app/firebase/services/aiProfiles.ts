@@ -13,10 +13,10 @@ import {
   serverTimestamp,
   where,
   increment,
-} from "firebase/firestore";
-import { auth, firestore } from "../init";
-import { aiEvaluations, adminLogs, conversations, iaProfiles } from "../collections";
-import { deleteConversationWithMessages } from "./conversations";
+} from 'firebase/firestore';
+import { auth, firestore } from '../init';
+import { aiEvaluations, adminLogs, conversations, iaProfiles } from '../collections';
+import { deleteConversationWithMessages } from './conversations';
 import {
   createAdminLogPayload,
   createRealtimeListener,
@@ -28,16 +28,16 @@ import {
   normalizeVisibilityValue,
   omitUndefinedFields,
   sanitizeOptionalString,
-} from "../helpers";
+} from '../helpers';
 
 export const fetchAiProfilesRealTime = (onData: any, onError: any) =>
-  createRealtimeListener(iaProfiles, onData, onError, "profils IA");
+  createRealtimeListener(iaProfiles, onData, onError, 'profils IA');
 
 export const fetchAiProfilesByOwnerRealTime = (ownerId: any, onData: any, onError: any) => {
   try {
-    const normalizedId = normalizeRequiredString(ownerId, "Owner ID");
-    const ref = query(iaProfiles, where("ownerId", "==", normalizedId));
-    return createRealtimeListener(ref, onData, onError, "profils IA owner");
+    const normalizedId = normalizeRequiredString(ownerId, 'Owner ID');
+    const ref = query(iaProfiles, where('ownerId', '==', normalizedId));
+    return createRealtimeListener(ref, onData, onError, 'profils IA owner');
   } catch (err) {
     console.error("Impossible d'écouter les IA de l'auteur", err);
     onError?.(err);
@@ -46,11 +46,11 @@ export const fetchAiProfilesByOwnerRealTime = (ownerId: any, onData: any, onErro
 };
 
 export const fetchAiEvaluationsRealTime = (onData: any, onError: any) =>
-  createRealtimeListener(aiEvaluations, onData, onError, "evaluations IA");
+  createRealtimeListener(aiEvaluations, onData, onError, 'evaluations IA');
 
 export const fetchAiProfileById = async (profileId: any) => {
   try {
-    const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
+    const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
     const snapshot = await getDoc(doc(iaProfiles, normalizedId));
 
     if (!snapshot.exists()) {
@@ -62,16 +62,16 @@ export const fetchAiProfileById = async (profileId: any) => {
       ...snapshot.data(),
     };
   } catch (err) {
-    console.error("Erreur lors de la recuperation du profil IA", err);
+    console.error('Erreur lors de la recuperation du profil IA', err);
     throw err;
   }
 };
 
 export const fetchAiEvaluationsForUserRealTime = (userId: any, onData: any, onError: any) => {
   try {
-    const normalizedId = normalizeRequiredString(userId, "User ID");
-    const ref = query(aiEvaluations, where("userId", "==", normalizedId));
-    return createRealtimeListener(ref, onData, onError, "evaluations IA");
+    const normalizedId = normalizeRequiredString(userId, 'User ID');
+    const ref = query(aiEvaluations, where('userId', '==', normalizedId));
+    return createRealtimeListener(ref, onData, onError, 'evaluations IA');
   } catch (err) {
     console.error("Impossible d'écouter les evaluations IA", err);
     onError?.(err);
@@ -90,35 +90,41 @@ export const addAiProfile = async ({
 }: any = {}) => {
   const currentUser = auth.currentUser;
   if (!currentUser) {
-    throw new Error("Session utilisateur invalide.");
+    throw new Error('Session utilisateur invalide.');
   }
 
   const payload = {
-    ownerId: normalizeRequiredString(currentUser.uid, "Owner ID"),
+    ownerId: normalizeRequiredString(currentUser.uid, 'Owner ID'),
     ownerMail: sanitizeOptionalString(currentUser.email ?? undefined),
     name: sanitizeOptionalString(name),
     mentality: sanitizeOptionalString(mentality),
     voice: sanitizeOptionalString(voice),
     voiceRhythm: sanitizeOptionalString(voiceRhythm),
     look: normalizeOptionalLook(look),
-    visibility: normalizeVisibilityValue(visibility) ?? "public",
-    accessType: normalizeAccessTypeValue(accessType) ?? "free",
+    visibility: normalizeVisibilityValue(visibility) ?? 'public',
+    accessType: normalizeAccessTypeValue(accessType) ?? 'free',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-    status: "pending",
+    status: 'pending',
   };
 
   return addDoc(iaProfiles, omitUndefinedFields(payload));
 };
 
-const allowedStatuses = ["pending", "active", "rejected", "suspended", "disabled"];
+const allowedStatuses = ['pending', 'active', 'rejected', 'suspended', 'disabled'];
 
-export const updateAiProfileStatus = async ({ profileId, status, adminId, adminMail, note }: any) => {
-  const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
-  const normalizedStatus = normalizeRequiredString(status, "Statut");
+export const updateAiProfileStatus = async ({
+  profileId,
+  status,
+  adminId,
+  adminMail,
+  note,
+}: any) => {
+  const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
+  const normalizedStatus = normalizeRequiredString(status, 'Statut');
 
   if (!allowedStatuses.includes(normalizedStatus)) {
-    throw new Error("Statut IA invalide.");
+    throw new Error('Statut IA invalide.');
   }
 
   const docRef = doc(iaProfiles, normalizedId);
@@ -134,8 +140,8 @@ export const updateAiProfileStatus = async ({ profileId, status, adminId, adminM
   await updateDoc(docRef, updatePayload);
 
   const logPayload = createAdminLogPayload({
-    action: "ai_profile_status",
-    targetType: "iaProfile",
+    action: 'ai_profile_status',
+    targetType: 'iaProfile',
     targetId: normalizedId,
     adminId,
     adminMail,
@@ -159,7 +165,7 @@ export const flagAiProfileSafetyViolation = async ({
   adminId,
   adminMail,
 }: any) => {
-  const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
+  const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   const sanitizedWarning =
     sanitizeOptionalString(warning) ??
     "La génération d'image a été rejetée par le système de sécurité.";
@@ -167,7 +173,7 @@ export const flagAiProfileSafetyViolation = async ({
 
   const docRef = doc(iaProfiles, normalizedId);
   const updatePayload = omitUndefinedFields({
-    status: "rejected",
+    status: 'rejected',
     statusNote: sanitizedNote,
     ownerNotification: sanitizedWarning,
     hiddenFromCatalogue: true,
@@ -177,8 +183,8 @@ export const flagAiProfileSafetyViolation = async ({
   });
 
   const logPayload = createAdminLogPayload({
-    action: "ai_profile_safety_violation",
-    targetType: "iaProfile",
+    action: 'ai_profile_safety_violation',
+    targetType: 'iaProfile',
     targetId: normalizedId,
     adminId,
     adminMail,
@@ -195,7 +201,7 @@ export const flagAiProfileSafetyViolation = async ({
 };
 
 export const updateAiProfileDetails = async ({ profileId, updates, adminId, adminMail }: any) => {
-  const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
+  const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   const normalizedUpdates = {
     name: sanitizeOptionalString(updates?.name),
     mentality: sanitizeOptionalString(updates?.mentality),
@@ -213,7 +219,7 @@ export const updateAiProfileDetails = async ({ profileId, updates, adminId, admi
   });
 
   if (Object.keys(updatePayload).length <= 1) {
-    throw new Error("Aucune modification IA.");
+    throw new Error('Aucune modification IA.');
   }
 
   const docRef = doc(iaProfiles, normalizedId);
@@ -222,20 +228,20 @@ export const updateAiProfileDetails = async ({ profileId, updates, adminId, admi
   batch.set(
     doc(adminLogs),
     createAdminLogPayload({
-      action: "ai_profile_update",
-      targetType: "iaProfile",
+      action: 'ai_profile_update',
+      targetType: 'iaProfile',
       targetId: normalizedId,
       adminId,
       adminMail,
       details: omitUndefinedFields(normalizedUpdates),
-    })
+    }),
   );
 
   return batch.commit();
 };
 
 export const updateAiProfileForOwner = async ({ profileId, updates }: any) => {
-  const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
+  const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   const normalizedUpdates = {
     name: sanitizeOptionalString(updates?.name),
     mentality: sanitizeOptionalString(updates?.mentality),
@@ -253,7 +259,7 @@ export const updateAiProfileForOwner = async ({ profileId, updates }: any) => {
   });
 
   if (Object.keys(updatePayload).length <= 1) {
-    throw new Error("Aucune modification IA.");
+    throw new Error('Aucune modification IA.');
   }
 
   const docRef = doc(iaProfiles, normalizedId);
@@ -261,14 +267,14 @@ export const updateAiProfileForOwner = async ({ profileId, updates }: any) => {
 };
 
 export const deleteAiProfile = async ({ profileId, adminId, adminMail }: any) => {
-  const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
+  const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   const docRef = doc(iaProfiles, normalizedId);
 
   await deleteDoc(docRef);
 
   const logPayload = createAdminLogPayload({
-    action: "ai_profile_delete",
-    targetType: "iaProfile",
+    action: 'ai_profile_delete',
+    targetType: 'iaProfile',
     targetId: normalizedId,
     adminId,
     adminMail,
@@ -283,14 +289,12 @@ export const deleteAiProfile = async ({ profileId, adminId, adminMail }: any) =>
 };
 
 export const deleteAiProfileAndConversations = async ({ profileId, adminId, adminMail }: any) => {
-  const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
+  const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   let deletedConversations = 0;
   let deletedMessages = 0;
 
   try {
-    const snapshot = await getDocs(
-      query(conversations, where("aiId", "==", normalizedId))
-    );
+    const snapshot = await getDocs(query(conversations, where('aiId', '==', normalizedId)));
 
     for (const docItem of snapshot.docs) {
       const result = await deleteConversationWithMessages({
@@ -302,15 +306,15 @@ export const deleteAiProfileAndConversations = async ({ profileId, adminId, admi
       deletedMessages += result?.messagesDeleted ?? 0;
     }
   } catch (err) {
-    console.error("Erreur suppression conversations liees a l IA", err);
+    console.error('Erreur suppression conversations liees a l IA', err);
     throw err;
   }
 
   await deleteDoc(doc(iaProfiles, normalizedId));
 
   const logPayload = createAdminLogPayload({
-    action: "ai_profile_delete",
-    targetType: "iaProfile",
+    action: 'ai_profile_delete',
+    targetType: 'iaProfile',
     targetId: normalizedId,
     adminId,
     adminMail,
@@ -330,7 +334,7 @@ export const deleteAiProfileAndConversations = async ({ profileId, adminId, admi
 };
 
 export const resetAiProfile = async ({ profileId }: any) => {
-  const normalizedId = normalizeRequiredString(profileId, "Profil IA ID");
+  const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   const docRef = doc(iaProfiles, normalizedId);
 
   return updateDoc(docRef, {
@@ -351,9 +355,9 @@ export const addAiEvaluation = async ({
   comment,
   tags,
 }: any) => {
-  const normalizedUserId = normalizeRequiredString(userId, "User ID");
-  const normalizedAiId = normalizeRequiredString(aiId, "IA ID");
-  const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");
+  const normalizedUserId = normalizeRequiredString(userId, 'User ID');
+  const normalizedAiId = normalizeRequiredString(aiId, 'IA ID');
+  const normalizedConversationId = normalizeRequiredString(conversationId, 'Conversation ID');
   const normalizedRating = normalizeOptionalNumber(rating);
 
   if (
@@ -362,20 +366,20 @@ export const addAiEvaluation = async ({
     normalizedRating < 1 ||
     normalizedRating > 5
   ) {
-    throw new Error("Note invalide.");
+    throw new Error('Note invalide.');
   }
 
   const conversationRef = doc(conversations, normalizedConversationId);
   const conversationSnapshot = await getDoc(conversationRef);
   if (!conversationSnapshot.exists()) {
-    throw new Error("Conversation introuvable.");
+    throw new Error('Conversation introuvable.');
   }
   const conversationData = conversationSnapshot.data();
   if (conversationData.userId !== normalizedUserId) {
-    throw new Error("Conversation non autorisee.");
+    throw new Error('Conversation non autorisee.');
   }
   if (conversationData.aiId && conversationData.aiId !== normalizedAiId) {
-    throw new Error("IA non associee a cette conversation.");
+    throw new Error('IA non associee a cette conversation.');
   }
 
   const payload = {

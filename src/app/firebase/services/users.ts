@@ -9,17 +9,10 @@ import {
   updateDoc,
   writeBatch,
   increment,
-} from "firebase/firestore";
-import {
-  EmailAuthProvider,
-  linkWithCredential,
-  reauthenticateWithCredential,
-} from "firebase/auth";
-import { auth, firestore } from "../init";
-import {
-  utilisateurs,
-  adminLogs,
-} from "../collections";
+} from 'firebase/firestore';
+import { EmailAuthProvider, linkWithCredential, reauthenticateWithCredential } from 'firebase/auth';
+import { auth, firestore } from '../init';
+import { utilisateurs, adminLogs } from '../collections';
 import {
   createAdminLogPayload,
   mapSnapshot,
@@ -31,22 +24,22 @@ import {
   omitUndefinedFields,
   sanitizeOptionalString,
   createRealtimeListener,
-} from "../helpers";
+} from '../helpers';
 
 export const fetchUtilisateurs = async () => {
   try {
     const snapshot = await getDocs(utilisateurs);
     return mapSnapshot(snapshot).map((user) => normalizeUtilisateurRole(user));
   } catch (err) {
-    console.error("Erreur lors de la récupération des utilisateurs", err);
+    console.error('Erreur lors de la récupération des utilisateurs', err);
     throw err;
   }
 };
 
 export const addUtilisateur = async ({ mail, pseudo, adult }: any) => {
   const payload = {
-    mail: normalizeRequiredString(mail, "Mail"),
-    pseudo: normalizeRequiredString(pseudo, "Pseudo"),
+    mail: normalizeRequiredString(mail, 'Mail'),
+    pseudo: normalizeRequiredString(pseudo, 'Pseudo'),
     adult: Boolean(adult),
     dateOfCreate: serverTimestamp(),
   };
@@ -64,11 +57,11 @@ export const fetchUtilisateursRealTime = (onData: any, onError: any) =>
       onData?.(normalized);
     },
     onError,
-    "utilisateurs"
+    'utilisateurs',
   );
 
 export const fetchUtilisateurById = async (uid: any) => {
-  const normalizedId = normalizeRequiredString(uid, "UID");
+  const normalizedId = normalizeRequiredString(uid, 'UID');
   const docRef = doc(utilisateurs, normalizedId);
   const snapshot = await getDoc(docRef);
 
@@ -84,7 +77,7 @@ export const fetchUtilisateurById = async (uid: any) => {
 
 export const fetchUtilisateurByIdRealTime = (uid: any, onData: any, onError: any) => {
   try {
-    const normalizedId = normalizeRequiredString(uid, "UID");
+    const normalizedId = normalizeRequiredString(uid, 'UID');
     const docRef = doc(utilisateurs, normalizedId);
 
     return onSnapshot(
@@ -101,9 +94,9 @@ export const fetchUtilisateurByIdRealTime = (uid: any, onData: any, onError: any
         onData?.(normalizeUtilisateurRole(payload));
       },
       (error) => {
-        console.error("Erreur du flux temps reel utilisateur", error);
+        console.error('Erreur du flux temps reel utilisateur', error);
         onError?.(error);
-      }
+      },
     );
   } catch (err) {
     console.error("Impossible d'ecouter l'utilisateur", err);
@@ -114,28 +107,28 @@ export const fetchUtilisateurByIdRealTime = (uid: any, onData: any, onError: any
 
 export const ensureUtilisateurProfile = async ({ user, role, pseudo }: any) => {
   if (!user?.uid) {
-    throw new Error("Utilisateur Firebase manquant.");
+    throw new Error('Utilisateur Firebase manquant.');
   }
 
   const normalizedRole = normalizeOptionalString(role);
-  const effectiveRole = normalizedRole === "prestataire" ? "client" : normalizedRole;
+  const effectiveRole = normalizedRole === 'prestataire' ? 'client' : normalizedRole;
   const normalizedPseudo = normalizeOptionalString(pseudo);
   const docRef = doc(utilisateurs, user.uid);
   const snapshot = await getDoc(docRef);
-  const mail = normalizeOptionalString(user.email ?? "");
+  const mail = normalizeOptionalString(user.email ?? '');
   const providerIds = (user.providerData ?? [])
     .map((provider: any) => provider?.providerId)
     .filter(Boolean);
-  const fallbackPseudo = mail ? mail.split("@")[0] : undefined;
+  const fallbackPseudo = mail ? mail.split('@')[0] : undefined;
 
   if (!snapshot.exists()) {
     if (!effectiveRole) {
-      throw new Error("Le rôle est obligatoire pour créer un profil.");
+      throw new Error('Le rôle est obligatoire pour créer un profil.');
     }
 
     const payload = {
       mail,
-      pseudo: normalizedPseudo ?? sanitizeOptionalString(user.displayName ?? "") ?? fallbackPseudo,
+      pseudo: normalizedPseudo ?? sanitizeOptionalString(user.displayName ?? '') ?? fallbackPseudo,
       role: effectiveRole,
       providerIds,
       createdAt: serverTimestamp(),
@@ -161,8 +154,8 @@ export const ensureUtilisateurProfile = async ({ user, role, pseudo }: any) => {
   if (effectiveRole && !(existing as any).role) {
     updates.role = effectiveRole;
   }
-  if ((existing as any).role === "prestataire") {
-    updates.role = "client";
+  if ((existing as any).role === 'prestataire') {
+    updates.role = 'client';
   }
   if (mail && !(existing as any).mail) {
     updates.mail = mail;
@@ -189,19 +182,19 @@ export const ensureUtilisateurProfile = async ({ user, role, pseudo }: any) => {
 };
 
 export const updateUtilisateur = async (id: any) => {
-  const normalizedId = normalizeRequiredString(id, "ID");
+  const normalizedId = normalizeRequiredString(id, 'ID');
   const docRef = doc(utilisateurs, normalizedId);
 
   return updateDoc(docRef, { adult: true });
 };
 
 export const updateUtilisateurRole = async ({ userId, role, adminId, adminMail }: any) => {
-  const normalizedId = normalizeRequiredString(userId, "Utilisateur ID");
-  const normalizedRole = normalizeRequiredString(role, "Role");
-  const allowedRoles = ["client", "admin"];
+  const normalizedId = normalizeRequiredString(userId, 'Utilisateur ID');
+  const normalizedRole = normalizeRequiredString(role, 'Role');
+  const allowedRoles = ['client', 'admin'];
 
   if (!allowedRoles.includes(normalizedRole)) {
-    throw new Error("Role utilisateur invalide.");
+    throw new Error('Role utilisateur invalide.');
   }
 
   const docRef = doc(utilisateurs, normalizedId);
@@ -210,8 +203,8 @@ export const updateUtilisateurRole = async ({ userId, role, adminId, adminMail }
     updatedAt: serverTimestamp(),
   };
   const logPayload = createAdminLogPayload({
-    action: "user_role_update",
-    targetType: "utilisateur",
+    action: 'user_role_update',
+    targetType: 'utilisateur',
     targetId: normalizedId,
     adminId,
     adminMail,
@@ -232,7 +225,7 @@ export const grantUserTokensWithPassword = async ({
   adminMail,
   adminPassword,
 }: any) => {
-  const normalizedId = normalizeRequiredString(targetUserId, "Utilisateur ID");
+  const normalizedId = normalizeRequiredString(targetUserId, 'Utilisateur ID');
   const normalizedAmount = normalizeOptionalNumber(amount);
   const password = normalizeRequiredPassword(adminPassword);
 
@@ -241,22 +234,22 @@ export const grantUserTokensWithPassword = async ({
     !Number.isInteger(normalizedAmount) ||
     normalizedAmount <= 0
   ) {
-    throw new Error("Montant invalide.");
+    throw new Error('Montant invalide.');
   }
 
   const currentUser = auth.currentUser;
   if (!currentUser || !currentUser.email) {
-    throw new Error("Session admin invalide.");
+    throw new Error('Session admin invalide.');
   }
   if (adminId && currentUser.uid !== adminId) {
-    throw new Error("Admin invalide.");
+    throw new Error('Admin invalide.');
   }
 
   const credential = EmailAuthProvider.credential(currentUser.email, password);
   const providerIds = (currentUser.providerData ?? [])
     .map((provider) => provider?.providerId)
     .filter(Boolean);
-  const hasPasswordProvider = providerIds.includes("password");
+  const hasPasswordProvider = providerIds.includes('password');
 
   if (hasPasswordProvider) {
     await reauthenticateWithCredential(currentUser, credential);
@@ -270,8 +263,8 @@ export const grantUserTokensWithPassword = async ({
     updatedAt: serverTimestamp(),
   };
   const logPayload = createAdminLogPayload({
-    action: "user_tokens_grant",
-    targetType: "utilisateur",
+    action: 'user_tokens_grant',
+    targetType: 'utilisateur',
     targetId: normalizedId,
     adminId,
     adminMail,

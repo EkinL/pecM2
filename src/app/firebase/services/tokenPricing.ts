@@ -1,17 +1,17 @@
-import { doc, onSnapshot, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import {
   normalizeCountryPricingMap,
   normalizeOptionalNumber,
   normalizeOptionalTokenPricing,
   omitUndefinedFields,
   sanitizeOptionalString,
-} from "../helpers";
-import { settings } from "../collections";
-import { auth } from "../init";
+} from '../helpers';
+import { settings } from '../collections';
+import { auth } from '../init';
 
 export const fetchTokenPricingSettingsRealTime = (onData: any, onError: any) => {
   try {
-    const docRef = doc(settings, "tokenPricingIdf");
+    const docRef = doc(settings, 'tokenPricingIdf');
     return onSnapshot(
       docRef,
       (snapshot) => {
@@ -22,9 +22,9 @@ export const fetchTokenPricingSettingsRealTime = (onData: any, onError: any) => 
         onData?.({ id: snapshot.id, ...snapshot.data() });
       },
       (error) => {
-        console.error("Erreur du flux temps reel token pricing", error);
+        console.error('Erreur du flux temps reel token pricing', error);
         onError?.(error);
-      }
+      },
     );
   } catch (err) {
     console.error("Impossible d'ecouter les tarifs tokens", err);
@@ -36,10 +36,10 @@ export const fetchTokenPricingSettingsRealTime = (onData: any, onError: any) => 
 export const updateTokenPricingSettings = async ({ base, countries, adminId, adminMail }: any) => {
   const normalizedBase = normalizeOptionalTokenPricing(base);
   const normalizedCountries = normalizeCountryPricingMap(countries);
-  const docRef = doc(settings, "tokenPricingIdf");
+  const docRef = doc(settings, 'tokenPricingIdf');
 
   if (!normalizedBase) {
-    throw new Error("Tarifs de base invalides.");
+    throw new Error('Tarifs de base invalides.');
   }
 
   return setDoc(
@@ -51,7 +51,7 @@ export const updateTokenPricingSettings = async ({ base, countries, adminId, adm
       updatedBy: sanitizeOptionalString(adminId),
       updatedMail: sanitizeOptionalString(adminMail),
     },
-    { merge: true }
+    { merge: true },
   );
 };
 
@@ -64,7 +64,7 @@ export const getTokenPrice = async ({ lat, lng, currency, zoneId }: any = {}) =>
   });
 
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
 
   if (auth.currentUser) {
@@ -78,8 +78,8 @@ export const getTokenPrice = async ({ lat, lng, currency, zoneId }: any = {}) =>
     }
   }
 
-  const response = await fetch("/api/token-price", {
-    method: "POST",
+  const response = await fetch('/api/token-price', {
+    method: 'POST',
     headers,
     body: JSON.stringify(payload),
   });
@@ -88,13 +88,13 @@ export const getTokenPrice = async ({ lat, lng, currency, zoneId }: any = {}) =>
 
   if (!response.ok) {
     const message =
-      responseBody && typeof responseBody === "object" && "error" in responseBody
+      responseBody && typeof responseBody === 'object' && 'error' in responseBody
         ? responseBody.error
         : response.statusText;
     throw new Error(
-      typeof message === "string" && message.length
+      typeof message === 'string' && message.length
         ? message
-        : "Erreur lors de la récupération du tarif dynamique."
+        : 'Erreur lors de la récupération du tarif dynamique.',
     );
   }
 

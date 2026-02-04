@@ -1,8 +1,8 @@
-import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
-import { getFunctions } from "firebase/functions";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { getAnalytics, isSupported as isAnalyticsSupported } from 'firebase/analytics';
+import { getFunctions } from 'firebase/functions';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 const firebaseEnv = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,11 +21,10 @@ const missingKeys = Object.entries({
   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: firebaseEnv.storageBucket,
   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: firebaseEnv.messagingSenderId,
   NEXT_PUBLIC_FIREBASE_APP_ID: firebaseEnv.appId,
-})
-  .flatMap(([key, value]) => (value ? [] : [key]));
+}).flatMap(([key, value]) => (value ? [] : [key]));
 
 if (missingKeys.length > 0) {
-  throw new Error(`Missing ${missingKeys.join(", ")}. Define it in .env.local.`);
+  throw new Error(`Missing ${missingKeys.join(', ')}. Define it in .env.local.`);
 }
 
 const firebaseConfig: {

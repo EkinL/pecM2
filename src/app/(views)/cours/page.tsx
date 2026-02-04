@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import { fetchCours } from "../../indexFirebase";
+import { useEffect, useState } from 'react';
+import { fetchCours } from '../../indexFirebase';
 
 type Utilisateur = {
   id: string;
@@ -15,10 +15,10 @@ const formatUtilisateurLabel = (utilisateur: Utilisateur) => {
 };
 
 const formatHours = (hours: unknown) => {
-  if (typeof hours === "number" && Number.isFinite(hours)) {
+  if (typeof hours === 'number' && Number.isFinite(hours)) {
     return `${hours}`;
   }
-  if (typeof hours === "string") {
+  if (typeof hours === 'string') {
     const trimmed = hours.trim();
     return trimmed.length ? trimmed : null;
   }
@@ -40,9 +40,9 @@ export default function Home() {
           setCours(data);
         }
       } catch (fetchError) {
-        console.error("Impossible de récupérer les cours.", fetchError);
+        console.error('Impossible de récupérer les cours.', fetchError);
         if (isMounted) {
-          setError("Impossible de récupérer les cours.");
+          setError('Impossible de récupérer les cours.');
         }
       } finally {
         if (isMounted) {
@@ -62,19 +62,11 @@ export default function Home() {
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
         <section className="w-full max-w-xl rounded-2xl border border-black/10 dark:border-white/20 bg-white/60 dark:bg-black/40 p-6 shadow-lg space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">
-            Cours Firestore
-          </h2>
+          <h2 className="text-xl font-semibold tracking-tight">Cours Firestore</h2>
           {isLoading && (
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Chargement des Cours...
-            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Chargement des Cours...</p>
           )}
-          {error && (
-            <p className="text-sm text-red-500">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-sm text-red-500">{error}</p>}
           {!isLoading && !error && (
             <ul className="space-y-2">
               {cours.length === 0 && (
@@ -95,17 +87,9 @@ export default function Home() {
                         ? cour.coursName
                         : formatUtilisateurLabel(cour)}
                     </p>
-                    {hoursLabel ? (
-                      <p className="text-sm font-medium">
-                        {hoursLabel} heures
-                      </p>
-                    ) : null}
-                    <p className="text-xs text-gray-500">
-                      Nom du prof: {String(cour.prof ?? '')}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      ID: {cour.id}
-                    </p>
+                    {hoursLabel ? <p className="text-sm font-medium">{hoursLabel} heures</p> : null}
+                    <p className="text-xs text-gray-500">Nom du prof: {String(cour.prof ?? '')}</p>
+                    <p className="text-xs text-gray-500">ID: {cour.id}</p>
                   </li>
                 );
               })}

@@ -15,7 +15,7 @@ import {
   writeBatch,
   increment,
   where,
-} from "firebase/firestore";
+} from 'firebase/firestore';
 import {
   conversations,
   conversationMessages,
@@ -23,8 +23,8 @@ import {
   adminLogs,
   settings,
   utilisateurs,
-} from "../collections";
-import { firestore } from "../init";
+} from '../collections';
+import { firestore } from '../init';
 import {
   createAdminLogPayload,
   createRealtimeListener,
@@ -36,18 +36,18 @@ import {
   normalizeRequiredString,
   omitUndefinedFields,
   sanitizeOptionalString,
-} from "../helpers";
+} from '../helpers';
 
-const allowedStatuses = ["pending", "running", "completed"];
+const allowedStatuses = ['pending', 'running', 'completed'];
 
 export const fetchConversationsRealTime = (onData: any, onError: any) =>
-  createRealtimeListener(conversations, onData, onError, "conversations");
+  createRealtimeListener(conversations, onData, onError, 'conversations');
 
 export const fetchConversationsForUserRealTime = (userId: any, onData: any, onError: any) => {
   try {
-    const normalizedId = normalizeRequiredString(userId, "User ID");
-    const ref = query(conversations, where("userId", "==", normalizedId));
-    return createRealtimeListener(ref, onData, onError, "conversations user");
+    const normalizedId = normalizeRequiredString(userId, 'User ID');
+    const ref = query(conversations, where('userId', '==', normalizedId));
+    return createRealtimeListener(ref, onData, onError, 'conversations user');
   } catch (err) {
     console.error("Impossible d'ecouter les conversations user", err);
     onError?.(err);
@@ -57,7 +57,7 @@ export const fetchConversationsForUserRealTime = (userId: any, onData: any, onEr
 
 export const fetchConversationById = async (conversationId: any) => {
   try {
-    const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
+    const normalizedId = normalizeRequiredString(conversationId, 'Conversation ID');
     const snapshot = await getDoc(doc(conversations, normalizedId));
 
     if (!snapshot.exists()) {
@@ -69,16 +69,16 @@ export const fetchConversationById = async (conversationId: any) => {
       ...snapshot.data(),
     };
   } catch (err) {
-    console.error("Erreur lors de la recuperation de la conversation", err);
+    console.error('Erreur lors de la recuperation de la conversation', err);
     throw err;
   }
 };
 
 export const updateConversationStatus = async ({ conversationId, status, note }: any) => {
-  const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
-  const normalizedStatus = normalizeRequiredString(status, "Statut");
+  const normalizedId = normalizeRequiredString(conversationId, 'Conversation ID');
+  const normalizedStatus = normalizeRequiredString(status, 'Statut');
   if (!allowedStatuses.includes(normalizedStatus)) {
-    throw new Error("Statut conversation invalide.");
+    throw new Error('Statut conversation invalide.');
   }
   return updateDoc(doc(conversations, normalizedId), {
     status: normalizedStatus,
@@ -87,15 +87,19 @@ export const updateConversationStatus = async ({ conversationId, status, note }:
   });
 };
 
-export const deleteConversationWithMessages = async ({ conversationId, adminId, adminMail }: any) => {
-  const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
+export const deleteConversationWithMessages = async ({
+  conversationId,
+  adminId,
+  adminMail,
+}: any) => {
+  const normalizedId = normalizeRequiredString(conversationId, 'Conversation ID');
   const messagesRef = conversationMessages(normalizedId);
   const batchSize = 400;
   let lastDoc;
   let deletedMessages = 0;
 
   while (true) {
-    const constraints: any[] = [orderBy("__name__"), limit(batchSize)];
+    const constraints: any[] = [orderBy('__name__'), limit(batchSize)];
     if (lastDoc) {
       constraints.splice(1, 0, startAfter(lastDoc));
     }
@@ -118,8 +122,8 @@ export const deleteConversationWithMessages = async ({ conversationId, adminId, 
   await deleteDoc(doc(conversations, normalizedId));
 
   const logPayload = createAdminLogPayload({
-    action: "conversation_delete",
-    targetType: "conversation",
+    action: 'conversation_delete',
+    targetType: 'conversation',
     targetId: normalizedId,
     adminId,
     adminMail,
@@ -136,11 +140,11 @@ export const deleteConversationWithMessages = async ({ conversationId, adminId, 
 };
 
 export const updateConversationLocation = async ({ conversationId, location }: any) => {
-  const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
+  const normalizedId = normalizeRequiredString(conversationId, 'Conversation ID');
   const normalizedLocation = normalizeOptionalLocation(location);
 
   if (!normalizedLocation) {
-    throw new Error("Localisation invalide.");
+    throw new Error('Localisation invalide.');
   }
 
   return updateDoc(doc(conversations, normalizedId), {
@@ -150,12 +154,16 @@ export const updateConversationLocation = async ({ conversationId, location }: a
   });
 };
 
-export const updateConversationCountry = async ({ conversationId, countryCode, countryLabel }: any) => {
-  const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
+export const updateConversationCountry = async ({
+  conversationId,
+  countryCode,
+  countryLabel,
+}: any) => {
+  const normalizedId = normalizeRequiredString(conversationId, 'Conversation ID');
   const normalizedCode = normalizeCountryCode(countryCode);
 
   if (!normalizedCode) {
-    throw new Error("Pays invalide.");
+    throw new Error('Pays invalide.');
   }
 
   return updateDoc(doc(conversations, normalizedId), {
@@ -173,11 +181,11 @@ export const updateConversationTokenPricing = async ({
   adminMail,
   note,
 }: any) => {
-  const normalizedId = normalizeRequiredString(conversationId, "Conversation ID");
+  const normalizedId = normalizeRequiredString(conversationId, 'Conversation ID');
   const normalizedPricing = normalizeOptionalTokenPricing(pricing);
 
   if (!normalizedPricing) {
-    throw new Error("Tarifs tokens invalides.");
+    throw new Error('Tarifs tokens invalides.');
   }
 
   return updateDoc(doc(conversations, normalizedId), {
@@ -195,13 +203,13 @@ export const addConversationMessage = async ({
   authorId,
   authorRole,
   content,
-  kind = "text",
+  kind = 'text',
   metadata,
   tokenCost,
 }: any) => {
-  const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");
-  const normalizedContent = normalizeRequiredString(content, "Message");
-  const normalizedKind = sanitizeOptionalString(kind) ?? "text";
+  const normalizedConversationId = normalizeRequiredString(conversationId, 'Conversation ID');
+  const normalizedContent = normalizeRequiredString(content, 'Message');
+  const normalizedKind = sanitizeOptionalString(kind) ?? 'text';
   const normalizedTokenCost = normalizeOptionalNumber(tokenCost);
   const messagesRef = conversationMessages(normalizedConversationId);
   const conversationRef = doc(conversations, normalizedConversationId);
@@ -214,7 +222,7 @@ export const addConversationMessage = async ({
     kind: normalizedKind,
     content: normalizedContent,
     tokenCost: normalizedTokenCost,
-    metadata: typeof metadata === "object" && metadata ? metadata : undefined,
+    metadata: typeof metadata === 'object' && metadata ? metadata : undefined,
     createdAt: serverTimestamp(),
   });
 
@@ -226,7 +234,7 @@ export const addConversationMessage = async ({
       updatedAt: serverTimestamp(),
       messageCount: increment(1),
     },
-    { merge: true }
+    { merge: true },
   );
 
   await batch.commit();
@@ -237,25 +245,25 @@ export const addConversationMessage = async ({
   };
 };
 
-export const createConversation = async ({ userId, aiId, status = "running" }: any) => {
-  const normalizedUserId = normalizeRequiredString(userId, "User ID");
-  const normalizedAiId = normalizeRequiredString(aiId, "IA ID");
-  const normalizedStatus = sanitizeOptionalString(status) ?? "running";
+export const createConversation = async ({ userId, aiId, status = 'running' }: any) => {
+  const normalizedUserId = normalizeRequiredString(userId, 'User ID');
+  const normalizedAiId = normalizeRequiredString(aiId, 'IA ID');
+  const normalizedStatus = sanitizeOptionalString(status) ?? 'running';
   const aiRef = doc(iaProfiles, normalizedAiId);
   const aiSnapshot = await getDoc(aiRef);
 
   if (!aiSnapshot.exists()) {
-    throw new Error("IA introuvable.");
+    throw new Error('IA introuvable.');
   }
 
-  const aiStatusRaw = sanitizeOptionalString(aiSnapshot.data()?.status) ?? "pending";
+  const aiStatusRaw = sanitizeOptionalString(aiSnapshot.data()?.status) ?? 'pending';
   const aiStatus = aiStatusRaw.toLowerCase();
-  if (aiStatus !== "active") {
-    throw new Error("IA non active.");
+  if (aiStatus !== 'active') {
+    throw new Error('IA non active.');
   }
   const aiImageUrl = sanitizeOptionalString(aiSnapshot.data()?.imageUrl);
   if (!aiImageUrl) {
-    throw new Error("Avatar IA en cours de generation.");
+    throw new Error('Avatar IA en cours de generation.');
   }
   const docRef = doc(conversations);
 
@@ -281,14 +289,14 @@ export const sendConversationMessageWithTokens = async ({
   userId,
   authorRole,
   content,
-  kind = "text",
+  kind = 'text',
   metadata,
   tokenCost,
 }: any) => {
-  const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");
-  const normalizedUserId = normalizeRequiredString(userId, "User ID");
-  const normalizedContent = normalizeRequiredString(content, "Message");
-  const normalizedKind = sanitizeOptionalString(kind) ?? "text";
+  const normalizedConversationId = normalizeRequiredString(conversationId, 'Conversation ID');
+  const normalizedUserId = normalizeRequiredString(userId, 'User ID');
+  const normalizedContent = normalizeRequiredString(content, 'Message');
+  const normalizedKind = sanitizeOptionalString(kind) ?? 'text';
   const normalizedTokenCost = normalizeOptionalNumber(tokenCost);
 
   const messagesRef = conversationMessages(normalizedConversationId);
@@ -300,69 +308,67 @@ export const sendConversationMessageWithTokens = async ({
   await runTransaction(firestore, async (transaction) => {
     const conversationSnapshot = await transaction.get(conversationRef);
     if (!conversationSnapshot.exists()) {
-      throw new Error("Conversation introuvable.");
+      throw new Error('Conversation introuvable.');
     }
     const conversationData = conversationSnapshot.data() ?? {};
     const countryCode = normalizeCountryCode(conversationData?.countryCode);
     const locationData = conversationData?.location;
     const hasLocation =
-      typeof locationData?.lat === "number" && typeof locationData?.lng === "number";
+      typeof locationData?.lat === 'number' && typeof locationData?.lng === 'number';
     if (!hasLocation && !countryCode) {
-      throw new Error("Localisation requise.");
+      throw new Error('Localisation requise.');
     }
     const aiId = sanitizeOptionalString(conversationData.aiId);
     if (!aiId) {
-      throw new Error("IA introuvable.");
+      throw new Error('IA introuvable.');
     }
 
     const aiRef = doc(iaProfiles, aiId);
     const aiSnapshot = await transaction.get(aiRef);
     if (!aiSnapshot.exists()) {
-      throw new Error("IA introuvable.");
+      throw new Error('IA introuvable.');
     }
-    const aiStatusRaw = sanitizeOptionalString(aiSnapshot.data()?.status) ?? "pending";
+    const aiStatusRaw = sanitizeOptionalString(aiSnapshot.data()?.status) ?? 'pending';
     const aiStatus = aiStatusRaw.toLowerCase();
-    if (aiStatus !== "active") {
-      throw new Error("IA non active.");
+    if (aiStatus !== 'active') {
+      throw new Error('IA non active.');
     }
     const aiImageUrl = sanitizeOptionalString(aiSnapshot.data()?.imageUrl);
     if (!aiImageUrl) {
-      throw new Error("Avatar IA en cours de generation.");
+      throw new Error('Avatar IA en cours de generation.');
     }
 
-    const settingsSnapshot = await transaction.get(doc(settings, "tokenPricingIdf"));
-    const settingsData = settingsSnapshot.exists() ? settingsSnapshot.data() ?? {} : {};
-    const basePricing = typeof settingsData.base === "object" ? settingsData.base : {};
+    const settingsSnapshot = await transaction.get(doc(settings, 'tokenPricingIdf'));
+    const settingsData = settingsSnapshot.exists() ? (settingsSnapshot.data() ?? {}) : {};
+    const basePricing = typeof settingsData.base === 'object' ? settingsData.base : {};
     const countryPricing =
-      countryCode && typeof settingsData.countries === "object"
-        ? settingsData.countries?.[countryCode] ?? {}
+      countryCode && typeof settingsData.countries === 'object'
+        ? (settingsData.countries?.[countryCode] ?? {})
         : {};
 
     const baseCosts: Record<string, number> = {
       text: 1,
       image: 5,
     };
-    const overrideCost = normalizeOptionalNumber(
-      conversationData?.tokenPricing?.[normalizedKind]
-    );
+    const overrideCost = normalizeOptionalNumber(conversationData?.tokenPricing?.[normalizedKind]);
     const countryCost = normalizeOptionalNumber((countryPricing as any)?.[normalizedKind]);
     const baseCost = normalizeOptionalNumber((basePricing as any)?.[normalizedKind]);
     const fallbackCost = baseCosts[normalizedKind] ?? normalizedTokenCost;
     const finalTokenCost = overrideCost ?? countryCost ?? baseCost ?? fallbackCost;
 
     if (!finalTokenCost || finalTokenCost <= 0) {
-      throw new Error("Cout token invalide.");
+      throw new Error('Cout token invalide.');
     }
 
     const userSnapshot = await transaction.get(userRef);
     if (!userSnapshot.exists()) {
-      throw new Error("Utilisateur introuvable.");
+      throw new Error('Utilisateur introuvable.');
     }
     const currentTokens =
-      typeof userSnapshot.data().tokens === "number" ? userSnapshot.data().tokens : 0;
+      typeof userSnapshot.data().tokens === 'number' ? userSnapshot.data().tokens : 0;
 
     if (currentTokens < finalTokenCost) {
-      throw new Error("Solde insuffisant.");
+      throw new Error('Solde insuffisant.');
     }
 
     payload = omitUndefinedFields({
@@ -372,7 +378,7 @@ export const sendConversationMessageWithTokens = async ({
       kind: normalizedKind,
       content: normalizedContent,
       tokenCost: finalTokenCost,
-      metadata: typeof metadata === "object" && metadata ? metadata : undefined,
+      metadata: typeof metadata === 'object' && metadata ? metadata : undefined,
       createdAt: serverTimestamp(),
     });
 
@@ -383,7 +389,7 @@ export const sendConversationMessageWithTokens = async ({
         updatedAt: serverTimestamp(),
         messageCount: increment(1),
       },
-      { merge: true }
+      { merge: true },
     );
     transaction.update(userRef, {
       tokens: currentTokens - finalTokenCost,
@@ -397,13 +403,16 @@ export const sendConversationMessageWithTokens = async ({
   };
 };
 
-export const fetchConversationMessagesRealTime = (
-  { conversationId, pageSize = 25, onData, onError }: any = {}
-) => {
+export const fetchConversationMessagesRealTime = ({
+  conversationId,
+  pageSize = 25,
+  onData,
+  onError,
+}: any = {}) => {
   try {
-    const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");
+    const normalizedConversationId = normalizeRequiredString(conversationId, 'Conversation ID');
     const messagesRef = conversationMessages(normalizedConversationId);
-    const ref = query(messagesRef, orderBy("createdAt", "desc"), limit(pageSize));
+    const ref = query(messagesRef, orderBy('createdAt', 'desc'), limit(pageSize));
 
     return onSnapshot(
       ref,
@@ -412,9 +421,9 @@ export const fetchConversationMessagesRealTime = (
         onData?.(messages);
       },
       (error) => {
-        console.error("Erreur du flux temps réel messages", error);
+        console.error('Erreur du flux temps réel messages', error);
         onError?.(error);
-      }
+      },
     );
   } catch (err) {
     console.error("Impossible d'écouter les messages", err);
@@ -429,9 +438,9 @@ export const fetchConversationMessagesPage = async ({
   cursor,
 }: any = {}) => {
   try {
-    const normalizedConversationId = normalizeRequiredString(conversationId, "Conversation ID");
+    const normalizedConversationId = normalizeRequiredString(conversationId, 'Conversation ID');
     const messagesRef = conversationMessages(normalizedConversationId);
-    const constraints: any[] = [orderBy("createdAt", "desc"), limit(pageSize)];
+    const constraints: any[] = [orderBy('createdAt', 'desc'), limit(pageSize)];
 
     if (cursor) {
       constraints.push(startAfter(cursor));
@@ -447,7 +456,7 @@ export const fetchConversationMessagesPage = async ({
       hasMore: snapshot.size === pageSize,
     };
   } catch (err) {
-    console.error("Erreur lors de la pagination des messages", err);
+    console.error('Erreur lors de la pagination des messages', err);
     throw err;
   }
 };

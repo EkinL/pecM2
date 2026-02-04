@@ -1,5 +1,5 @@
-import { addDoc, doc, getDocs, query, serverTimestamp, updateDoc, where } from "firebase/firestore";
-import { demandes, utilisateurs } from "../collections";
+import { addDoc, doc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { demandes, utilisateurs } from '../collections';
 import {
   createRealtimeListener,
   mapSnapshot,
@@ -9,16 +9,16 @@ import {
   omitUndefinedFields,
   sanitizeOptionalString,
   pickRandomItem,
-} from "../helpers";
+} from '../helpers';
 
 export const fetchDemandesRealTime = (onData: any, onError: any) =>
-  createRealtimeListener(demandes, onData, onError, "demandes");
+  createRealtimeListener(demandes, onData, onError, 'demandes');
 
 export const fetchDemandesForClientRealTime = (clientId: any, onData: any, onError: any) => {
   try {
-    const normalizedId = normalizeRequiredString(clientId, "Client ID");
-    const ref = query(demandes, where("clientId", "==", normalizedId));
-    return createRealtimeListener(ref, onData, onError, "demandes client");
+    const normalizedId = normalizeRequiredString(clientId, 'Client ID');
+    const ref = query(demandes, where('clientId', '==', normalizedId));
+    return createRealtimeListener(ref, onData, onError, 'demandes client');
   } catch (err) {
     console.error("Impossible d'écouter les demandes client", err);
     onError?.(err);
@@ -26,11 +26,15 @@ export const fetchDemandesForClientRealTime = (clientId: any, onData: any, onErr
   }
 };
 
-export const fetchDemandesForPrestataireRealTime = (prestataireId: any, onData: any, onError: any) => {
+export const fetchDemandesForPrestataireRealTime = (
+  prestataireId: any,
+  onData: any,
+  onError: any,
+) => {
   try {
-    const normalizedId = normalizeRequiredString(prestataireId, "Client ID");
-    const ref = query(demandes, where("prestataireId", "==", normalizedId));
-    return createRealtimeListener(ref, onData, onError, "demandes client");
+    const normalizedId = normalizeRequiredString(prestataireId, 'Client ID');
+    const ref = query(demandes, where('prestataireId', '==', normalizedId));
+    return createRealtimeListener(ref, onData, onError, 'demandes client');
   } catch (err) {
     console.error("Impossible d'écouter les demandes client", err);
     onError?.(err);
@@ -50,17 +54,16 @@ export const addDemande = async ({
   availability,
   location,
 }: any) => {
-  const normalizedClientId = normalizeRequiredString(clientId, "Client ID");
-  const normalizedTitle = normalizeRequiredString(title, "Titre");
-  const normalizedDescription = normalizeRequiredString(description, "Description");
+  const normalizedClientId = normalizeRequiredString(clientId, 'Client ID');
+  const normalizedTitle = normalizeRequiredString(title, 'Titre');
+  const normalizedDescription = normalizeRequiredString(description, 'Description');
   const normalizedLocation = normalizeOptionalLocation(location);
 
   const prestatairesSnapshot = await getDocs(
-    query(utilisateurs, where("role", "in", ["client", "admin"]))
+    query(utilisateurs, where('role', 'in', ['client', 'admin'])),
   );
   const prestataires = mapSnapshot(prestatairesSnapshot);
-  const matchedPrestataire =
-    prestataires.length > 0 ? pickRandomItem(prestataires) : undefined;
+  const matchedPrestataire = prestataires.length > 0 ? pickRandomItem(prestataires) : undefined;
 
   const payload = {
     clientId: normalizedClientId,
@@ -77,7 +80,7 @@ export const addDemande = async ({
     prestataireId: matchedPrestataire?.id,
     prestatairePseudo: sanitizeOptionalString(matchedPrestataire?.pseudo),
     prestataireMail: sanitizeOptionalString(matchedPrestataire?.mail),
-    status: matchedPrestataire ? "matched" : "pending",
+    status: matchedPrestataire ? 'matched' : 'pending',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
@@ -86,11 +89,11 @@ export const addDemande = async ({
 };
 
 export const updateDemandeLocation = async ({ demandeId, location }: any) => {
-  const normalizedDemandeId = normalizeRequiredString(demandeId, "Demande ID");
+  const normalizedDemandeId = normalizeRequiredString(demandeId, 'Demande ID');
   const normalizedLocation = normalizeOptionalLocation(location);
 
   if (!normalizedLocation) {
-    throw new Error("Localisation invalide.");
+    throw new Error('Localisation invalide.');
   }
 
   return updateDoc(doc(demandes, normalizedDemandeId), {
@@ -101,11 +104,11 @@ export const updateDemandeLocation = async ({ demandeId, location }: any) => {
 };
 
 export const acceptDemande = async ({ demandeId, prestataireId }: any) => {
-  const normalizedDemandeId = normalizeRequiredString(demandeId, "Demande ID");
-  const normalizedPrestataireId = normalizeRequiredString(prestataireId, "Prestataire ID");
+  const normalizedDemandeId = normalizeRequiredString(demandeId, 'Demande ID');
+  const normalizedPrestataireId = normalizeRequiredString(prestataireId, 'Prestataire ID');
 
   return updateDoc(doc(demandes, normalizedDemandeId), {
-    status: "accepted",
+    status: 'accepted',
     prestataireId: normalizedPrestataireId,
     acceptedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -113,10 +116,10 @@ export const acceptDemande = async ({ demandeId, prestataireId }: any) => {
 };
 
 export const cancelDemande = async ({ demandeId, reason }: any) => {
-  const normalizedDemandeId = normalizeRequiredString(demandeId, "Demande ID");
+  const normalizedDemandeId = normalizeRequiredString(demandeId, 'Demande ID');
 
   return updateDoc(doc(demandes, normalizedDemandeId), {
-    status: "cancelled",
+    status: 'cancelled',
     cancelReason: sanitizeOptionalString(reason),
     cancelledAt: serverTimestamp(),
     updatedAt: serverTimestamp(),

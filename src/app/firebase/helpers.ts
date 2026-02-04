@@ -1,7 +1,7 @@
-import { onSnapshot, serverTimestamp } from "firebase/firestore";
+import { onSnapshot, serverTimestamp } from 'firebase/firestore';
 
 export const normalizeRequiredString = (value: unknown, label: string): string => {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     throw new Error(`${label} est obligatoire`);
   }
   const trimmed = value.trim();
@@ -12,10 +12,10 @@ export const normalizeRequiredString = (value: unknown, label: string): string =
 };
 
 export const normalizeOptionalNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
   }
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     const trimmed = value.trim();
     if (!trimmed) {
       return undefined;
@@ -29,8 +29,10 @@ export const normalizeOptionalNumber = (value: unknown): number | undefined => {
 export const omitUndefinedFields = (payload: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
 
-export const normalizeOptionalLocation = (location: unknown): { lat: number; lng: number; accuracy?: number } | undefined => {
-  if (!location || typeof location !== "object") {
+export const normalizeOptionalLocation = (
+  location: unknown,
+): { lat: number; lng: number; accuracy?: number } | undefined => {
+  if (!location || typeof location !== 'object') {
     return undefined;
   }
   const loc = location as { lat?: unknown; lng?: unknown; accuracy?: unknown };
@@ -41,11 +43,17 @@ export const normalizeOptionalLocation = (location: unknown): { lat: number; lng
   }
   const accuracy = normalizeOptionalNumber(loc.accuracy);
 
-  return omitUndefinedFields({ lat, lng, accuracy }) as { lat: number; lng: number; accuracy?: number };
+  return omitUndefinedFields({ lat, lng, accuracy }) as {
+    lat: number;
+    lng: number;
+    accuracy?: number;
+  };
 };
 
-export const normalizeOptionalTokenPricing = (pricing: unknown): { text?: number; image?: number } | undefined => {
-  if (!pricing || typeof pricing !== "object") {
+export const normalizeOptionalTokenPricing = (
+  pricing: unknown,
+): { text?: number; image?: number } | undefined => {
+  if (!pricing || typeof pricing !== 'object') {
     return undefined;
   }
   const p = pricing as { text?: unknown; image?: unknown };
@@ -57,31 +65,36 @@ export const normalizeOptionalTokenPricing = (pricing: unknown): { text?: number
 };
 
 export const normalizeCountryCode = (code: unknown): string | undefined => {
-  if (typeof code !== "string") {
+  if (typeof code !== 'string') {
     return undefined;
   }
   const trimmed = code.trim().toUpperCase();
   return /^[A-Z]{2}$/.test(trimmed) ? trimmed : undefined;
 };
 
-export const normalizeCountryPricingMap = (countries: unknown): Record<string, { text?: number; image?: number }> | undefined => {
-  if (!countries || typeof countries !== "object") {
+export const normalizeCountryPricingMap = (
+  countries: unknown,
+): Record<string, { text?: number; image?: number }> | undefined => {
+  if (!countries || typeof countries !== 'object') {
     return undefined;
   }
-  const normalized = Object.entries(countries).reduce((acc, [code, value]) => {
-    const normalizedCode = normalizeCountryCode(code);
-    const pricing = normalizeOptionalTokenPricing(value);
-    if (normalizedCode && pricing) {
-      acc[normalizedCode] = pricing;
-    }
-    return acc;
-  }, {} as Record<string, { text?: number; image?: number }>);
+  const normalized = Object.entries(countries).reduce(
+    (acc, [code, value]) => {
+      const normalizedCode = normalizeCountryCode(code);
+      const pricing = normalizeOptionalTokenPricing(value);
+      if (normalizedCode && pricing) {
+        acc[normalizedCode] = pricing;
+      }
+      return acc;
+    },
+    {} as Record<string, { text?: number; image?: number }>,
+  );
 
   return Object.keys(normalized).length ? normalized : undefined;
 };
 
 export const sanitizeOptionalString = (value: unknown): string | undefined => {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return undefined;
   }
   const trimmed = value.trim();
@@ -91,24 +104,28 @@ export const sanitizeOptionalString = (value: unknown): string | undefined => {
 export const normalizeOptionalString = sanitizeOptionalString;
 
 export const normalizeOptionalLook = (look: unknown): Record<string, string> | undefined => {
-  if (!look || typeof look !== "object") {
+  if (!look || typeof look !== 'object') {
     return undefined;
   }
-  const entries = Object.entries(look).reduce((acc, [key, value]) => {
-    const sanitized = sanitizeOptionalString(value);
-    if (sanitized) {
-      acc[key] = sanitized;
-    }
-    return acc;
-  }, {} as Record<string, string>);
+  const entries = Object.entries(look).reduce(
+    (acc, [key, value]) => {
+      const sanitized = sanitizeOptionalString(value);
+      if (sanitized) {
+        acc[key] = sanitized;
+      }
+      return acc;
+    },
+    {} as Record<string, string>,
+  );
 
   return Object.keys(entries).length ? entries : undefined;
 };
 
-export const normalizeRoleValue = (role: unknown): unknown => (role === "prestataire" ? "client" : role);
+export const normalizeRoleValue = (role: unknown): unknown =>
+  role === 'prestataire' ? 'client' : role;
 
 export const normalizeUtilisateurRole = (user: unknown): unknown => {
-  if (!user || typeof user !== "object") {
+  if (!user || typeof user !== 'object') {
     return user;
   }
   const u = user as { role?: unknown };
@@ -126,54 +143,72 @@ export const normalizeOptionalStringArray = (values: unknown): string[] | undefi
   if (!Array.isArray(values)) {
     return undefined;
   }
-  const sanitized = values.map((value) => sanitizeOptionalString(value)).filter(Boolean) as string[];
+  const sanitized = values
+    .map((value) => sanitizeOptionalString(value))
+    .filter(Boolean) as string[];
   return sanitized.length ? sanitized : undefined;
 };
 
 export const normalizeVisibilityValue = (value: unknown): string | undefined => {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return undefined;
   }
   const normalized = value.trim().toLowerCase();
-  if (["public", "private"].includes(normalized)) {
+  if (['public', 'private'].includes(normalized)) {
     return normalized;
   }
   return undefined;
 };
 
 export const normalizeAccessTypeValue = (value: unknown): string | undefined => {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return undefined;
   }
   const normalized = value.trim().toLowerCase();
-  if (["free", "paid"].includes(normalized)) {
+  if (['free', 'paid'].includes(normalized)) {
     return normalized;
   }
   return undefined;
 };
 
 export const normalizeRequiredPassword = (value: unknown): string => {
-  if (typeof value !== "string") {
-    throw new Error("Mot de passe est obligatoire");
+  if (typeof value !== 'string') {
+    throw new Error('Mot de passe est obligatoire');
   }
   if (!value.length) {
-    throw new Error("Mot de passe est obligatoire");
+    throw new Error('Mot de passe est obligatoire');
   }
   return value;
 };
 
-export const createAdminLogPayload = ({ action, targetType, targetId, adminId, adminMail, details }: { action: unknown; targetType: unknown; targetId: unknown; adminId: unknown; adminMail: unknown; details: unknown }) =>
+export const createAdminLogPayload = ({
+  action,
+  targetType,
+  targetId,
+  adminId,
+  adminMail,
+  details,
+}: {
+  action: unknown;
+  targetType: unknown;
+  targetId: unknown;
+  adminId: unknown;
+  adminMail: unknown;
+  details: unknown;
+}) =>
   omitUndefinedFields({
-    action: normalizeRequiredString(action, "Action"),
-    targetType: normalizeRequiredString(targetType, "Type"),
-    targetId: normalizeRequiredString(targetId, "Cible ID"),
+    action: normalizeRequiredString(action, 'Action'),
+    targetType: normalizeRequiredString(targetType, 'Type'),
+    targetId: normalizeRequiredString(targetId, 'Cible ID'),
     adminId: sanitizeOptionalString(adminId),
     adminMail: sanitizeOptionalString(adminMail),
-    details: typeof details === "object" && details ? details : undefined,
+    details: typeof details === 'object' && details ? details : undefined,
     createdAt: serverTimestamp(),
   });
 
-export const mapSnapshot = (snapshot: { docs: Array<{ id: string; data: () => Record<string, unknown> }> }): Array<{ id: string; [key: string]: unknown }> =>
+export const mapSnapshot = (snapshot: {
+  docs: Array<{ id: string; data: () => Record<string, unknown> }>;
+}): Array<{ id: string; [key: string]: unknown }> =>
   snapshot.docs.map((doc) => ({
     ...doc.data(),
     id: doc.id,
@@ -181,7 +216,12 @@ export const mapSnapshot = (snapshot: { docs: Array<{ id: string; data: () => Re
 
 export const pickRandomItem = <T>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
 
-export const createRealtimeListener = (reference: any, onData: any, onError: any, label: string) => {
+export const createRealtimeListener = (
+  reference: any,
+  onData: any,
+  onError: any,
+  label: string,
+) => {
   try {
     return onSnapshot(
       reference,
@@ -191,7 +231,7 @@ export const createRealtimeListener = (reference: any, onData: any, onError: any
       (error: any) => {
         console.error(`Erreur du flux temps réel ${label}`, error);
         onError?.(error);
-      }
+      },
     );
   } catch (err) {
     console.error(`Impossible d'écouter ${label}`, err);

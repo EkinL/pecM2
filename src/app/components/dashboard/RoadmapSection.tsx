@@ -16,7 +16,10 @@ export const RoadmapSection = ({ phases }: RoadmapSectionProps) => (
     </div>
     <div className="mt-6 space-y-4">
       {phases.map((phase) => (
-        <article key={phase.title} className="rounded-2xl border border-slate-800/80 bg-slate-950/50 p-4">
+        <article
+          key={phase.title}
+          className="rounded-2xl border border-slate-800/80 bg-slate-950/50 p-4"
+        >
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-semibold">{phase.title}</p>
             <span className="text-[11px] text-slate-500">Suivre</span>

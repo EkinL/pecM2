@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from 'next/link';
 
 type OwnerAiHeaderProps = {
   ownerLoading: boolean;
@@ -10,7 +10,7 @@ export const OwnerAiHeader = ({ ownerLoading, ownerLabel }: OwnerAiHeaderProps) 
     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Mes IA</p>
     <h1 className="text-3xl font-semibold">Créations privées</h1>
     <p className="text-sm text-slate-400">
-      {ownerLoading ? "Chargement du créateur..." : `Créateur: ${ownerLabel}`}
+      {ownerLoading ? 'Chargement du créateur...' : `Créateur: ${ownerLabel}`}
     </p>
     <div className="flex flex-wrap gap-3 text-xs">
       <Link

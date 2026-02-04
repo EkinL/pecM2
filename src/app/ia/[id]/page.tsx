@@ -1,15 +1,11 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useParams } from "next/navigation";
-import { onAuthStateChanged } from "firebase/auth";
-import {
-  auth,
-  fetchAiProfileById,
-  fetchUtilisateurByIdRealTime,
-} from "../../indexFirebase";
-import { formatLookSummary } from "../aiOptions";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, fetchAiProfileById, fetchUtilisateurByIdRealTime } from '../../indexFirebase';
+import { formatLookSummary } from '../aiOptions';
 
 type Timestamp = {
   seconds?: number;
@@ -60,21 +56,21 @@ type AiProfile = {
 
 const formatDate = (value?: Timestamp | string) => {
   if (!value) {
-    return "—";
+    return '—';
   }
-  if (typeof value === "string") {
-    return new Date(value).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'string') {
+    return new Date(value).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  if (typeof value === "object" && value?.seconds) {
-    return new Date(value.seconds * 1000).toLocaleString("fr-FR", {
-      dateStyle: "short",
-      timeStyle: "short",
+  if (typeof value === 'object' && value?.seconds) {
+    return new Date(value.seconds * 1000).toLocaleString('fr-FR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   }
-  return "—";
+  return '—';
 };
 
 const toLookPayload = (values: Record<string, string>) => {
@@ -90,23 +86,23 @@ const toLookPayload = (values: Record<string, string>) => {
 };
 
 const resolveCustomValue = (choice: string, custom: string) =>
-  choice === "Autre" ? custom : choice;
+  choice === 'Autre' ? custom : choice;
 
 const resolveChoiceAndCustom = (value: string | undefined, options: string[]) => {
   if (!value) {
-    return { choice: "", custom: "" };
+    return { choice: '', custom: '' };
   }
   if (options.includes(value)) {
-    return { choice: value, custom: "" };
+    return { choice: value, custom: '' };
   }
-  return { choice: "Autre", custom: value };
+  return { choice: 'Autre', custom: value };
 };
 
 export default function IaProfilePage() {
   const params = useParams();
   const paramId = (params as { id?: string | string[] }).id;
   const profileId =
-    typeof paramId === "string" ? paramId : Array.isArray(paramId) ? paramId[0] : "";
+    typeof paramId === 'string' ? paramId : Array.isArray(paramId) ? paramId[0] : '';
 
   const [userId, setUserId] = useState<string | null>(null);
   const [authMail, setAuthMail] = useState<string | null>(null);
@@ -117,7 +113,7 @@ export default function IaProfilePage() {
   const [aiLoading, setAiLoading] = useState(true);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  const roleMismatch = Boolean(userId && profile?.role && profile.role !== "client");
+  const roleMismatch = Boolean(userId && profile?.role && profile.role !== 'client');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -145,20 +141,24 @@ export default function IaProfilePage() {
     }
 
     setProfileLoading(true);
-    const unsubscribe = fetchUtilisateurByIdRealTime(userId, (data: unknown) => {
-      setProfile(data as Profil | null);
-      setProfileLoading(false);
-    }, () => {
-      setProfile(null);
-      setProfileLoading(false);
-    });
+    const unsubscribe = fetchUtilisateurByIdRealTime(
+      userId,
+      (data: unknown) => {
+        setProfile(data as Profil | null);
+        setProfileLoading(false);
+      },
+      () => {
+        setProfile(null);
+        setProfileLoading(false);
+      },
+    );
 
     return () => unsubscribe?.();
   }, [userId]);
 
   useEffect(() => {
     if (!profileId) {
-      setAiError("Profil IA introuvable.");
+      setAiError('Profil IA introuvable.');
       setAiLoading(false);
       return;
     }
@@ -170,7 +170,7 @@ export default function IaProfilePage() {
         setAiError(null);
       })
       .catch(() => {
-        setAiError("Impossible de recuperer le profil IA.");
+        setAiError('Impossible de recuperer le profil IA.');
       })
       .finally(() => {
         setAiLoading(false);
@@ -185,16 +185,14 @@ export default function IaProfilePage() {
         <header className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-900 to-slate-950/80 p-6 shadow-2xl shadow-slate-900/40 backdrop-blur">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Profil IA</p>
-            <h1 className="text-3xl font-semibold md:text-4xl">
-              {aiProfile?.name ?? "IA"}
-            </h1>
+            <h1 className="text-3xl font-semibold md:text-4xl">{aiProfile?.name ?? 'IA'}</h1>
             <p className="text-sm text-slate-400 md:text-base">
               Personnalite, apparence et actions de reset/sauvegarde.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-            <span>{profile?.mail ?? authMail ?? "Compte actif"}</span>
-            <span>{profileLoading ? "..." : `${profile?.tokens ?? 0} tokens`}</span>
+            <span>{profile?.mail ?? authMail ?? 'Compte actif'}</span>
+            <span>{profileLoading ? '...' : `${profile?.tokens ?? 0} tokens`}</span>
             <Link
               href="/ia"
               className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
@@ -208,7 +206,8 @@ export default function IaProfilePage() {
           <section className="rounded-3xl border border-amber-400/60 bg-amber-500/5 p-6 text-amber-200">
             <p className="text-sm font-semibold">{String(aiProfile?.ownerNotification)}</p>
             <p className="mt-2 text-xs text-amber-100">
-              Cette IA est masquée du catalogue public. Modifiez votre description ou contactez un admin pour lever l&apos;avertissement.
+              Cette IA est masquée du catalogue public. Modifiez votre description ou contactez un
+              admin pour lever l&apos;avertissement.
             </p>
           </section>
         )}
@@ -220,9 +219,7 @@ export default function IaProfilePage() {
         ) : roleMismatch ? (
           <section className="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
             <h2 className="text-lg font-semibold">Acces reserve aux clients</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              Ce profil est reserve aux comptes client.
-            </p>
+            <p className="mt-2 text-sm text-slate-400">Ce profil est reserve aux comptes client.</p>
             <Link
               href="/demandes/client"
               className="mt-4 inline-flex items-center rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
@@ -232,7 +229,7 @@ export default function IaProfilePage() {
           </section>
         ) : aiError || !aiProfile ? (
           <section className="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
-            <p className="text-sm text-rose-300">{aiError ?? "Profil introuvable."}</p>
+            <p className="text-sm text-rose-300">{aiError ?? 'Profil introuvable.'}</p>
           </section>
         ) : (
           <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
@@ -240,9 +237,7 @@ export default function IaProfilePage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-semibold">Resume IA</h2>
-                  <p className="text-sm text-slate-400">
-                    {formatLookSummary(aiProfile.look)}
-                  </p>
+                  <p className="text-sm text-slate-400">{formatLookSummary(aiProfile.look)}</p>
                 </div>
                 <div className="text-xs text-slate-400">
                   Mis a jour {formatDate(aiProfile.updatedAt)}
@@ -250,17 +245,16 @@ export default function IaProfilePage() {
               </div>
 
               <div className="mt-4 space-y-2 text-sm text-slate-400">
-                <p>Mentalite: {aiProfile.mentality ?? "Non definie"}</p>
-                <p>Voix: {aiProfile.voice ?? "Non definie"}</p>
-                <p>Rythme vocal: {aiProfile.voiceRhythm ?? "Non defini"}</p>
+                <p>Mentalite: {aiProfile.mentality ?? 'Non definie'}</p>
+                <p>Voix: {aiProfile.voice ?? 'Non definie'}</p>
+                <p>Rythme vocal: {aiProfile.voiceRhythm ?? 'Non defini'}</p>
               </div>
 
               <div className="mt-4 text-xs text-slate-500">
                 {isOwner
                   ? "La modification et le reset sont désactivés ici ; seules des suppressions depuis 'Mes IA' sont possibles."
-                  : "Lecture seule : contactez le propriétaire ou un admin pour toute action."}
+                  : 'Lecture seule : contactez le propriétaire ou un admin pour toute action.'}
               </div>
-
             </article>
 
             <article className="rounded-3xl border border-white/5 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
@@ -270,21 +264,21 @@ export default function IaProfilePage() {
               </div>
 
               <div className="mt-5 space-y-3 text-sm text-slate-400">
-                <p>Nom: {aiProfile.name ?? "Non defini"}</p>
-                <p>Mentalite: {aiProfile.mentality ?? "Non definie"}</p>
-                <p>Voix: {aiProfile.voice ?? "Non definie"}</p>
-                <p>Rythme vocal: {aiProfile.voiceRhythm ?? "Non defini"}</p>
+                <p>Nom: {aiProfile.name ?? 'Non defini'}</p>
+                <p>Mentalite: {aiProfile.mentality ?? 'Non definie'}</p>
+                <p>Voix: {aiProfile.voice ?? 'Non definie'}</p>
+                <p>Rythme vocal: {aiProfile.voiceRhythm ?? 'Non defini'}</p>
                 <p>Apparence: {formatLookSummary(aiProfile.look)}</p>
                 <p>
-                  Details physiques:{" "}
-                  {aiProfile.look?.details?.trim() ? aiProfile.look.details : "Non definis"}
+                  Details physiques:{' '}
+                  {aiProfile.look?.details?.trim() ? aiProfile.look.details : 'Non definis'}
                 </p>
               </div>
 
               <div className="mt-4 text-xs text-slate-500">
                 {isOwner
-                  ? "La modification et le reset sont désactivés ici ; la suppression se passe depuis « Mes IA »."
-                  : "Lecture seule : contactez le propriétaire ou un admin pour toute autre action."}
+                  ? 'La modification et le reset sont désactivés ici ; la suppression se passe depuis « Mes IA ».'
+                  : 'Lecture seule : contactez le propriétaire ou un admin pour toute autre action.'}
               </div>
             </article>
           </section>

@@ -8,15 +8,13 @@ export type SubscriptionAwareProfile = {
   plan?: string;
 };
 
-export const hasActiveSubscription = (
-  profile?: SubscriptionAwareProfile | null
-) => {
+export const hasActiveSubscription = (profile?: SubscriptionAwareProfile | null) => {
   if (!profile) {
     return false;
   }
 
   const status = profile.subscription?.status?.trim().toLowerCase();
-  if (status === "active") {
+  if (status === 'active') {
     return true;
   }
 
@@ -24,7 +22,7 @@ export const hasActiveSubscription = (
     return true;
   }
 
-  if (typeof profile.plan === "string" && profile.plan.toLowerCase().includes("premium")) {
+  if (typeof profile.plan === 'string' && profile.plan.toLowerCase().includes('premium')) {
     return true;
   }
 
