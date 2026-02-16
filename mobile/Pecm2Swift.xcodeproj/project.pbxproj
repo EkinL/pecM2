@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -60,7 +60,6 @@
 		A5107DC3755E8A06B85934F9 /* AppleSignInHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AE9B43A651F356A2E06BD64 /* AppleSignInHelper.swift */; };
 		A97104107FF2E3E2A8142A93 /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47FD84E7B779A7E31C59B90F /* EmptyStateView.swift */; };
 		AC156E4FC4E02DB41F054F9E /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5641053B7714192D161B2E95 /* Haptics.swift */; };
-		C2E054D2012EEBC809C357DF /* AppConfig.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3FFF6B65CB369F6637E604CB /* AppConfig.plist */; };
 		C52A9F283A4CC0D37D67A5BA /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF57FB0262865951C88349D7 /* Toast.swift */; };
 		C5DB55C58B0924F0E4C1A9A2 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A35168329DED79F5DC5603 /* AuthService.swift */; };
 		CB3EB11BE764F39FE271C204 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F502A6CCC83F7E9A0F192A /* LocationManager.swift */; };
@@ -79,7 +78,6 @@
 /* Begin PBXFileReference section */
 		06A9CA0411D3F0F8D5C91414 /* ConversationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationService.swift; sourceTree = "<group>"; };
 		0D24C2D4E62716300962B723 /* TokenPricingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TokenPricingService.swift; sourceTree = "<group>"; };
-		0E1C7D15FB2F5E781461B7C3 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		15CA4C99B9E3AA3F846438A6 /* AppFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFields.swift; sourceTree = "<group>"; };
 		17DA286973A20ED7EA637F99 /* Pecm2Swift.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Pecm2Swift.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		267A398D0D06753100641E70 /* AiProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AiProfile.swift; sourceTree = "<group>"; };
@@ -92,7 +90,6 @@
 		3AE9B43A651F356A2E06BD64 /* AppleSignInHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInHelper.swift; sourceTree = "<group>"; };
 		3BEF462594BB643BBC4EB5C8 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		3D71351BF63A0B5DC624B340 /* SectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SectionHeader.swift; sourceTree = "<group>"; };
-		3FFF6B65CB369F6637E604CB /* AppConfig.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = AppConfig.plist; sourceTree = "<group>"; };
 		413B9D132D34C22D75A2FFFE /* Pecm2SwiftApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Pecm2SwiftApp.swift; sourceTree = "<group>"; };
 		47A06AC867E22E39DA247BDC /* ViewControllerResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewControllerResolver.swift; sourceTree = "<group>"; };
 		47FD84E7B779A7E31C59B90F /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
@@ -218,14 +215,12 @@
 		71C8EB0FAD7C443ACD2E4095 /* Pecm2Swift */ = {
 			isa = PBXGroup;
 			children = (
-				0E1C7D15FB2F5E781461B7C3 /* GoogleService-Info.plist */,
 				F935985E028CB2B5DEBA15EB /* Info.plist */,
 				413B9D132D34C22D75A2FFFE /* Pecm2SwiftApp.swift */,
 				8C6038D364B3F38037C2019C /* Config */,
 				D56B5B7F24EE07605406A002 /* Firebase */,
 				862E65A8C470A9CAF97855EB /* Helpers */,
 				1C6CE817831A7478E6B543AB /* Models */,
-				8AF0D5474F4DF021D540A958 /* Resources */,
 				0C31446352272E29719A1FA7 /* Services */,
 				22018700FAB244FA9D4EC680 /* Theme */,
 				E287123D19AB073975066D4A /* ViewModels */,
@@ -287,14 +282,6 @@
 			path = Helpers;
 			sourceTree = "<group>";
 		};
-		8AF0D5474F4DF021D540A958 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-				3FFF6B65CB369F6637E604CB /* AppConfig.plist */,
-			);
-			path = Resources;
-			sourceTree = "<group>";
-		};
 		8C6038D364B3F38037C2019C /* Config */ = {
 			isa = PBXGroup;
 			children = (
@@ -335,9 +322,7 @@
 			buildConfigurationList = 32AE1115D0F84594778718DE /* Build configuration list for PBXNativeTarget "Pecm2Swift" */;
 			buildPhases = (
 				9406C01F95258513D6E7185B /* Sources */,
-				EF6B8AC402047D6A2B76364B /* Resources */,
 				456D62D1F969F740F895D324 /* Frameworks */,
-				45636B942F43259400DEF637 /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -378,6 +363,7 @@
 				63D4F6245E8AD661F962D3DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				1AC499F9337010D4F9809FAA /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -385,38 +371,6 @@
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXResourcesBuildPhase section */
-		EF6B8AC402047D6A2B76364B /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				C2E054D2012EEBC809C357DF /* AppConfig.plist in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		45636B942F43259400DEF637 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/$(FULL_PRODUCT_NAME)/GoogleService-Info.plist",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "set -euo pipefail\n\necho \"=== Firebase plist script ===\"\necho \"CONFIGURATION: ${CONFIGURATION}\"\n\nAPP_PATH=\"${BUILT_PRODUCTS_DIR}/${FULL_PRODUCT_NAME}\"\nDEST_PLIST=\"${APP_PATH}/GoogleService-Info.plist\"\n\nmkdir -p \"${APP_PATH}\"\n\n# 1) CI env var base64\nif [ \"${GOOGLE_SERVICE_INFO_PLIST_B64:-}\" != \"\" ]; then\n  echo \"Using GOOGLE_SERVICE_INFO_PLIST_B64 ✅\"\n  echo \"${GOOGLE_SERVICE_INFO_PLIST_B64}\" | base64 --decode > \"${DEST_PLIST}\" || {\n    echo \"❌ base64 decode failed\"\n    if [ \"${CONFIGURATION}\" = \"Release\" ]; then exit 1; else exit 0; fi\n  }\n  echo \"✅ Plist generated at: ${DEST_PLIST}\"\n  exit 0\nfi\n\n# 2) local fallback\nLOCAL_PLIST=\"${SRCROOT}/Pecm2Swift/GoogleService-Info.plist\"\nif [ -f \"${LOCAL_PLIST}\" ]; then\n  cp \"${LOCAL_PLIST}\" \"${DEST_PLIST}\"\n  echo \"✅ Plist copied from local path: ${LOCAL_PLIST}\"\n  exit 0\nfi\n\necho \"⚠️ GoogleService-Info.plist missing.\"\necho \"Expected local: ${LOCAL_PLIST}\"\necho \"Or set GOOGLE_SERVICE_INFO_PLIST_B64 (CI / scheme env).\"\n\n# Release must fail, Debug can continue\nif [ \"${CONFIGURATION}\" = \"Release\" ]; then\n  exit 1\nelse\n  exit 0\nfi\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		9406C01F95258513D6E7185B /* Sources */ = {

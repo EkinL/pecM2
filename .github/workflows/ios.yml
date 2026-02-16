@@ -26,6 +26,14 @@ jobs:
       with:
         xcode-version: '15.2'
 
+    - name: Install XcodeGen
+      run: brew install xcodegen
+
+    - name: Generate Xcode project
+      run: |
+        cd mobile
+        xcodegen generate
+
     - name: List available simulators
       run: xcrun simctl list devices available
 
@@ -79,6 +87,14 @@ jobs:
       uses: maxim-lobanov/setup-xcode@v1
       with:
         xcode-version: '15.2'
+
+    - name: Install XcodeGen
+      run: brew install xcodegen
+
+    - name: Generate Xcode project
+      run: |
+        cd mobile
+        xcodegen generate
 
     - name: Archive
       run: |
