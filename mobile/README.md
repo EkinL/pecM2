@@ -5,10 +5,10 @@ Elle utilise les routes API Next (`/api/...`) comme backend pour l’IA et la ta
 
 ## Démarrage
 
-1. Ouvrir `pecm2-1-swift/Pecm2Swift.xcodeproj`
+1. Ouvrir `mobile/Pecm2Swift.xcodeproj`
 2. Vérifier `Pecm2Swift/Resources/AppConfig.plist`
    - `nextApiBaseUrl` doit pointer vers votre serveur Next (LAN ou production)
-   - Les valeurs Firebase proviennent de `.env.example`
+   - Les valeurs Firebase proviennent de votre projet Firebase (ou de la config web dans `next/.env.local`)
 3. Lancer sur simulateur ou device
 
 ## Notes importantes
