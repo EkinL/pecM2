@@ -162,7 +162,7 @@ describe('aiOptions', () => {
         facialHair: 'Aucune',
         makeup: 'Naturel',
         glasses: 'Oui',
-        accessories: 'Boucles d\'oreilles',
+        accessories: "Boucles d'oreilles",
         piercings: 'Non',
         tattoos: 'Non',
         scars: 'Non',
