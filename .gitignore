@@ -39,6 +39,7 @@ key.properties
 # Firebase / Google config & service accounts
 GoogleService-Info*.plist
 google-services.json
+*AppConfig*.plist
 *firebase-adminsdk*.json
 *serviceAccount*.json
 credentials*.json
