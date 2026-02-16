@@ -15,8 +15,22 @@ Technical README and usage guide for the PECM2 app (Next.js + Firebase).
 3. Install deps + start dev server
 
 ```bash
+cd next
 npm install
 npm run dev
+```
+
+## Testing
+
+```bash
+# Run unit tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Generate coverage report
+npm run test:coverage
 ```
 
 ## Architecture
