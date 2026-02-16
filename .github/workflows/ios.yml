@@ -26,40 +26,34 @@ jobs:
       with:
         xcode-version: '15.2'
 
-    - name: Install dependencies
-      run: |
-        cd mobile
-        # Generate Xcode project from project.yml if using XcodeGen
-        if command -v xcodegen &> /dev/null; then
-          xcodegen generate
-        else
-          brew install xcodegen
-          xcodegen generate
-        fi
+    - name: List available simulators
+      run: xcrun simctl list devices available
 
     - name: Build
       run: |
         cd mobile
         xcodebuild -project Pecm2Swift.xcodeproj \
           -scheme Pecm2Swift \
-          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+          -destination 'platform=iOS Simulator,name=iPhone 15' \
           -configuration Debug \
-          build \
+          clean build \
           CODE_SIGNING_ALLOWED=NO \
           CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGNING_REQUIRED=NO \
+          -allowProvisioningUpdates
 
     - name: Run tests
       run: |
         cd mobile
         xcodebuild -project Pecm2Swift.xcodeproj \
           -scheme Pecm2Swift \
-          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.2' \
+          -destination 'platform=iOS Simulator,name=iPhone 15' \
           -configuration Debug \
           test \
           CODE_SIGNING_ALLOWED=NO \
           CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO || echo "No tests found or tests failed"
+          CODE_SIGNING_REQUIRED=NO \
+          -allowProvisioningUpdates || echo "No tests found or tests failed"
 
     - name: SwiftLint
       run: |
@@ -86,27 +80,19 @@ jobs:
       with:
         xcode-version: '15.2'
 
-    - name: Install dependencies
-      run: |
-        cd mobile
-        if command -v xcodegen &> /dev/null; then
-          xcodegen generate
-        else
-          brew install xcodegen
-          xcodegen generate
-        fi
-
     - name: Archive
       run: |
         cd mobile
         xcodebuild -project Pecm2Swift.xcodeproj \
           -scheme Pecm2Swift \
+          -destination 'generic/platform=iOS Simulator' \
           -configuration Release \
           -archivePath ./build/Pecm2Swift.xcarchive \
           archive \
           CODE_SIGNING_ALLOWED=NO \
           CODE_SIGN_IDENTITY="" \
-          CODE_SIGNING_REQUIRED=NO
+          CODE_SIGNING_REQUIRED=NO \
+          -allowProvisioningUpdates
 
     - name: Upload Archive
       uses: actions/upload-artifact@v4
