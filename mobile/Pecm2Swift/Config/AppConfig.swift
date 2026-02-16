@@ -32,7 +32,7 @@ struct AppConfig {
        let url = URL(string: baseUrlString) {
       nextApiBaseUrl = url
     } else {
-      nextApiBaseUrl = URL(string: "http://localhost:3000")!
+      nextApiBaseUrl = URL(string: "https://pec-m2.vercel.app")!
     }
   }
 

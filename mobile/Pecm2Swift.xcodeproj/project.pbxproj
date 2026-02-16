@@ -63,7 +63,6 @@
 		C2E054D2012EEBC809C357DF /* AppConfig.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3FFF6B65CB369F6637E604CB /* AppConfig.plist */; };
 		C52A9F283A4CC0D37D67A5BA /* Toast.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF57FB0262865951C88349D7 /* Toast.swift */; };
 		C5DB55C58B0924F0E4C1A9A2 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A35168329DED79F5DC5603 /* AuthService.swift */; };
-		C7A1B14891E18DC15BA21AB6 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 0E1C7D15FB2F5E781461B7C3 /* GoogleService-Info.plist */; };
 		CB3EB11BE764F39FE271C204 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49F502A6CCC83F7E9A0F192A /* LocationManager.swift */; };
 		CE5D1B25C5D7FBEE84EBC0A4 /* DemandeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE77379E19F1828F9E6616CC /* DemandeService.swift */; };
 		D234F7F609886533AEDDDBE0 /* View+MobileDesktopParity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FE551CEA97E55763117276B /* View+MobileDesktopParity.swift */; };
@@ -393,7 +392,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				C2E054D2012EEBC809C357DF /* AppConfig.plist in Resources */,
-				C7A1B14891E18DC15BA21AB6 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -412,10 +410,11 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(FULL_PRODUCT_NAME)/GoogleService-Info.plist",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "set -e\n\nPLIST_PATH=\"${SRCROOT}/Pecm2Swift/GoogleService-Info.plist\"\n\nif [ -z \"${GOOGLE_SERVICE_INFO_PLIST_B64}\" ]; then\n  echo \"❌ Missing GOOGLE_SERVICE_INFO_PLIST_B64\"\n  exit 1\nfi\n\necho \"${GOOGLE_SERVICE_INFO_PLIST_B64}\" | base64 --decode > \"${PLIST_PATH}\"\necho \"✅ GoogleService-Info.plist generated at ${PLIST_PATH}\"\n";
+			shellScript = "set -euo pipefail\n\necho \"=== Firebase plist script ===\"\necho \"CONFIGURATION: ${CONFIGURATION}\"\n\nAPP_PATH=\"${BUILT_PRODUCTS_DIR}/${FULL_PRODUCT_NAME}\"\nDEST_PLIST=\"${APP_PATH}/GoogleService-Info.plist\"\n\nmkdir -p \"${APP_PATH}\"\n\n# 1) CI env var base64\nif [ \"${GOOGLE_SERVICE_INFO_PLIST_B64:-}\" != \"\" ]; then\n  echo \"Using GOOGLE_SERVICE_INFO_PLIST_B64 ✅\"\n  echo \"${GOOGLE_SERVICE_INFO_PLIST_B64}\" | base64 --decode > \"${DEST_PLIST}\" || {\n    echo \"❌ base64 decode failed\"\n    if [ \"${CONFIGURATION}\" = \"Release\" ]; then exit 1; else exit 0; fi\n  }\n  echo \"✅ Plist generated at: ${DEST_PLIST}\"\n  exit 0\nfi\n\n# 2) local fallback\nLOCAL_PLIST=\"${SRCROOT}/Pecm2Swift/GoogleService-Info.plist\"\nif [ -f \"${LOCAL_PLIST}\" ]; then\n  cp \"${LOCAL_PLIST}\" \"${DEST_PLIST}\"\n  echo \"✅ Plist copied from local path: ${LOCAL_PLIST}\"\n  exit 0\nfi\n\necho \"⚠️ GoogleService-Info.plist missing.\"\necho \"Expected local: ${LOCAL_PLIST}\"\necho \"Or set GOOGLE_SERVICE_INFO_PLIST_B64 (CI / scheme env).\"\n\n# Release must fail, Debug can continue\nif [ \"${CONFIGURATION}\" = \"Release\" ]; then\n  exit 1\nelse\n  exit 0\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
