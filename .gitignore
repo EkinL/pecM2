@@ -23,6 +23,26 @@
 # misc
 .DS_Store
 *.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.cer
+*.crt
+*.der
+*.mobileprovision
+*.provisionprofile
+*.jks
+*.keystore
+key.properties
+
+# Firebase / Google config & service accounts
+GoogleService-Info*.plist
+google-services.json
+*firebase-adminsdk*.json
+*serviceAccount*.json
+credentials*.json
+client_secret*.json
 
 # debug
 npm-debug.log*
@@ -32,6 +52,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!.env.sample
+!.env.template
 
 # vercel
 .vercel
