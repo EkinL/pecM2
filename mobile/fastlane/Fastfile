@@ -16,12 +16,18 @@ platform :ios do
     # Generate Xcode project from XcodeGen
     sh("cd .. && xcodegen generate")
 
-    match(
+    match_params = {
       type: "appstore",
       app_identifier: ["com.lilian.pecm2"],
       readonly: is_ci,
       api_key: api_key
-    )
+    }
+
+    if ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
+      match_params[:git_basic_authorization] = ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
+    end
+
+    match(match_params)
 
     version = get_version_number(
       xcodeproj: "Pecm2Swift.xcodeproj",
