@@ -13,6 +13,7 @@ import {
   fetchUtilisateursRealTime,
   fetchUtilisateurByIdRealTime,
 } from '../indexFirebase';
+import { logActivity } from '../utils/logActivity';
 import { formatLookSummary } from './aiOptions';
 import {
   countryLabelByCode,
@@ -644,6 +645,12 @@ export default function IaCataloguePage() {
     setActionId(aiId);
     try {
       const conversation = await createConversation({ userId, aiId });
+      void logActivity({
+        action: 'conversation_create',
+        targetType: 'conversation',
+        targetId: conversation.id,
+        details: { aiId },
+      });
       router.push(`/conversations/${conversation.id}`);
     } catch (error) {
       console.error('Erreur lors du demarrage', error);

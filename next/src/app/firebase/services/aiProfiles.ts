@@ -7,7 +7,6 @@ import {
   getDoc,
   getDocs,
   query,
-  setDoc,
   updateDoc,
   writeBatch,
   serverTimestamp,
@@ -15,10 +14,9 @@ import {
   increment,
 } from 'firebase/firestore';
 import { auth, firestore } from '../init';
-import { aiEvaluations, adminLogs, conversations, iaProfiles } from '../collections';
+import { aiEvaluations, conversations, iaProfiles } from '../collections';
 import { deleteConversationWithMessages } from './conversations';
 import {
-  createAdminLogPayload,
   createRealtimeListener,
   normalizeAccessTypeValue,
   normalizeOptionalLook,
@@ -138,33 +136,9 @@ export const updateAiProfileStatus = async ({
   });
 
   await updateDoc(docRef, updatePayload);
-
-  const logPayload = createAdminLogPayload({
-    action: 'ai_profile_status',
-    targetType: 'iaProfile',
-    targetId: normalizedId,
-    adminId,
-    adminMail,
-    details: omitUndefinedFields({
-      status: normalizedStatus,
-      note: sanitizeOptionalString(note),
-    }),
-  });
-
-  try {
-    await setDoc(doc(adminLogs), logPayload);
-  } catch (err) {
-    console.warn("Impossible d'ecrire le log admin IA", err);
-  }
 };
 
-export const flagAiProfileSafetyViolation = async ({
-  profileId,
-  warning,
-  note,
-  adminId,
-  adminMail,
-}: any) => {
+export const flagAiProfileSafetyViolation = async ({ profileId, warning, note }: any) => {
   const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   const sanitizedWarning =
     sanitizeOptionalString(warning) ??
@@ -182,25 +156,12 @@ export const flagAiProfileSafetyViolation = async ({
     updatedAt: serverTimestamp(),
   });
 
-  const logPayload = createAdminLogPayload({
-    action: 'ai_profile_safety_violation',
-    targetType: 'iaProfile',
-    targetId: normalizedId,
-    adminId,
-    adminMail,
-    details: omitUndefinedFields({
-      warning: sanitizedWarning,
-      note: sanitizedNote,
-    }),
-  });
-
   const batch = writeBatch(firestore);
   batch.update(docRef, updatePayload);
-  batch.set(doc(adminLogs), logPayload);
   return batch.commit();
 };
 
-export const updateAiProfileDetails = async ({ profileId, updates, adminId, adminMail }: any) => {
+export const updateAiProfileDetails = async ({ profileId, updates }: any) => {
   const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   const normalizedUpdates = {
     name: sanitizeOptionalString(updates?.name),
@@ -225,17 +186,6 @@ export const updateAiProfileDetails = async ({ profileId, updates, adminId, admi
   const docRef = doc(iaProfiles, normalizedId);
   const batch = writeBatch(firestore);
   batch.update(docRef, updatePayload);
-  batch.set(
-    doc(adminLogs),
-    createAdminLogPayload({
-      action: 'ai_profile_update',
-      targetType: 'iaProfile',
-      targetId: normalizedId,
-      adminId,
-      adminMail,
-      details: omitUndefinedFields(normalizedUpdates),
-    }),
-  );
 
   return batch.commit();
 };
@@ -266,29 +216,14 @@ export const updateAiProfileForOwner = async ({ profileId, updates }: any) => {
   return updateDoc(docRef, updatePayload);
 };
 
-export const deleteAiProfile = async ({ profileId, adminId, adminMail }: any) => {
+export const deleteAiProfile = async ({ profileId }: any) => {
   const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   const docRef = doc(iaProfiles, normalizedId);
 
   await deleteDoc(docRef);
-
-  const logPayload = createAdminLogPayload({
-    action: 'ai_profile_delete',
-    targetType: 'iaProfile',
-    targetId: normalizedId,
-    adminId,
-    adminMail,
-    details: {},
-  });
-
-  try {
-    await setDoc(doc(adminLogs), logPayload);
-  } catch (err) {
-    console.warn("Impossible d'ecrire le log admin suppression IA", err);
-  }
 };
 
-export const deleteAiProfileAndConversations = async ({ profileId, adminId, adminMail }: any) => {
+export const deleteAiProfileAndConversations = async ({ profileId }: any) => {
   const normalizedId = normalizeRequiredString(profileId, 'Profil IA ID');
   let deletedConversations = 0;
   let deletedMessages = 0;
@@ -299,8 +234,6 @@ export const deleteAiProfileAndConversations = async ({ profileId, adminId, admi
     for (const docItem of snapshot.docs) {
       const result = await deleteConversationWithMessages({
         conversationId: docItem.id,
-        adminId,
-        adminMail,
       });
       deletedConversations += 1;
       deletedMessages += result?.messagesDeleted ?? 0;
@@ -311,24 +244,6 @@ export const deleteAiProfileAndConversations = async ({ profileId, adminId, admi
   }
 
   await deleteDoc(doc(iaProfiles, normalizedId));
-
-  const logPayload = createAdminLogPayload({
-    action: 'ai_profile_delete',
-    targetType: 'iaProfile',
-    targetId: normalizedId,
-    adminId,
-    adminMail,
-    details: omitUndefinedFields({
-      conversationsDeleted: deletedConversations,
-      messagesDeleted: deletedMessages,
-    }),
-  });
-
-  try {
-    await setDoc(doc(adminLogs), logPayload);
-  } catch (err) {
-    console.warn("Impossible d'ecrire le log admin suppression IA", err);
-  }
 
   return { conversationsDeleted: deletedConversations, messagesDeleted: deletedMessages };
 };

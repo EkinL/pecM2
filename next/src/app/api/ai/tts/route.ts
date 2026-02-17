@@ -1,5 +1,12 @@
 import { NextResponse } from 'next/server';
 import { fetchAiProfileById } from '../../../indexFirebase';
+import {
+  getIpFromRequest,
+  getPlatformFromRequest,
+  getUserAgentFromRequest,
+  verifyActorFromRequest,
+  writeActivityLog,
+} from '../../_lib/activityLogs';
 
 const ALLOWED_VOICES = new Set(['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']);
 
@@ -136,6 +143,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Texte manquant.' }, { status: 400 });
     }
 
+    const actor = await verifyActorFromRequest(request).catch(() => null);
+    const actorIdForLog = actor?.uid ?? undefined;
+    const actorMail = actor?.email;
+    const platform = getPlatformFromRequest(request);
+    const ip = getIpFromRequest(request);
+    const userAgent = getUserAgentFromRequest(request);
+
     const rawOpenAiKey =
       process.env.OPENAI_API_KEY ??
       process.env.OPENAI_TOKEN ??
@@ -192,6 +206,30 @@ export async function POST(request: Request) {
     }
 
     const audioBuffer = await response.arrayBuffer();
+
+    if (actorIdForLog) {
+      try {
+        await writeActivityLog({
+          action: 'tts_generated',
+          actorId: actorIdForLog,
+          actorMail,
+          targetType: aiId ? 'aiProfile' : 'system',
+          targetId: aiId || undefined,
+          platform,
+          ip,
+          userAgent,
+          details: {
+            aiId: aiId || undefined,
+            model,
+            voice,
+            textLength: text.length,
+          },
+        });
+      } catch (logError) {
+        console.warn("Impossible d'ecrire le log tts_generated", logError);
+      }
+    }
+
     return new Response(audioBuffer, {
       status: 200,
       headers: {

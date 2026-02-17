@@ -11,6 +11,7 @@ final class SessionStore: ObservableObject {
 
   private var authHandle: AuthStateDidChangeListenerHandle?
   private var profileListener: ListenerRegistration?
+  private var lastAuthUid: String?
 
     private static let isRunningForPreviews: Bool = {
     ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
@@ -33,6 +34,26 @@ final class SessionStore: ObservableObject {
   func listenToAuthChanges() {
     authHandle = Auth.auth().addStateDidChangeListener { [weak self] _, user in
       guard let self else { return }
+      let previousUid = self.lastAuthUid
+      let newUid = user?.uid
+      self.lastAuthUid = newUid
+
+      if let newUid, newUid != previousUid {
+        let providerIds = user?.providerData.map { $0.providerID } ?? []
+        Task {
+          await LogService.log(
+            action: "login",
+            targetType: "user",
+            targetId: newUid,
+            details: ["providerIds": providerIds]
+          )
+        }
+      } else if user == nil, let previousUid {
+        Task {
+          await LogService.log(action: "logout", targetType: "user", targetId: previousUid)
+        }
+      }
+
       self.user = user
       self.profile = nil
       self.profileListener?.remove()
@@ -59,4 +80,3 @@ final class SessionStore: ObservableObject {
     }
   }
 }
-

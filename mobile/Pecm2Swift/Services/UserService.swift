@@ -43,6 +43,17 @@ struct UserService {
       ]
       try await docRef.setData(payload, merge: true)
       let createdSnapshot = try await docRef.getDocument()
+      Task {
+        await LogService.log(
+          action: "profile_setup",
+          targetType: "user",
+          targetId: user.uid,
+          details: [
+            "isNew": true,
+            "role": normalizedRole
+          ]
+        )
+      }
       return try createdSnapshot.data(as: UserProfile.self)
     }
 
@@ -66,6 +77,18 @@ struct UserService {
 
     if updates.count > 1 {
       try await docRef.setData(updates, merge: true)
+      let updatedFields = updates.keys.filter { $0 != "updatedAt" }
+      Task {
+        await LogService.log(
+          action: "profile_setup",
+          targetType: "user",
+          targetId: user.uid,
+          details: [
+            "isNew": false,
+            "updatedFields": updatedFields
+          ]
+        )
+      }
     }
 
     return try snapshot.data(as: UserProfile.self)

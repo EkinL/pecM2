@@ -39,6 +39,7 @@ struct DemandesClientView: View {
         }
       }
       .navigationTitle("Mes demandes")
+      .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .navigationBarTrailing) {
           Button {
@@ -76,6 +77,16 @@ struct DemandesClientView: View {
       .onAppear {
         if let userId = session.user?.uid {
           viewModel.listenForClient(clientId: userId)
+          Task {
+            await LogService.log(
+              action: "screen_open",
+              targetType: "system",
+              targetId: "demandes_client",
+              details: ["screen": "DemandesClientView"],
+              throttleKey: "screen_open:demandes_client",
+              throttleSeconds: 60
+            )
+          }
         }
       }
       .onChange(of: viewModel.errorMessage) { newValue in

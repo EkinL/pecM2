@@ -4,6 +4,13 @@ import {
   omitUndefinedFields,
   sanitizeOptionalString,
 } from '../../firebase/helpers';
+import {
+  getIpFromRequest,
+  getPlatformFromRequest,
+  getUserAgentFromRequest,
+  verifyActorFromRequest,
+  writeActivityLog,
+} from '../_lib/activityLogs';
 
 const CLOUD_FUNCTION_URL = 'https://us-central1-todolist-76572.cloudfunctions.net/getTokenPrice';
 const FIREBASE_CLIENT_VERSION = 'fire-js/12.6.0';
@@ -44,6 +51,12 @@ export async function POST(request: Request) {
   }
 
   const payload = normalizeRequestPayload(body);
+  const actor = await verifyActorFromRequest(request).catch(() => null);
+  const actorIdForLog = actor?.uid ?? undefined;
+  const actorMail = actor?.email;
+  const platform = getPlatformFromRequest(request);
+  const ip = getIpFromRequest(request);
+  const userAgent = getUserAgentFromRequest(request);
 
   let functionResponse: Response;
   try {
@@ -81,6 +94,28 @@ export async function POST(request: Request) {
     (forwardedBody && typeof forwardedBody === 'object' && 'data' in forwardedBody
       ? forwardedBody.data
       : forwardedBody) ?? null;
+
+  if (actorIdForLog) {
+    try {
+      await writeActivityLog({
+        action: 'token_price_lookup',
+        actorId: actorIdForLog,
+        actorMail,
+        targetType: 'system',
+        platform,
+        ip,
+        userAgent,
+        details: {
+          lat: payload.lat,
+          lng: payload.lng,
+          currency: payload.currency,
+          zoneId: payload.zoneId,
+        },
+      });
+    } catch (logError) {
+      console.warn("Impossible d'ecrire le log token_price_lookup", logError);
+    }
+  }
 
   return NextResponse.json(payloadData);
 }

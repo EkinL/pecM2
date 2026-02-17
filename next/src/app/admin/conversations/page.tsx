@@ -14,6 +14,7 @@ import {
   signOutUser,
   updateConversationStatus,
 } from '../../indexFirebase';
+import { logActivity } from '../../utils/logActivity';
 
 type Timestamp = {
   seconds?: number;
@@ -307,6 +308,12 @@ export default function AdminConversationsPage() {
         status: 'running',
         note: 'opened by admin',
       });
+      void logActivity({
+        action: 'conversation_status_update',
+        targetType: 'conversation',
+        targetId: conversationId,
+        details: { status: 'running' },
+      });
       setConversationActionSuccess('Conversation ouverte.');
     } catch (error) {
       console.error("Erreur lors de l'ouverture", error);
@@ -341,6 +348,12 @@ export default function AdminConversationsPage() {
         status: 'completed',
         note: 'closed by admin',
       });
+      void logActivity({
+        action: 'conversation_status_update',
+        targetType: 'conversation',
+        targetId: conversationId,
+        details: { status: 'completed' },
+      });
       setConversationActionSuccess('Conversation fermee.');
     } catch (error) {
       console.error('Erreur lors de la fermeture', error);
@@ -370,10 +383,12 @@ export default function AdminConversationsPage() {
     setConversationAction({ id: conversationId, type: 'delete' });
 
     try {
-      await deleteConversationWithMessages({
-        conversationId,
-        adminId: adminUser?.uid,
-        adminMail: adminUser?.mail ?? undefined,
+      const result = await deleteConversationWithMessages({ conversationId });
+      void logActivity({
+        action: 'conversation_delete',
+        targetType: 'conversation',
+        targetId: conversationId,
+        details: { messagesDeleted: result?.messagesDeleted ?? null },
       });
       setConversationActionSuccess('Conversation supprimee.');
     } catch (error) {
@@ -432,6 +447,12 @@ export default function AdminConversationsPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
             <span>{adminUser?.mail ?? 'Compte admin'}</span>
+            <Link
+              href="/admin/logs"
+              className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
+            >
+              Logs
+            </Link>
             <Link
               href="/"
               className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
@@ -544,6 +565,14 @@ export default function AdminConversationsPage() {
                       >
                         Voir les messages
                       </Link>
+                      {conversation.userId ? (
+                        <Link
+                          href={`/admin/users/${conversation.userId}/logs`}
+                          className="rounded-lg border border-slate-800/80 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600"
+                        >
+                          Logs user
+                        </Link>
+                      ) : null}
                       {canAccept && (
                         <button
                           type="button"

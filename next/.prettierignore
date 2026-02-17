@@ -1,0 +1,7 @@
+.next/
+node_modules/
+.cache/
+coverage/
+dist/
+build/
+next-env.d.ts

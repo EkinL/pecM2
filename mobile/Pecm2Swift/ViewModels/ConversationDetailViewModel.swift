@@ -51,6 +51,7 @@ final class ConversationDetailViewModel: ObservableObject {
     guard !trimmed.isEmpty else { return }
 
     isSending = true
+    errorMessage = nil
     do {
       _ = try await ConversationService.sendMessageWithTokens(
         conversationId: conversationId,
@@ -59,7 +60,11 @@ final class ConversationDetailViewModel: ObservableObject {
         content: trimmed,
         kind: "text"
       )
-      _ = try await NextApiService.aiReply(conversationId: conversationId, userId: userId, aiId: aiId, message: trimmed)
+      do {
+        _ = try await NextApiService.aiReply(conversationId: conversationId, aiId: aiId, message: trimmed)
+      } catch {
+        errorMessage = "Message envoyé, mais réponse IA indisponible. \(error.localizedDescription)"
+      }
     } catch {
       errorMessage = error.localizedDescription
     }

@@ -20,13 +20,11 @@ import {
   conversations,
   conversationMessages,
   iaProfiles,
-  adminLogs,
   settings,
   utilisateurs,
 } from '../collections';
 import { firestore } from '../init';
 import {
-  createAdminLogPayload,
   createRealtimeListener,
   mapSnapshot,
   normalizeCountryCode,
@@ -87,11 +85,7 @@ export const updateConversationStatus = async ({ conversationId, status, note }:
   });
 };
 
-export const deleteConversationWithMessages = async ({
-  conversationId,
-  adminId,
-  adminMail,
-}: any) => {
+export const deleteConversationWithMessages = async ({ conversationId }: any) => {
   const normalizedId = normalizeRequiredString(conversationId, 'Conversation ID');
   const messagesRef = conversationMessages(normalizedId);
   const batchSize = 400;
@@ -120,21 +114,6 @@ export const deleteConversationWithMessages = async ({
   }
 
   await deleteDoc(doc(conversations, normalizedId));
-
-  const logPayload = createAdminLogPayload({
-    action: 'conversation_delete',
-    targetType: 'conversation',
-    targetId: normalizedId,
-    adminId,
-    adminMail,
-    details: { messagesDeleted: deletedMessages },
-  });
-
-  try {
-    await setDoc(doc(adminLogs), logPayload);
-  } catch (err) {
-    console.warn("Impossible d'ecrire le log admin suppression conversation", err);
-  }
 
   return { messagesDeleted: deletedMessages };
 };

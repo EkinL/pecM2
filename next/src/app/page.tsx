@@ -18,6 +18,7 @@ import {
   updateConversationStatus,
   updateUtilisateurRole,
 } from './indexFirebase';
+import { logActivity } from './utils/logActivity';
 import { HeroHeader } from './components/dashboard/HeroHeader';
 import { RoadmapSection } from './components/dashboard/RoadmapSection';
 import { FocusSection } from './components/dashboard/FocusSection';
@@ -433,11 +434,25 @@ export default function AdminDashboard() {
   };
 
   const triggerAvatarGeneration = async (profileId: string) => {
+    let token: string | null = null;
+    try {
+      const user = auth.currentUser;
+      token = user ? await user.getIdToken() : null;
+    } catch (error) {
+      console.warn("Impossible d'obtenir le token Firebase pour l'avatar IA", error);
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-pecm2-platform': 'web',
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const response = await fetch('/api/ai/image', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       keepalive: true,
       body: JSON.stringify({
         aiId: profileId,
@@ -474,6 +489,12 @@ export default function AdminDashboard() {
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
+      });
+      void logActivity({
+        action: 'ai_profile_status',
+        targetType: 'aiProfile',
+        targetId: profileId,
+        details: { status: 'active' },
       });
       if (!hasAvatar) {
         const { imageUrl: generatedImageUrl, updateError } =
@@ -525,6 +546,12 @@ export default function AdminDashboard() {
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
       });
+      void logActivity({
+        action: 'ai_profile_status',
+        targetType: 'aiProfile',
+        targetId: profileId,
+        details: { status: 'rejected' },
+      });
       setAiActionSuccess('IA refusee.');
     } catch (error) {
       console.error('Erreur lors du refus IA', error);
@@ -564,6 +591,12 @@ export default function AdminDashboard() {
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
+      });
+      void logActivity({
+        action: 'ai_profile_status',
+        targetType: 'aiProfile',
+        targetId: profileId,
+        details: { status },
       });
       if (status === 'active') {
         const targetProfile = aiProfiles.find((profile) => profile.id === profileId);
@@ -628,6 +661,12 @@ export default function AdminDashboard() {
         role: 'admin',
         adminId: adminUser.uid,
         adminMail: adminUser.mail ?? undefined,
+      });
+      void logActivity({
+        action: 'user_role_update',
+        targetType: 'user',
+        targetId: userId,
+        details: { role: 'admin' },
       });
       setUserRoleAction({
         id: userId,
@@ -705,6 +744,12 @@ export default function AdminDashboard() {
         adminId: adminUser.uid,
         adminMail: adminUser.mail ?? undefined,
         adminPassword: password,
+      });
+      void logActivity({
+        action: 'user_tokens_grant',
+        targetType: 'user',
+        targetId: userId,
+        details: { amount },
       });
       setTokenGrantAction({
         id: userId,
@@ -793,6 +838,12 @@ export default function AdminDashboard() {
         },
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
+      });
+      void logActivity({
+        action: 'ai_profile_update',
+        targetType: 'aiProfile',
+        targetId: aiEditId,
+        details: { fields: ['name', 'mentality', 'voice', 'look'] },
       });
       setAiEditSuccess('IA mise a jour.');
     } catch (error) {

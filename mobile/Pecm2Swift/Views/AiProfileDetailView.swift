@@ -63,6 +63,20 @@ struct AiProfileDetailView: View {
     .appScreenBackground()
     .tint(AppColors.accent)
     .toast($toast)
+    .onAppear {
+      if let aiId = profile.id {
+        Task {
+          await LogService.log(
+            action: "ai_profile_open",
+            targetType: "aiProfile",
+            targetId: aiId,
+            details: ["name": profile.name ?? ""],
+            throttleKey: "ai_profile_open:\(aiId)",
+            throttleSeconds: 60
+          )
+        }
+      }
+    }
     .onChange(of: errorMessage) { newValue in
       guard let newValue, !newValue.isEmpty else { return }
       toast = ToastData(style: .error, message: newValue)

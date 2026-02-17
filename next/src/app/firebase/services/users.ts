@@ -12,9 +12,8 @@ import {
 } from 'firebase/firestore';
 import { EmailAuthProvider, linkWithCredential, reauthenticateWithCredential } from 'firebase/auth';
 import { auth, firestore } from '../init';
-import { utilisateurs, adminLogs } from '../collections';
+import { utilisateurs } from '../collections';
 import {
-  createAdminLogPayload,
   mapSnapshot,
   normalizeOptionalNumber,
   normalizeOptionalString,
@@ -188,7 +187,7 @@ export const updateUtilisateur = async (id: any) => {
   return updateDoc(docRef, { adult: true });
 };
 
-export const updateUtilisateurRole = async ({ userId, role, adminId, adminMail }: any) => {
+export const updateUtilisateurRole = async ({ userId, role }: any) => {
   const normalizedId = normalizeRequiredString(userId, 'Utilisateur ID');
   const normalizedRole = normalizeRequiredString(role, 'Role');
   const allowedRoles = ['client', 'admin'];
@@ -202,18 +201,9 @@ export const updateUtilisateurRole = async ({ userId, role, adminId, adminMail }
     role: normalizedRole,
     updatedAt: serverTimestamp(),
   };
-  const logPayload = createAdminLogPayload({
-    action: 'user_role_update',
-    targetType: 'utilisateur',
-    targetId: normalizedId,
-    adminId,
-    adminMail,
-    details: { role: normalizedRole },
-  });
 
   const batch = writeBatch(firestore);
   batch.update(docRef, updatePayload);
-  batch.set(doc(adminLogs), logPayload);
 
   return batch.commit();
 };
@@ -222,7 +212,6 @@ export const grantUserTokensWithPassword = async ({
   targetUserId,
   amount,
   adminId,
-  adminMail,
   adminPassword,
 }: any) => {
   const normalizedId = normalizeRequiredString(targetUserId, 'Utilisateur ID');
@@ -262,18 +251,9 @@ export const grantUserTokensWithPassword = async ({
     tokens: increment(normalizedAmount),
     updatedAt: serverTimestamp(),
   };
-  const logPayload = createAdminLogPayload({
-    action: 'user_tokens_grant',
-    targetType: 'utilisateur',
-    targetId: normalizedId,
-    adminId,
-    adminMail,
-    details: { amount: normalizedAmount },
-  });
 
   const batch2 = writeBatch(firestore);
   batch2.update(docRef, updatePayload);
-  batch2.set(doc(adminLogs), logPayload);
 
   return batch2.commit();
 };

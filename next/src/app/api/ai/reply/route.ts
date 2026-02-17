@@ -1,21 +1,32 @@
 import { NextResponse } from 'next/server';
+import admin from 'firebase-admin';
 import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-} from 'firebase/firestore';
-import {
-  addConversationMessage,
-  fetchAiProfileById,
-  fetchConversationById,
-  firestore,
-} from '../../../indexFirebase';
+  getIpFromRequest,
+  getPlatformFromRequest,
+  getUserAgentFromRequest,
+  verifyActorFromRequest,
+  writeActivityLog,
+} from '../../_lib/activityLogs';
+import { getFirebaseAdminFirestore } from '../../_lib/firebaseAdmin';
+
+export const runtime = 'nodejs';
+
+const isFirebaseAdminConfigurationError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message = error.message.toLowerCase();
+  return (
+    message.includes('credential introuvable') ||
+    message.includes('default credentials') ||
+    message.includes('application default') ||
+    message.includes('unable to detect a project id') ||
+    message.includes('project id') ||
+    message.includes('projectid') ||
+    message.includes('google_cloud_project') ||
+    message.includes('gcloud_project')
+  );
+};
 
 type Message = {
   authorRole?: string;
@@ -130,15 +141,7 @@ const buildPrompt = ({
     .join('\n');
 };
 
-const fallbackReply = ({
-  aiProfile,
-  memory,
-  userMessage,
-}: {
-  aiProfile: AiProfile | null;
-  memory: string;
-  userMessage: string;
-}) => {
+const fallbackReply = ({ aiProfile }: { aiProfile: AiProfile | null }) => {
   const name = aiProfile?.name ?? 'IA';
   const mentality = aiProfile?.mentality ?? 'bienveillante';
   return `${name} (${mentality}) : Merci pour ton message. Dis m en un peu plus, je veux bien comprendre.`;
@@ -182,35 +185,105 @@ const extractOpenAiText = (data: unknown) => {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const conversationId = typeof body?.conversationId === 'string' ? body.conversationId : '';
-    const userId = typeof body?.userId === 'string' ? body.userId : '';
-    const aiId = typeof body?.aiId === 'string' ? body.aiId : '';
+    let body: Record<string, unknown> = {};
+    try {
+      body = (await request.json()) ?? {};
+    } catch (error) {
+      console.warn('Impossible de parser /api/ai/reply', error);
+    }
+
+    const conversationId =
+      typeof body.conversationId === 'string' ? body.conversationId.trim() : '';
+    const requestedUserId = typeof body.userId === 'string' ? body.userId.trim() : '';
+    const aiId = typeof body.aiId === 'string' ? body.aiId.trim() : '';
     const userMessage = typeof body?.message === 'string' ? body.message.trim() : '';
 
-    if (!conversationId || !userId || !aiId || !userMessage) {
+    if (!conversationId || !aiId || !userMessage) {
       return NextResponse.json({ error: 'Parametres invalides.' }, { status: 400 });
     }
 
-    const conversation = (await fetchConversationById(conversationId)) as {
-      id: string;
-      userId?: string;
-      aiId?: string;
-    } | null;
-    if (!conversation) {
-      return NextResponse.json({ error: 'Conversation introuvable.' }, { status: 404 });
+    let actor: { uid: string; email?: string } | null = null;
+    try {
+      actor = await verifyActorFromRequest(request);
+    } catch (error) {
+      if (isFirebaseAdminConfigurationError(error)) {
+        console.error('Firebase Admin non configuré pour /api/ai/reply', error);
+        return NextResponse.json(
+          {
+            error:
+              process.env.NODE_ENV === 'production'
+                ? 'Service indisponible.'
+                : 'Firebase Admin non configuré (FIREBASE_SERVICE_ACCOUNT_KEY / FIREBASE_PROJECT_ID manquant).',
+          },
+          { status: 503 },
+        );
+      }
+      console.warn('Token Firebase invalide pour /api/ai/reply', error);
+      actor = null;
     }
-    if (conversation.userId !== userId) {
+
+    if (!actor?.uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const actorId = actor.uid;
+    const actorMail = actor.email;
+    const platform = getPlatformFromRequest(request);
+    const ip = getIpFromRequest(request);
+    const userAgent = getUserAgentFromRequest(request);
+
+    if (requestedUserId && requestedUserId !== actorId) {
       return NextResponse.json({ error: 'Conversation non autorisee.' }, { status: 403 });
     }
-    if (conversation.aiId && conversation.aiId !== aiId) {
+
+    let firestore: admin.firestore.Firestore;
+    try {
+      firestore = getFirebaseAdminFirestore();
+    } catch (error) {
+      if (isFirebaseAdminConfigurationError(error)) {
+        console.error('Firebase Admin non configuré pour /api/ai/reply', error);
+        return NextResponse.json(
+          {
+            error:
+              process.env.NODE_ENV === 'production'
+                ? 'Service indisponible.'
+                : 'Firebase Admin non configuré (FIREBASE_SERVICE_ACCOUNT_KEY / FIREBASE_PROJECT_ID manquant).',
+          },
+          { status: 503 },
+        );
+      }
+      throw error;
+    }
+
+    const conversationRef = firestore.collection('conversations').doc(conversationId);
+    const conversationSnap = await conversationRef.get();
+    if (!conversationSnap.exists) {
+      return NextResponse.json({ error: 'Conversation introuvable.' }, { status: 404 });
+    }
+
+    const conversationData = conversationSnap.data() ?? {};
+    const conversationUserId =
+      typeof conversationData.userId === 'string' ? conversationData.userId.trim() : '';
+    const conversationAiId =
+      typeof conversationData.aiId === 'string' ? conversationData.aiId.trim() : '';
+
+    if (!conversationUserId || conversationUserId !== actorId) {
+      return NextResponse.json({ error: 'Conversation non autorisee.' }, { status: 403 });
+    }
+    if (conversationAiId && conversationAiId !== aiId) {
       return NextResponse.json({ error: 'IA non associee a cette conversation.' }, { status: 403 });
     }
 
-    const aiProfile = (await fetchAiProfileById(aiId)) as AiProfile | null;
-    if (!aiProfile) {
+    const aiSnap = await firestore.collection('iaProfiles').doc(aiId).get();
+    if (!aiSnap.exists) {
       return NextResponse.json({ error: 'Profil IA introuvable.' }, { status: 404 });
     }
+
+    const aiProfile = {
+      id: aiSnap.id,
+      ...(aiSnap.data() ?? {}),
+    } as AiProfile;
+
     const aiStatus = typeof aiProfile.status === 'string' ? aiProfile.status.toLowerCase() : '';
     if (aiStatus !== 'active') {
       return NextResponse.json(
@@ -223,10 +296,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Avatar IA en cours de generation.' }, { status: 403 });
     }
 
-    const messagesRef = collection(firestore, 'conversations', conversationId, 'messages');
-    const messagesSnapshot = await getDocs(
-      query(messagesRef, orderBy('createdAt', 'desc'), limit(12)),
-    );
+    const messagesSnapshot = await conversationRef
+      .collection('messages')
+      .orderBy('createdAt', 'desc')
+      .limit(12)
+      .get();
     const historyMessages = messagesSnapshot.docs
       .map((docItem) => docItem.data() as Message)
       .reverse();
@@ -250,11 +324,15 @@ export async function POST(request: Request) {
       .filter(Boolean)
       .join('\n');
 
-    const memoryRef = doc(firestore, 'utilisateurs', userId, 'aiMemory', aiId);
-    const memorySnap = await getDoc(memoryRef);
+    const memoryRef = firestore
+      .collection('utilisateurs')
+      .doc(actorId)
+      .collection('aiMemory')
+      .doc(aiId);
+    const memorySnap = await memoryRef.get();
     const memory =
-      memorySnap.exists() && typeof memorySnap.data().summary === 'string'
-        ? memorySnap.data().summary
+      memorySnap.exists && typeof memorySnap.data()?.summary === 'string'
+        ? (memorySnap.data()?.summary as string)
         : '';
 
     const prompt = buildPrompt({ aiProfile, memory, history, userMessage });
@@ -294,67 +372,75 @@ export async function POST(request: Request) {
         openAiMessages.push({ role: 'user', content: userMessage });
       }
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${openAiKey}`,
-        },
-        body: JSON.stringify({
-          model: openAiModel,
-          messages: openAiMessages,
-          temperature: 0.7,
-          max_tokens: 220,
-        }),
-      });
+      try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${openAiKey}`,
+          },
+          body: JSON.stringify({
+            model: openAiModel,
+            messages: openAiMessages,
+            temperature: 0.7,
+            max_tokens: 220,
+          }),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        replyText = extractOpenAiText(data);
-        if (replyText) {
-          replySource = 'openai';
+        if (response.ok) {
+          const data = await response.json();
+          replyText = extractOpenAiText(data);
+          if (replyText) {
+            replySource = 'openai';
+          }
+        } else {
+          const data = await response.json().catch(() => ({}));
+          openAiError =
+            typeof data?.error?.message === 'string'
+              ? data.error.message
+              : typeof data?.error === 'string'
+                ? data.error
+                : `Erreur OpenAI (${response.status})`;
         }
-      } else {
-        const data = await response.json().catch(() => ({}));
-        openAiError =
-          typeof data?.error?.message === 'string'
-            ? data.error.message
-            : typeof data?.error === 'string'
-              ? data.error
-              : `Erreur OpenAI (${response.status})`;
+      } catch (error) {
+        openAiError = error instanceof Error ? error.message : 'Erreur reseau OpenAI.';
       }
     }
 
     if (!replyText && hasApiKey) {
-      const response = await fetch(`https://router.huggingface.co/models/${model}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 220,
-            temperature: 0.7,
-            top_p: 0.9,
-            return_full_text: false,
+      try {
+        const response = await fetch(`https://router.huggingface.co/models/${model}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
           },
-          options: {
-            wait_for_model: true,
-          },
-        }),
-      });
+          body: JSON.stringify({
+            inputs: prompt,
+            parameters: {
+              max_new_tokens: 220,
+              temperature: 0.7,
+              top_p: 0.9,
+              return_full_text: false,
+            },
+            options: {
+              wait_for_model: true,
+            },
+          }),
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        replyText = extractGeneratedText(data);
-        if (replyText) {
-          replySource = 'huggingface';
+        if (response.ok) {
+          const data = await response.json();
+          replyText = extractGeneratedText(data);
+          if (replyText) {
+            replySource = 'huggingface';
+          }
+        } else {
+          const data = await response.json().catch(() => ({}));
+          hfError = typeof data?.error === 'string' ? data.error : `Erreur HF (${response.status})`;
         }
-      } else {
-        const data = await response.json().catch(() => ({}));
-        hfError = typeof data?.error === 'string' ? data.error : `Erreur HF (${response.status})`;
+      } catch (error) {
+        hfError = error instanceof Error ? error.message : 'Erreur reseau Hugging Face.';
       }
     }
 
@@ -370,41 +456,79 @@ export async function POST(request: Request) {
     }
 
     if (!replyText) {
-      replyText = fallbackReply({ aiProfile, memory, userMessage });
+      replyText = fallbackReply({ aiProfile });
       replySource = 'fallback';
     }
 
     const memorySummary = updateMemorySummary(memory, userMessage, replyText);
-    await setDoc(
-      memoryRef,
+    await memoryRef.set(
       {
         summary: memorySummary,
-        updatedAt: serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       { merge: true },
     );
 
-    await addConversationMessage({
+    const usedModel =
+      replySource === 'openai' ? openAiModel : replySource === 'huggingface' ? model : 'fallback';
+
+    const messageRef = conversationRef.collection('messages').doc();
+    const messagePayload = {
       conversationId,
       authorId: aiId,
       authorRole: 'ai',
-      content: replyText,
       kind: 'text',
+      content: replyText,
       tokenCost: 0,
       metadata: {
-        model:
-          replySource === 'openai'
-            ? openAiModel
-            : replySource === 'huggingface'
-              ? model
-              : 'fallback',
+        model: usedModel,
         via: replySource ?? 'fallback',
       },
-    });
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    const batch = firestore.batch();
+    batch.set(messageRef, messagePayload);
+    batch.set(
+      conversationRef,
+      {
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        messageCount: admin.firestore.FieldValue.increment(1),
+      },
+      { merge: true },
+    );
+    await batch.commit();
+
+    try {
+      await writeActivityLog({
+        action: 'ai_reply',
+        actorId,
+        actorMail,
+        actorRole: undefined,
+        targetType: 'conversation',
+        targetId: conversationId,
+        platform,
+        ip,
+        userAgent,
+        details: {
+          aiId,
+          source: replySource ?? 'fallback',
+          model: usedModel,
+        },
+      });
+    } catch (error) {
+      console.warn("Impossible d'ecrire le log ai_reply", error);
+    }
 
     return NextResponse.json({ reply: replyText });
   } catch (error) {
     console.error('Erreur AI reply', error);
-    return NextResponse.json({ error: 'Erreur generation IA.' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Erreur generation IA.';
+    return NextResponse.json(
+      {
+        error: process.env.NODE_ENV === 'production' ? 'Erreur generation IA.' : message,
+      },
+      { status: 500 },
+    );
   }
 }

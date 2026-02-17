@@ -134,10 +134,27 @@ Champs :
 - `countries`: { [ISO2]: { text, image } }
 - `updatedAt`, `updatedBy`, `updatedMail`
 
-### 5.7 `adminLogs`
-Champs :
-- action (user_role_update, user_tokens_grant, ai_profile_status, ai_profile_update, ai_profile_delete, conversation_delete, ...)
-- targetType, targetId, adminId, adminMail, details, createdAt
+### 5.7 `adminLogs` (activity logs)
+Collection unique pour tracer les actions importantes (clients + admins). Utilisee par les pages admin `/admin/logs`.
+
+Champs minimum (nouveau format) :
+- `action`: string (ex: `login`, `message_send`, `ai_reply`, `tokens_insufficient`, `user_role_update`, ...)
+- `actorId`: uid
+- `actorMail`: string? (si dispo)
+- `actorRole`: `client` | `admin` | ...
+- `targetType`: `user` | `aiProfile` | `conversation` | `demande` | `system`
+- `targetId`: string? (id cible)
+- `details`: object (petit, pas de blob)
+- `createdAt`: serverTimestamp
+- `platform`: `ios` | `web`
+- `ip`, `userAgent`: optionnel (surtout web)
+
+Ecriture :
+- Recommandee côté serveur uniquement via `POST /api/logs` et les routes critiques (Firebase Admin SDK).
+Securite :
+- Firestore rules : lecture admin uniquement, ecriture client interdite.
+Indexes :
+- Voir `firestore.indexes.json` (actorId+createdAt, action+createdAt, targetId+createdAt, actorId+action+createdAt, ...).
 
 ### 5.8 `cours` (demo/test)
 Champs : `coursName`, `prof`, `hours`, `dateOfCreate`
@@ -208,6 +225,17 @@ Body : `{ lat?, lng?, currency?, zoneId? }`
 - Transmet Authorization Firebase si present
 - Reponse : payload de la function (normalise)
 
+### 6.8 `POST /api/logs`
+Fichier : `src/app/api/logs/route.ts`
+Body : `{ action, targetType, targetId?, details? }`
+Headers :
+- `Authorization: Bearer <Firebase ID token>` (obligatoire)
+- `x-pecm2-platform: web|ios` (recommande)
+
+Traitement :
+- Verifie le token Firebase côté serveur (Firebase Admin)
+- Ecrit un document dans `adminLogs` avec `createdAt` serverTimestamp + `ip/userAgent/platform`
+
 ## 7) Logique tokens & tarification
 - Couts par defaut : texte = 1 token, image = 5 tokens
 - Tarification dynamique : `settings/tokenPricingIdf` (base + pays)
@@ -243,6 +271,7 @@ Principales pages :
 - `/demandes/client` : creation/suivi demandes client
 - `/demandes/prestataire` : gestion demandes admin
 - `/admin/ia`, `/admin/tokens`, `/admin/conversations` : modules admin
+- `/admin/logs`, `/admin/users/[userId]/logs` : logs d'activité (admin)
 - `/form/users`, `/form/cours`, `/cours` : CRUD demo/test
 
 ## 11) Modules iOS (SwiftUI)

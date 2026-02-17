@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, fetchUtilisateurByIdRealTime, signOutUser } from '../indexFirebase';
+import { logActivity } from '../utils/logActivity';
 
 const isActivePath = (pathname: string, href: string, exact?: boolean) => {
   if (exact) {
@@ -18,13 +19,30 @@ export default function TopNav() {
   const [userId, setUserId] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [signOutLoading, setSignOutLoading] = useState(false);
+  const lastAuthUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      const previousUid = lastAuthUidRef.current;
+      const nextUid = user?.uid ?? null;
+      lastAuthUidRef.current = nextUid;
+
       if (!user) {
         setUserId(null);
         setRole(null);
         return;
+      }
+
+      if (nextUid && nextUid !== previousUid) {
+        const providerIds = (user.providerData ?? [])
+          .map((provider) => provider?.providerId)
+          .filter(Boolean) as string[];
+        void logActivity({
+          action: 'login',
+          targetType: 'user',
+          targetId: nextUid,
+          details: { providerIds },
+        });
       }
       setUserId(user.uid);
     });
@@ -58,6 +76,14 @@ export default function TopNav() {
   const handleSignOut = async () => {
     setSignOutLoading(true);
     try {
+      if (userId) {
+        void logActivity({
+          action: 'logout',
+          targetType: 'user',
+          targetId: userId,
+          details: {},
+        });
+      }
       await signOutUser();
     } finally {
       setSignOutLoading(false);
@@ -69,6 +95,7 @@ export default function TopNav() {
     if (normalizedRole === 'admin') {
       return [
         { href: '/', label: 'Dashboard', exact: true },
+        { href: '/admin/logs', label: 'Logs' },
         { href: '/admin/conversations', label: 'Conversations' },
         { href: '/demandes/prestataire', label: 'Demandes admin' },
         { href: '/admin/ia', label: 'Validation IA' },
