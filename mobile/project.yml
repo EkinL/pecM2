@@ -23,7 +23,7 @@ targets:
       - path: Pecm2Swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.pecm2.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.lilian.pecm2
         INFOPLIST_FILE: Pecm2Swift/Info.plist
     dependencies:
       - package: Firebase
