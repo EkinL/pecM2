@@ -1,0 +1,41 @@
+@startuml
+!theme plain
+
+autonumber
+
+actor User
+participant "ConversationView" as View
+participant "ConversationDetailViewModel" as VM
+participant "ConversationService\n(iOS Firestore tx)" as ConvService
+participant "Cloud Firestore" as Firestore
+participant "NextApiService" as MobileApi
+participant "POST /api/conversation/send" as ApiSend
+participant "POST /api/ai/reply" as ApiReply
+participant "OpenAI / HuggingFace" as LLM
+participant "adminLogs" as Logs
+
+User -> View : Tap Send
+View -> VM : sendTextMessage(text)
+
+VM -> ConvService : sendMessageWithTokens(conversationId,userId,text)
+ConvService -> Firestore : transaction\n- check conversation/IA status\n- compute tokenCost\n- decrement user tokens\n- write client message
+
+alt Firestore permission denied on mobile
+  VM -> MobileApi : sendConversationMessage(...)
+  MobileApi -> ApiSend : POST /api/conversation/send + Bearer token
+  ApiSend -> Firestore : Admin transaction\n(same checks + writes)
+  ApiSend -> Logs : writeActivityLog(message_send)
+end
+
+VM -> MobileApi : aiReply(conversationId, aiId, message)
+MobileApi -> ApiReply : POST /api/ai/reply + Bearer token
+ApiReply -> Firestore : verify ownership + load aiProfile + history + memory
+ApiReply -> LLM : generate reply
+ApiReply -> Firestore : write IA message + update messageCount + memory summary
+ApiReply -> Logs : writeActivityLog(ai_reply)
+
+Firestore --> VM : onSnapshot(messages)
+VM --> View : publish updated messages
+View --> User : message + IA response displayed
+
+@enduml

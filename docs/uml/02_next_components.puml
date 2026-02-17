@@ -1,0 +1,74 @@
+@startuml
+!theme plain
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+
+package "Next.js app" {
+  component "Pages (client/admin)\n/app/*" as Pages
+  component "Firebase client layer\nindexFirebase.ts + services/*" as FirebaseLayer
+  component "API Layer\n/app/api/*" as ApiLayer
+  component "Observability\nobservability/metrics + /api/metrics" as Metrics
+}
+
+package "API Layer (key routes)" {
+  component "POST /api/conversation/send" as ApiSend
+  component "POST /api/ai/reply" as ApiReply
+  component "POST /api/ai/image" as ApiImage
+  component "POST /api/ai/tts" as ApiTts
+  component "POST /api/token-price" as ApiToken
+  component "POST /api/location/*" as ApiLocation
+  component "POST /api/logs" as ApiLogs
+}
+
+package "Backend services" {
+  component "Firebase Admin adapter\napi/_lib/firebaseAdmin.ts" as AdminAdapter
+  component "Activity logs adapter\napi/_lib/activityLogs.ts" as ActivityLogs
+}
+
+database "Cloud Firestore" as Firestore
+database "Firebase Auth" as FirebaseAuth
+database "Firebase Storage" as Storage
+cloud "OpenAI" as OpenAI
+cloud "HuggingFace" as HF
+cloud "Cloud Function getTokenPrice" as CF
+cloud "OpenStreetMap Nominatim" as OSM
+
+Pages --> FirebaseLayer : realtime + writes (client SDK)
+Pages --> ApiLayer : fetch /api/*
+
+ApiLayer --> ApiSend
+ApiLayer --> ApiReply
+ApiLayer --> ApiImage
+ApiLayer --> ApiTts
+ApiLayer --> ApiToken
+ApiLayer --> ApiLocation
+ApiLayer --> ApiLogs
+
+ApiSend --> AdminAdapter
+ApiReply --> AdminAdapter
+ApiImage --> AdminAdapter
+ApiLogs --> ActivityLogs
+ApiToken --> ActivityLogs
+ApiTts --> ActivityLogs
+
+AdminAdapter --> FirebaseAuth : verifyIdToken()
+AdminAdapter --> Firestore
+ActivityLogs --> Firestore : adminLogs writes
+
+FirebaseLayer --> Firestore
+FirebaseLayer --> FirebaseAuth
+
+ApiImage --> Storage : avatar upload
+ApiReply --> OpenAI
+ApiReply --> HF : fallback
+ApiImage --> OpenAI
+ApiTts --> OpenAI
+ApiToken --> CF
+ApiLocation --> OSM
+
+Metrics --> ApiLayer : instrumentation
+
+@enduml
