@@ -16,171 +16,28 @@ struct AccountView: View {
 
   var body: some View {
     NavigationStack {
-      ScrollView {
-        VStack(alignment: .leading, spacing: 16) {
+      ScrollView(showsIndicators: false) {
+        VStack(alignment: .leading, spacing: 18) {
           if let profile = session.profile {
-            VStack(alignment: .leading, spacing: 10) {
-              SectionHeader(title: "Profil", systemImage: "person.crop.circle")
-              CardContainer {
-                VStack(alignment: .leading, spacing: 10) {
-                  Text(displayName(profile: profile))
-                    .font(AppTypography.title)
-                    .foregroundColor(AppColors.textPrimary)
-                    .lineLimit(2)
-
-                  HStack(spacing: 10) {
-                    StatusPill(text: (profile.role ?? "client").capitalized, tint: AppColors.accent)
-                    StatusPill(text: "Tokens: \(profile.tokens ?? 0)", tint: AppColors.textSecondary)
-                  }
-
-                  Divider()
-                    .overlay(AppColors.inputBackground.opacity(0.8))
-
-                  VStack(alignment: .leading, spacing: 8) {
-                    AccountInfoRow(label: "Email", value: profile.mail)
-                    AccountInfoRow(label: "Rôle", value: profile.role ?? "client")
-                    AccountInfoRow(label: "Tokens", value: String(profile.tokens ?? 0))
-                    AccountInfoRow(label: "Providers", value: providerIdsText(profile: profile, authUser: session.user))
-                  }
-                }
-              }
-            }
+            profileHero(profile)
+            identitySection(profile)
+          } else {
+            profilePlaceholder
           }
 
-	          VStack(alignment: .leading, spacing: 10) {
-	            SectionHeader(title: "Localisation", systemImage: "location.fill")
-	            CardContainer {
-	              VStack(alignment: .leading, spacing: 10) {
-	                Picker("Tarification", selection: Binding(get: {
-	                  viewModel.useLiveLocationPricing
-	                }, set: { enabled in
-	                  viewModel.togglePricingMode(enabled, locationManager: locationManager)
-	                })) {
-	                  Text("Localisation ON").tag(true)
-	                  Text("Tarif de base").tag(false)
-	                }
-	                .pickerStyle(.segmented)
-
-		                if viewModel.useLiveLocationPricing {
-		                  HStack(spacing: 10) {
-		                    StatusPill(text: locationStatusText, tint: locationStatusTint)
-		                    Spacer(minLength: 0)
-
-		                    if viewModel.locationStatus == .denied {
-		                      Button("Ouvrir Réglages") {
-		                        if let url = URL(string: UIApplication.openSettingsURLString) {
-		                          openURL(url)
-		                        }
-		                      }
-		                      .font(AppTypography.caption.weight(.semibold))
-		                      .tint(AppColors.accent)
-		                    }
-
-		                    Button(viewModel.isRefreshingLocation ? "Actualisation..." : "Actualiser") {
-		                      viewModel.refreshPricing(using: locationManager)
-		                    }
-		                    .disabled(viewModel.isRefreshingLocation)
-		                    .font(AppTypography.caption.weight(.semibold))
-		                    .tint(AppColors.accent)
-		                  }
-
-                  Divider()
-                    .overlay(AppColors.inputBackground.opacity(0.8))
-
-                  VStack(alignment: .leading, spacing: 8) {
-                    AccountInfoRow(label: "Pays", value: countryDisplayText)
-                    AccountInfoRow(label: "Maj", value: lastUpdatedText)
-                  }
-
-                  if let error = viewModel.locationError, !error.isEmpty {
-                    Text(error)
-                      .font(AppTypography.footnote)
-                      .foregroundColor(AppColors.error)
-                  }
-                } else {
-                  HStack(spacing: 10) {
-                    StatusPill(text: "Tarif de base", tint: AppColors.textSecondary)
-                    Spacer(minLength: 0)
-                    Button("Actualiser") {
-                      viewModel.refreshPricing(using: locationManager)
-                    }
-                    .font(AppTypography.caption.weight(.semibold))
-                    .tint(AppColors.accent)
-                  }
-                  Text("Tarif de base appliqué (localisation désactivée).")
-                    .font(AppTypography.footnote)
-                    .foregroundColor(AppColors.textSecondary)
-                }
-              }
-            }
-          }
-
-          VStack(alignment: .leading, spacing: 10) {
-            SectionHeader(title: "Tarif tokens (selon localisation)", systemImage: "tag.fill")
-            CardContainer {
-              VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 10) {
-                  if viewModel.tokenPriceLoading {
-                    ProgressView()
-                      .tint(AppColors.accent)
-                  } else {
-                    StatusPill(text: tokenPricingSourceText, tint: AppColors.textSecondary)
-                  }
-                  Spacer(minLength: 0)
-                  if viewModel.tokenPriceError != nil {
-                    Button("Réessayer") {
-                      viewModel.retryTokenPricing()
-                    }
-                    .font(AppTypography.caption.weight(.semibold))
-                    .tint(AppColors.accent)
-                  }
-                }
-
-                Divider()
-                  .overlay(AppColors.inputBackground.opacity(0.8))
-
-                VStack(alignment: .leading, spacing: 8) {
-                  AccountInfoRow(label: "Texte", value: tokenTextDisplay)
-                  AccountInfoRow(label: "Image", value: tokenImageDisplay)
-                }
-
-                if !viewModel.useLiveLocationPricing {
-                  Text("Tarif de base appliqué (localisation désactivée).")
-                    .font(AppTypography.footnote)
-                    .foregroundColor(AppColors.textSecondary)
-                } else if viewModel.countryCode == nil {
-                  Text("Tarif de base affiché (localisation en attente).")
-                    .font(AppTypography.footnote)
-                    .foregroundColor(AppColors.textSecondary)
-                }
-
-                if let error = viewModel.tokenPriceError, !error.isEmpty {
-                  Text(error)
-                    .font(AppTypography.footnote)
-                    .foregroundColor(AppColors.error)
-                }
-              }
-            }
-          }
-
-          VStack(alignment: .leading, spacing: 10) {
-            SectionHeader(title: "Sécurité", systemImage: "lock.fill")
-            CardContainer {
-              VStack(spacing: 12) {
-                DestructiveActionButton(title: "Se déconnecter", systemImage: "rectangle.portrait.and.arrow.right") {
-                  showLogoutConfirm = true
-                }
-              }
-            }
-          }
+          locationSection
+          pricingSection
+          securitySection
 
           Spacer(minLength: 24)
         }
-        .padding(AppLayout.screenPadding)
+        .padding(.horizontal, AppLayout.screenPadding)
+        .padding(.top, 12)
+        .padding(.bottom, 24)
         .mobileDesktopParity(maxWidth: AppLayout.maxContentWidth)
       }
-      .navigationTitle("Compte")
-      .navigationBarTitleDisplayMode(.large)
+      .navigationTitle("")
+      .navigationBarTitleDisplayMode(.inline)
     }
     .appScreenBackground()
     .tint(AppColors.accent)
@@ -207,7 +64,11 @@ struct AccountView: View {
       guard let uid = session.user?.uid else { return }
       viewModel.start(userId: uid, locationManager: locationManager)
       viewModel.applyProfile(session.profile)
-      viewModel.applyPricingMode(using: locationManager)
+      if isAdminRole(session.profile?.role) {
+        viewModel.applyPricingMode(using: locationManager)
+      } else {
+        viewModel.ensureLiveLocationForReadonlyUsers(using: locationManager)
+      }
     }
     .onDisappear {
       locationManager.stopUpdatingLocation()
@@ -222,6 +83,338 @@ struct AccountView: View {
     }
     .onReceive(session.$profile) { profile in
       viewModel.applyProfile(profile)
+      guard session.user != nil else { return }
+      if isAdminRole(profile?.role) {
+        viewModel.applyPricingMode(using: locationManager)
+      } else {
+        viewModel.ensureLiveLocationForReadonlyUsers(using: locationManager)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func profileHero(_ profile: UserProfile) -> some View {
+    ZStack(alignment: .topLeading) {
+      RoundedRectangle(cornerRadius: 22, style: .continuous)
+        .fill(
+          LinearGradient(
+            colors: [AppColors.backgroundSecondary, AppColors.inputBackground.opacity(0.82)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
+        )
+
+      Circle()
+        .fill(AppColors.accent.opacity(0.20))
+        .frame(width: 190, height: 190)
+        .offset(x: 180, y: -98)
+        .blur(radius: 6)
+
+      VStack(alignment: .leading, spacing: 14) {
+        HStack(alignment: .top, spacing: 12) {
+          ZStack {
+            Circle()
+              .fill(AppColors.inputBackground)
+            Text(initials(for: displayName(profile: profile)))
+              .font(AppTypography.headline)
+              .foregroundColor(AppColors.textPrimary)
+          }
+          .frame(width: 48, height: 48)
+
+          VStack(alignment: .leading, spacing: 4) {
+            Label("Compte", systemImage: "person.crop.circle.fill")
+              .font(AppTypography.caption.weight(.semibold))
+              .foregroundColor(AppColors.textSecondary)
+
+            Text(displayName(profile: profile))
+              .font(AppTypography.title)
+              .foregroundColor(AppColors.textPrimary)
+              .lineLimit(2)
+
+            Text((profile.mail ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Email indisponible" : (profile.mail ?? ""))
+              .font(AppTypography.footnote)
+              .foregroundColor(AppColors.textSecondary)
+              .lineLimit(2)
+          }
+        }
+
+        HStack(spacing: 8) {
+          StatusPill(text: (profile.role ?? "client").capitalized, tint: AppColors.accent)
+          StatusPill(text: "Tokens \(profile.tokens ?? 0)", tint: AppColors.textSecondary)
+          StatusPill(text: "\(providerCount(profile: profile, authUser: session.user)) connexion(s)", tint: AppColors.textSecondary)
+          Spacer(minLength: 0)
+        }
+      }
+      .padding(16)
+    }
+    .overlay(
+      RoundedRectangle(cornerRadius: 22, style: .continuous)
+        .stroke(AppColors.inputBackground.opacity(0.72), lineWidth: 1)
+    )
+    .shadow(color: .black.opacity(0.24), radius: 14, x: 0, y: 10)
+  }
+
+  private var profilePlaceholder: some View {
+    CardContainer(padding: 16) {
+      VStack(alignment: .leading, spacing: 8) {
+        Label("Compte", systemImage: "person.crop.circle.fill")
+          .font(AppTypography.caption.weight(.semibold))
+          .foregroundColor(AppColors.textSecondary)
+        Text("Chargement du profil...")
+          .font(AppTypography.title)
+          .foregroundColor(AppColors.textPrimary)
+        Text("Vos informations seront disponibles dans un instant.")
+          .font(AppTypography.body)
+          .foregroundColor(AppColors.textSecondary)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func identitySection(_ profile: UserProfile) -> some View {
+    sectionTitle(
+      title: "Profil et identite",
+      subtitle: "Consultez vos informations et vos methodes de connexion.",
+      systemImage: "person.text.rectangle"
+    )
+
+    CardContainer(padding: 16) {
+      VStack(alignment: .leading, spacing: 14) {
+        AccountInfoRow(label: "Pseudo", value: profile.pseudo)
+        dividerLine
+        AccountInfoRow(label: "Email", value: profile.mail)
+        dividerLine
+        AccountInfoRow(label: "Role", value: profile.role ?? "client")
+        dividerLine
+        AccountInfoRow(label: "Tokens", value: String(profile.tokens ?? 0))
+        dividerLine
+        AccountConnectionsRow(providerIDs: resolvedProviderIDs(profile: profile, authUser: session.user))
+      }
+    }
+  }
+
+  private var locationSection: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      sectionTitle(
+        title: "Localisation",
+        subtitle: "Activez la localisation pour des tarifs adaptes a votre pays.",
+        systemImage: "location.fill"
+      )
+
+      CardContainer(padding: 16) {
+        VStack(alignment: .leading, spacing: 14) {
+          if isAdminRole(session.profile?.role) {
+            Picker("Tarification", selection: Binding(get: {
+              viewModel.useLiveLocationPricing
+            }, set: { enabled in
+              viewModel.togglePricingMode(enabled, locationManager: locationManager)
+            })) {
+              Text("Localisation ON").tag(true)
+              Text("Tarif de base").tag(false)
+            }
+            .pickerStyle(.segmented)
+          }
+
+          let showLiveLocationDetails = !isAdminRole(session.profile?.role) || viewModel.useLiveLocationPricing
+          if showLiveLocationDetails {
+            HStack(spacing: 8) {
+              Label(locationStatusText, systemImage: locationStatusIconName)
+                .font(AppTypography.caption.weight(.semibold))
+                .foregroundColor(locationStatusTint)
+
+              Spacer(minLength: 0)
+
+              if viewModel.locationStatus == .denied {
+                smallActionButton("Ouvrir Reglages") {
+                  if let url = URL(string: UIApplication.openSettingsURLString) {
+                    openURL(url)
+                  }
+                }
+              }
+
+              smallActionButton(viewModel.isRefreshingLocation ? "Actualisation..." : "Actualiser", isDisabled: viewModel.isRefreshingLocation) {
+                if isAdminRole(session.profile?.role) {
+                  viewModel.refreshPricing(using: locationManager)
+                } else {
+                  viewModel.refreshLocationForReadonlyUser(using: locationManager)
+                }
+              }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
+            .background(AppColors.background.opacity(0.35))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+              RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(AppColors.inputBackground.opacity(0.70), lineWidth: 1)
+            )
+
+            AccountInfoRow(label: "Pays", value: countryDisplayText)
+            AccountInfoRow(label: "Derniere maj", value: lastUpdatedText)
+
+            if let error = viewModel.locationError, !error.isEmpty {
+              Text(error)
+                .font(AppTypography.footnote)
+                .foregroundColor(AppColors.error)
+            }
+          } else {
+            HStack(spacing: 10) {
+              StatusPill(text: "Tarif de base", tint: AppColors.textSecondary)
+              Spacer(minLength: 0)
+              smallActionButton("Actualiser") {
+                viewModel.refreshPricing(using: locationManager)
+              }
+            }
+
+            Text("Tarif de base applique (localisation desactivee).")
+              .font(AppTypography.footnote)
+              .foregroundColor(AppColors.textSecondary)
+          }
+        }
+      }
+    }
+  }
+
+  private var pricingSection: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      sectionTitle(
+        title: "Tarifs tokens",
+        subtitle: "Visualisez le cout des actions selon votre configuration.",
+        systemImage: "tag.fill"
+      )
+
+      CardContainer(padding: 16) {
+        VStack(alignment: .leading, spacing: 14) {
+          HStack(spacing: 10) {
+            if viewModel.tokenPriceLoading {
+              ProgressView()
+                .tint(AppColors.accent)
+            } else {
+              StatusPill(text: tokenPricingSourceText, tint: AppColors.textSecondary)
+            }
+
+            Spacer(minLength: 0)
+
+            if viewModel.tokenPriceError != nil {
+              smallActionButton("Reessayer") {
+                viewModel.retryTokenPricing()
+              }
+            }
+          }
+
+          HStack(spacing: 10) {
+            tokenMetricCard(title: "Texte", value: tokenTextDisplay ?? "—")
+            tokenMetricCard(title: "Image", value: tokenImageDisplay ?? "—")
+          }
+
+          if !viewModel.useLiveLocationPricing {
+            Text("Tarif de base applique (localisation desactivee).")
+              .font(AppTypography.footnote)
+              .foregroundColor(AppColors.textSecondary)
+          } else if viewModel.countryCode == nil {
+            Text("Tarif de base affiche (localisation en attente).")
+              .font(AppTypography.footnote)
+              .foregroundColor(AppColors.textSecondary)
+          }
+
+          if let error = viewModel.tokenPriceError, !error.isEmpty {
+            Text(error)
+              .font(AppTypography.footnote)
+              .foregroundColor(AppColors.error)
+          }
+        }
+      }
+    }
+  }
+
+  private var securitySection: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      sectionTitle(
+        title: "Securite",
+        subtitle: "Gerez votre session en toute securite.",
+        systemImage: "lock.fill"
+      )
+
+      CardContainer(padding: 16) {
+        VStack(alignment: .leading, spacing: 12) {
+          Text("Vous pouvez fermer votre session a tout moment.")
+            .font(AppTypography.body)
+            .foregroundColor(AppColors.textSecondary)
+
+          DestructiveActionButton(title: "Se deconnecter", systemImage: "rectangle.portrait.and.arrow.right") {
+            showLogoutConfirm = true
+          }
+        }
+      }
+    }
+  }
+
+  private func sectionTitle(title: String, subtitle: String, systemImage: String) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Label(title, systemImage: systemImage)
+        .font(AppTypography.headline)
+        .foregroundColor(AppColors.textPrimary)
+
+      Text(subtitle)
+        .font(AppTypography.footnote)
+        .foregroundColor(AppColors.textSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private func smallActionButton(_ title: String, isDisabled: Bool = false, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Text(title)
+        .font(AppTypography.caption.weight(.semibold))
+        .foregroundColor(AppColors.textPrimary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(AppColors.inputBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+          RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .stroke(AppColors.inputBackground.opacity(0.75), lineWidth: 1)
+        )
+    }
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+    .opacity(isDisabled ? 0.55 : 1)
+  }
+
+  private func tokenMetricCard(title: String, value: String) -> some View {
+    VStack(alignment: .leading, spacing: 4) {
+      Text(title.uppercased())
+        .font(AppTypography.caption.weight(.semibold))
+        .foregroundColor(AppColors.textSecondary)
+      Text(value)
+        .font(AppTypography.headline)
+        .foregroundColor(AppColors.textPrimary)
+        .lineLimit(2)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(12)
+    .background(AppColors.background.opacity(0.35))
+    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .overlay(
+      RoundedRectangle(cornerRadius: 12, style: .continuous)
+        .stroke(AppColors.inputBackground.opacity(0.72), lineWidth: 1)
+    )
+  }
+
+  private var dividerLine: some View {
+    Rectangle()
+      .fill(AppColors.inputBackground.opacity(0.75))
+      .frame(height: 1)
+  }
+
+  private var locationStatusIconName: String {
+    switch viewModel.locationStatus {
+    case .active:
+      return "location.fill"
+    case .pending:
+      return "hourglass"
+    case .denied:
+      return "location.slash"
     }
   }
 
@@ -274,10 +467,34 @@ struct AccountView: View {
     case .base:
       return "Source: base"
     case .countryOverride:
-      return "Source: override pays"
+      return "Source: pays"
     case .fallback:
-      return "Source: défaut"
+      return "Source: defaut"
     }
+  }
+
+  private func isAdminRole(_ role: String?) -> Bool {
+    (role ?? "client").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "admin"
+  }
+
+  private func providerCount(profile: UserProfile, authUser: User?) -> Int {
+    resolvedProviderIDs(profile: profile, authUser: authUser).count
+  }
+
+  private func initials(for name: String) -> String {
+    let parts = name
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .split(separator: " ")
+      .map(String.init)
+      .filter { !$0.isEmpty }
+
+    if parts.isEmpty {
+      return "U"
+    }
+    if parts.count == 1 {
+      return String(parts[0].prefix(1)).uppercased()
+    }
+    return (String(parts[0].prefix(1)) + String(parts[1].prefix(1))).uppercased()
   }
 }
 
@@ -289,16 +506,50 @@ private func displayName(profile: UserProfile) -> String {
   return "Utilisateur"
 }
 
-private func providerIdsText(profile: UserProfile, authUser: User?) -> String {
+private func resolvedProviderIDs(profile: UserProfile, authUser: User?) -> [String] {
   let fromProfile = (profile.providerIds ?? [])
     .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
     .filter { !$0.isEmpty }
-  if !fromProfile.isEmpty { return fromProfile.joined(separator: ", ") }
+  let source = !fromProfile.isEmpty ? fromProfile : (authUser?.providerData ?? []).map { $0.providerID }
 
-  let fromAuth = (authUser?.providerData ?? []).map { $0.providerID }
-  if !fromAuth.isEmpty { return fromAuth.joined(separator: ", ") }
+  var seen: Set<String> = []
+  var result: [String] = []
+  for provider in source {
+    let normalized = provider.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalized.isEmpty else { continue }
+    if seen.insert(normalized).inserted {
+      result.append(normalized)
+    }
+  }
+  return result
+}
 
-  return "—"
+private struct AccountConnectionsRow: View {
+  let providerIDs: [String]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("CONNEXIONS")
+        .font(AppTypography.caption.weight(.semibold))
+        .foregroundColor(AppColors.textSecondary)
+
+      if providerIDs.isEmpty {
+        Text("—")
+          .font(AppTypography.body)
+          .foregroundColor(AppColors.textPrimary)
+      } else {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 8) {
+            ForEach(providerIDs, id: \.self) { providerID in
+              ConnectionProviderBadge(providerID: providerID)
+            }
+          }
+          .padding(.vertical, 2)
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
 }
 
 private struct AccountInfoRow: View {
@@ -306,23 +557,105 @@ private struct AccountInfoRow: View {
   let value: String?
 
   var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 10) {
-      Text(label)
+    VStack(alignment: .leading, spacing: 4) {
+      Text(label.uppercased())
         .font(AppTypography.caption.weight(.semibold))
         .foregroundColor(AppColors.textSecondary)
-        .frame(width: 90, alignment: .leading)
+
       Text(displayValue)
         .font(AppTypography.body)
         .foregroundColor(AppColors.textPrimary)
-        .lineLimit(2)
+        .fixedSize(horizontal: false, vertical: true)
         .textSelection(.enabled)
-      Spacer(minLength: 0)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 
   private var displayValue: String {
     let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     return trimmed.isEmpty ? "—" : trimmed
+  }
+}
+
+private struct ConnectionProviderBadge: View {
+  let providerID: String
+
+  private var normalizedProviderID: String {
+    providerID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+  }
+
+  private var providerLabel: String {
+    switch normalizedProviderID {
+    case "google.com":
+      return "Google"
+    case "apple.com":
+      return "Apple"
+    case "password":
+      return "Email"
+    case "phone":
+      return "Telephone"
+    default:
+      return providerID
+    }
+  }
+
+  var body: some View {
+    HStack(spacing: 6) {
+      icon
+      Text(providerLabel)
+        .font(AppTypography.caption.weight(.semibold))
+        .foregroundColor(AppColors.textPrimary)
+        .lineLimit(1)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 7)
+    .background(AppColors.background.opacity(0.35))
+    .clipShape(Capsule())
+    .overlay(
+      Capsule()
+        .stroke(AppColors.inputBackground.opacity(0.75), lineWidth: 1)
+    )
+  }
+
+  @ViewBuilder
+  private var icon: some View {
+    switch normalizedProviderID {
+    case "google.com":
+      GoogleProviderIcon()
+    case "apple.com":
+      Image(systemName: "apple.logo")
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundColor(AppColors.textPrimary)
+    case "password":
+      Image(systemName: "envelope.fill")
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundColor(AppColors.textSecondary)
+    case "phone":
+      Image(systemName: "phone.fill")
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundColor(AppColors.textSecondary)
+    default:
+      Image(systemName: "person.crop.circle.badge.checkmark")
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundColor(AppColors.textSecondary)
+    }
+  }
+}
+
+private struct GoogleProviderIcon: View {
+  var body: some View {
+    ZStack {
+      Circle()
+        .fill(Color.white)
+      Text("G")
+        .font(.system(size: 10, weight: .bold, design: .rounded))
+        .foregroundColor(Color(hex: "#4285F4"))
+    }
+    .frame(width: 16, height: 16)
+    .overlay(
+      Circle()
+        .stroke(Color(hex: "#DADCE0"), lineWidth: 0.9)
+    )
   }
 }
 
@@ -482,6 +815,25 @@ final class AccountViewModel: ObservableObject {
 	    refreshTokenPricing()
 	  }
 
+  func ensureLiveLocationForReadonlyUsers(using locationManager: LocationManager) {
+    useLiveLocationPricing = true
+    locationError = nil
+
+    let auth = locationManager.authorizationStatus
+    if auth == .authorizedWhenInUse || auth == .authorizedAlways {
+      locationManager.startUpdatingLocation()
+      if let location = locationManager.location {
+        performCountryLookupIfNeeded(location: location, force: false)
+      } else {
+        locationManager.requestLocation()
+      }
+    } else {
+      locationManager.stopUpdatingLocation()
+    }
+
+    refreshTokenPricing()
+  }
+
   func retryTokenPricing() {
     listenTokenPricing()
   }
@@ -560,8 +912,35 @@ final class AccountViewModel: ObservableObject {
 		          locationError = error.localizedDescription
 		        }
 	      }
-	    }
-	  }
+		    }
+		  }
+
+  func refreshLocationForReadonlyUser(using locationManager: LocationManager) {
+    let now = Date()
+    if let lastManualRefreshAt, now.timeIntervalSince(lastManualRefreshAt) < 2 {
+      return
+    }
+    lastManualRefreshAt = now
+
+    isRefreshingLocation = true
+    locationError = nil
+
+    Task {
+      defer { isRefreshingLocation = false }
+      do {
+        let location = try await locationManager.requestOneShotLocation()
+        locationManager.startUpdatingLocation()
+        performCountryLookupIfNeeded(location: location, force: true)
+      } catch is CancellationError {
+        // Ignore
+      } catch {
+        let appliedFallback = await applyFallbackCountry()
+        if !appliedFallback {
+          locationError = error.localizedDescription
+        }
+      }
+    }
+  }
 
 	  private struct IpWhoIsPayload: Decodable {
 	    var success: Bool?
