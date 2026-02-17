@@ -8,11 +8,14 @@ import FirebaseFirestore
 struct AccountView: View {
   @EnvironmentObject private var session: SessionStore
   @EnvironmentObject private var locationManager: LocationManager
+  @EnvironmentObject private var accessibilitySettings: AppAccessibilitySettings
   @Environment(\.openURL) private var openURL
   @StateObject private var viewModel = AccountViewModel()
   @State private var errorMessage: String?
   @State private var toast: ToastData?
   @State private var showLogoutConfirm = false
+  @State private var showDeleteAccountRequestConfirm = false
+  @State private var isSubmittingDeletionRequest = false
 
   var body: some View {
     NavigationStack {
@@ -27,6 +30,7 @@ struct AccountView: View {
 
           locationSection
           pricingSection
+          accessibilitySection
           securitySection
 
           Spacer(minLength: 24)
@@ -59,6 +63,14 @@ struct AccountView: View {
       Button("Annuler", role: .cancel) {}
     } message: {
       Text("Vous devrez vous reconnecter pour accéder à vos conversations et demandes.")
+    }
+    .confirmationDialog("Demander la suppression du compte ?", isPresented: $showDeleteAccountRequestConfirm, titleVisibility: .visible) {
+      Button("Envoyer la demande", role: .destructive) {
+        submitDeletionRequest()
+      }
+      Button("Annuler", role: .cancel) {}
+    } message: {
+      Text("Votre demande RGPD sera enregistrée et traitée par un administrateur.")
     }
     .onAppear {
       guard let uid = session.user?.uid else { return }
@@ -327,16 +339,103 @@ struct AccountView: View {
     }
   }
 
-  private var securitySection: some View {
+  private var accessibilitySection: some View {
     VStack(alignment: .leading, spacing: 10) {
       sectionTitle(
-        title: "Securite",
-        subtitle: "Gerez votre session en toute securite.",
-        systemImage: "lock.fill"
+        title: "Accessibilite",
+        subtitle: "Ajustez le theme, la taille du texte et les animations.",
+        systemImage: "figure.wave"
       )
 
       CardContainer(padding: 16) {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
+          VStack(alignment: .leading, spacing: 8) {
+            Text("Theme d'affichage")
+              .font(AppTypography.caption.weight(.semibold))
+              .foregroundColor(AppColors.textSecondary)
+
+            Picker("Theme", selection: $accessibilitySettings.themePreference) {
+              ForEach(AppThemePreference.allCases) { preference in
+                Text(preference.label).tag(preference)
+              }
+            }
+            .pickerStyle(.segmented)
+          }
+
+          dividerLine
+
+          VStack(alignment: .leading, spacing: 8) {
+            Toggle(isOn: $accessibilitySettings.reduceMotion) {
+              Text("Reduire les animations")
+                .font(AppTypography.body)
+                .foregroundColor(AppColors.textPrimary)
+            }
+            .tint(AppColors.accent)
+
+            Text("Limite les transitions et animations pour un affichage plus statique.")
+              .font(AppTypography.footnote)
+              .foregroundColor(AppColors.textSecondary)
+          }
+
+          dividerLine
+
+          VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+              Text("Taille du texte")
+                .font(AppTypography.body)
+                .foregroundColor(AppColors.textPrimary)
+
+              Spacer(minLength: 0)
+
+              Text(accessibilitySettings.fontScaleLabel)
+                .font(AppTypography.caption.weight(.semibold))
+                .foregroundColor(AppColors.textSecondary)
+            }
+
+            Slider(
+              value: Binding(
+                get: { Double(accessibilitySettings.fontScaleIndex) },
+                set: { accessibilitySettings.setFontScale(from: $0) }
+              ),
+              in: Double(AppAccessibilitySettings.minFontScaleIndex)...Double(AppAccessibilitySettings.maxFontScaleIndex),
+              step: 1
+            )
+            .tint(AppColors.accent)
+
+            HStack(spacing: 0) {
+              ForEach(AppAccessibilitySettings.minFontScaleIndex...AppAccessibilitySettings.maxFontScaleIndex, id: \.self) { index in
+                fontScaleMarker(for: index)
+                if index < AppAccessibilitySettings.maxFontScaleIndex {
+                  Spacer(minLength: 0)
+                }
+              }
+            }
+
+            HStack {
+              Text("Petit")
+                .font(AppTypography.footnote)
+                .foregroundColor(AppColors.textSecondary)
+              Spacer(minLength: 0)
+              Text("Grand")
+                .font(AppTypography.footnote)
+                .foregroundColor(AppColors.textSecondary)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private var securitySection: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      sectionTitle(
+        title: "Securite et donnees",
+        subtitle: "Gerez votre session et vos droits RGPD.",
+        systemImage: "lock.shield.fill"
+      )
+
+      CardContainer(padding: 16) {
+        VStack(alignment: .leading, spacing: 14) {
           Text("Vous pouvez fermer votre session a tout moment.")
             .font(AppTypography.body)
             .foregroundColor(AppColors.textSecondary)
@@ -344,6 +443,39 @@ struct AccountView: View {
           DestructiveActionButton(title: "Se deconnecter", systemImage: "rectangle.portrait.and.arrow.right") {
             showLogoutConfirm = true
           }
+
+          if let deletionStatusText {
+            HStack(spacing: 8) {
+              Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(AppColors.accent)
+              Text(deletionStatusText)
+                .font(AppTypography.footnote)
+                .foregroundColor(AppColors.textSecondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppColors.background.opacity(0.35))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(
+              RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(AppColors.inputBackground.opacity(0.70), lineWidth: 1)
+            )
+          }
+
+          DestructiveActionButton(
+            title: deletionActionTitle,
+            systemImage: "trash.fill",
+            isDisabled: isSubmittingDeletionRequest || hasDeletionRequest
+          ) {
+            showDeleteAccountRequestConfirm = true
+          }
+
+          Text("Conformement au RGPD, vous pouvez demander la suppression de votre compte et de vos donnees.")
+            .font(AppTypography.footnote)
+            .foregroundColor(AppColors.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
       }
     }
@@ -359,6 +491,125 @@ struct AccountView: View {
         .font(AppTypography.footnote)
         .foregroundColor(AppColors.textSecondary)
         .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private func fontScaleMarker(for index: Int) -> some View {
+    VStack(spacing: 4) {
+      Capsule()
+        .fill(index == AppAccessibilitySettings.defaultFontScaleIndex ? AppColors.accent : AppColors.inputBackground.opacity(0.85))
+        .frame(width: index == AppAccessibilitySettings.defaultFontScaleIndex ? 3 : 1, height: index == AppAccessibilitySettings.defaultFontScaleIndex ? 13 : 8)
+
+      if index == AppAccessibilitySettings.defaultFontScaleIndex {
+        Text("Defaut")
+          .font(AppTypography.caption.weight(.semibold))
+          .foregroundColor(AppColors.textSecondary)
+      } else {
+        Color.clear
+          .frame(height: 14)
+      }
+    }
+  }
+
+  private var normalizedDeletionStatus: String {
+    session.profile?.accountDeletionRequestStatus?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased() ?? ""
+  }
+
+  private var hasDeletionRequest: Bool {
+    if session.profile?.accountDeletionRequestedAt != nil {
+      return true
+    }
+    return !normalizedDeletionStatus.isEmpty
+  }
+
+  private var deletionStatusText: String? {
+    guard hasDeletionRequest else { return nil }
+
+    let requestedAtText = session.profile?.accountDeletionRequestedAt?
+      .formatted(date: .abbreviated, time: .shortened)
+    let reviewedAtText = session.profile?.accountDeletionReviewedAt?
+      .formatted(date: .abbreviated, time: .shortened)
+
+    switch normalizedDeletionStatus {
+    case "in_review", "processing":
+      if let reviewedAtText {
+        return "Demande prise en compte le \(reviewedAtText)."
+      }
+      if let requestedAtText {
+        return "Demande en cours depuis le \(requestedAtText)."
+      }
+      return "Votre demande est en cours de traitement."
+    case "completed", "done", "approved":
+      if let reviewedAtText {
+        return "Demande traitee le \(reviewedAtText)."
+      }
+      return "Votre demande a ete traitee."
+    case "rejected", "declined":
+      if let reviewedAtText {
+        return "Demande refusee le \(reviewedAtText)."
+      }
+      return "Votre demande a ete refusee."
+    default:
+      if let requestedAtText {
+        return "Demande envoyee le \(requestedAtText)."
+      }
+      return "Demande de suppression deja envoyee."
+    }
+  }
+
+  private var deletionActionTitle: String {
+    if isSubmittingDeletionRequest {
+      return "Envoi en cours..."
+    }
+    switch normalizedDeletionStatus {
+    case "in_review", "processing":
+      return "Demande en cours de traitement"
+    case "completed", "done", "approved":
+      return "Demande traitee"
+    case "rejected", "declined":
+      return "Demande refusee"
+    default:
+      if hasDeletionRequest {
+        return "Demande deja envoyee"
+      }
+      return "Demander la suppression du compte"
+    }
+  }
+
+  private func submitDeletionRequest() {
+    guard !isSubmittingDeletionRequest else { return }
+    guard let user = session.user else {
+      errorMessage = "Utilisateur non authentifie."
+      return
+    }
+
+    isSubmittingDeletionRequest = true
+    let contactEmail = session.profile?.mail ?? user.email
+    let pseudo = session.profile?.pseudo
+
+    Task {
+      do {
+        try await UserService.requestAccountDeletion(userId: user.uid, email: contactEmail, pseudo: pseudo)
+        await LogService.log(
+          action: "account_deletion_requested",
+          targetType: "user",
+          targetId: user.uid,
+          details: ["source": "ios"]
+        )
+        await MainActor.run {
+          isSubmittingDeletionRequest = false
+          toast = ToastData(style: .success, message: "Demande envoyee. Nous revenons vers vous rapidement.")
+          Haptics.success()
+        }
+      } catch {
+        await MainActor.run {
+          isSubmittingDeletionRequest = false
+          errorMessage = error.localizedDescription
+          Haptics.error()
+        }
+      }
     }
   }
 
@@ -662,6 +913,7 @@ private struct GoogleProviderIcon: View {
 private struct DestructiveActionButton: View {
   let title: String
   let systemImage: String
+  var isDisabled: Bool = false
   let action: () -> Void
 
   var body: some View {
@@ -685,6 +937,8 @@ private struct DestructiveActionButton: View {
       )
     }
     .buttonStyle(.plain)
+    .disabled(isDisabled)
+    .opacity(isDisabled ? 0.60 : 1)
   }
 }
 

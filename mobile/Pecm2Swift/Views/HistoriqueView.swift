@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HistoriqueView: View {
   @EnvironmentObject private var session: SessionStore
+  @Environment(\.appShouldReduceMotion) private var reduceMotion
   @StateObject private var viewModel = ConversationsViewModel()
   @State private var aiProfilesById: [String: AiProfile] = [:]
   @State private var aiProfilesLoading: Set<String> = []
@@ -68,7 +69,7 @@ struct HistoriqueView: View {
             }
           } else if !filteredConversations.isEmpty {
             Button("Sélection") {
-              withAnimation(AppMotion.standard) {
+              runSelectionAnimation(AppMotion.standard) {
                 isSelectionMode = true
               }
             }
@@ -326,14 +327,14 @@ struct HistoriqueView: View {
           HStack(spacing: 6) {
             if isDeletingSelection {
               ProgressView()
-                .tint(AppColors.textPrimary)
+                .tint(AppColors.onAccent)
             } else {
               Image(systemName: "trash.fill")
             }
             Text(isDeletingSelection ? "Suppression..." : "Supprimer")
           }
           .font(AppTypography.caption.weight(.semibold))
-          .foregroundColor(AppColors.textPrimary)
+          .foregroundColor(AppColors.onAccent)
           .frame(maxWidth: .infinity, minHeight: 40)
           .background(AppColors.error)
           .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -411,7 +412,7 @@ struct HistoriqueView: View {
 
   private func beginSelection(with conversation: Conversation) {
     guard let conversationId = conversation.id else { return }
-    withAnimation(AppMotion.standard) {
+    runSelectionAnimation(AppMotion.standard) {
       isSelectionMode = true
       selectedConversationIds.insert(conversationId)
     }
@@ -421,7 +422,7 @@ struct HistoriqueView: View {
   private func toggleConversationSelection(_ conversation: Conversation) {
     guard let conversationId = conversation.id else { return }
 
-    withAnimation(AppMotion.quick) {
+    runSelectionAnimation(AppMotion.quick) {
       if selectedConversationIds.contains(conversationId) {
         selectedConversationIds.remove(conversationId)
       } else {
@@ -441,15 +442,25 @@ struct HistoriqueView: View {
 
   private func selectAllVisibleConversations() {
     let ids = filteredConversations.compactMap { $0.id }
-    withAnimation(AppMotion.quick) {
+    runSelectionAnimation(AppMotion.quick) {
       selectedConversationIds = Set(ids)
     }
   }
 
   private func cancelSelectionMode() {
-    withAnimation(AppMotion.standard) {
+    runSelectionAnimation(AppMotion.standard) {
       isSelectionMode = false
       selectedConversationIds.removeAll()
+    }
+  }
+
+  private func runSelectionAnimation(_ animation: Animation, updates: () -> Void) {
+    if reduceMotion {
+      updates()
+    } else {
+      withAnimation(animation) {
+        updates()
+      }
     }
   }
 

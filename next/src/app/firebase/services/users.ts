@@ -209,6 +209,48 @@ export const updateUtilisateurRole = async ({ userId, role }: any) => {
   return batch.commit();
 };
 
+export const updateUtilisateurDeletionRequestStatus = async ({
+  userId,
+  status,
+  adminId,
+  adminMail,
+  note,
+}: any) => {
+  const normalizedId = normalizeRequiredString(userId, 'Utilisateur ID');
+  const normalizedStatus = normalizeRequiredString(status, 'Statut');
+  const allowedStatuses = ['pending', 'in_review', 'completed', 'rejected'];
+
+  if (!allowedStatuses.includes(normalizedStatus)) {
+    throw new Error('Statut de demande RGPD invalide.');
+  }
+
+  const docRef = doc(utilisateurs, normalizedId);
+  const payload: Record<string, unknown> = {
+    accountDeletionRequestStatus: normalizedStatus,
+    accountDeletionReviewedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  const normalizedAdminId = normalizeOptionalString(adminId);
+  if (normalizedAdminId) {
+    payload.accountDeletionReviewedBy = normalizedAdminId;
+  }
+
+  const normalizedAdminMail = normalizeOptionalString(adminMail);
+  if (normalizedAdminMail) {
+    payload.accountDeletionReviewedByMail = normalizedAdminMail;
+  }
+
+  const normalizedNote = normalizeOptionalString(note);
+  if (normalizedNote) {
+    payload.accountDeletionReviewNote = normalizedNote;
+  } else {
+    payload.accountDeletionReviewNote = null;
+  }
+
+  return updateDoc(docRef, payload);
+};
+
 export const grantUserTokensWithPassword = async ({
   targetUserId,
   amount,

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AiProfilesView: View {
   @EnvironmentObject private var session: SessionStore
+  @Environment(\.appShouldReduceMotion) private var reduceMotion
   @StateObject private var viewModel = AiProfilesViewModel()
   @State private var selection: String = "catalogue"
   @State private var searchQuery: String = ""
@@ -295,7 +296,7 @@ struct AiProfilesView: View {
 
   private func modeButton(title: String, systemImage: String, value: String) -> some View {
     Button {
-      withAnimation(AppMotion.standard) {
+      runSelectionAnimation {
         selection = value
       }
     } label: {
@@ -306,7 +307,7 @@ struct AiProfilesView: View {
           .font(AppTypography.footnote.weight(.semibold))
           .lineLimit(1)
       }
-      .foregroundColor(selection == value ? AppColors.textPrimary : AppColors.textSecondary)
+      .foregroundColor(selection == value ? AppColors.onAccent : AppColors.textSecondary)
       .frame(maxWidth: .infinity, minHeight: 34)
       .padding(.horizontal, 8)
       .background(
@@ -325,6 +326,16 @@ struct AiProfilesView: View {
       .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
     .buttonStyle(.plain)
+  }
+
+  private func runSelectionAnimation(_ updates: () -> Void) {
+    if reduceMotion {
+      updates()
+    } else {
+      withAnimation(AppMotion.standard) {
+        updates()
+      }
+    }
   }
 
   private func statChip(title: String, value: String) -> some View {
