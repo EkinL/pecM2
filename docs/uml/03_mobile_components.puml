@@ -1,0 +1,82 @@
+@startuml
+!theme plain
+allowmixing
+
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+
+package "SwiftUI Views" {
+  class RootView <<View>>
+  class MainTabView <<View>>
+  class ConversationView <<View>>
+  class AccountView <<View>>
+  class DemandesAdminView <<View>>
+}
+
+package "ViewModels / State" {
+  class SessionStore <<ObservableObject>>
+  class ConversationDetailViewModel <<ObservableObject>>
+  class UsersViewModel <<ObservableObject>>
+  class DemandesViewModel <<ObservableObject>>
+}
+
+package "Services" {
+  class AuthService
+  class UserService
+  class ConversationService
+  class DemandeService
+  class TokenPricingService
+  class NextApiService
+  class LogService
+}
+
+package "Models" {
+  class UserProfile
+  class Conversation
+  class ConversationMessage
+  class Demande
+  class TokenPricingSettings
+}
+
+class FirebaseManager
+
+database "Firebase Auth" as FirebaseAuth
+database "Cloud Firestore" as Firestore
+cloud "Next.js API" as NextApi
+
+RootView --> SessionStore
+MainTabView --> SessionStore
+ConversationView --> ConversationDetailViewModel
+AccountView --> SessionStore
+DemandesAdminView --> DemandesViewModel
+
+SessionStore --> UserService : listenUser()
+SessionStore --> AuthService
+
+ConversationDetailViewModel --> ConversationService : messages + token tx
+ConversationDetailViewModel --> NextApiService : aiReply/tts/send fallback
+ConversationDetailViewModel --> LogService
+
+AccountView --> UserService : requestAccountDeletion()
+AccountView --> NextApiService : countryLookup()
+
+UsersViewModel --> UserService
+DemandesViewModel --> DemandeService
+
+UserService --> FirebaseManager
+ConversationService --> FirebaseManager
+DemandeService --> FirebaseManager
+TokenPricingService --> FirebaseManager
+AuthService --> FirebaseAuth
+
+FirebaseManager --> Firestore
+NextApiService --> NextApi
+
+ConversationService --> Conversation
+ConversationService --> ConversationMessage
+UserService --> UserProfile
+DemandeService --> Demande
+TokenPricingService --> TokenPricingSettings
+
+@enduml
