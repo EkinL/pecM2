@@ -24,9 +24,9 @@ jobs:
       CI: true
       LANG: en_US.UTF-8
       LC_ALL: en_US.UTF-8
-      APP_IDENTIFIER: com.pecm2.app
+      APP_IDENTIFIER: com.lilian.pecm2
       MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-      MATCH_GIT_BRANCH: ${{ vars.MATCH_GIT_BRANCH || 'main' }}
+      MATCH_GIT_BRANCH: ${{ vars.MATCH_GIT_BRANCH || 'master' }}
       MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
