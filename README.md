@@ -20,6 +20,22 @@ npm install
 npm run dev
 ```
 
+## Monitoring (Grafana)
+
+Local observability setup is available under `monitoring/` (Prometheus + Grafana).
+
+```bash
+cp monitoring/.env.example monitoring/.env
+docker compose --env-file monitoring/.env -f monitoring/docker-compose.yml up -d
+```
+
+Then open:
+
+- Grafana: `http://localhost:3001`
+- Prometheus: `http://localhost:9090`
+
+Detailed instructions: `monitoring/README.md`
+
 ## Testing
 
 ```bash

@@ -26,8 +26,12 @@ export const normalizeOptionalNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
-export const omitUndefinedFields = (payload: Record<string, unknown>) =>
-  Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== undefined));
+export const omitUndefinedFields = <T extends Record<string, unknown>>(
+  payload: T,
+): { [K in keyof T]?: Exclude<T[K], undefined> } =>
+  Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== undefined),
+  ) as { [K in keyof T]?: Exclude<T[K], undefined> };
 
 export const normalizeOptionalLocation = (
   location: unknown,

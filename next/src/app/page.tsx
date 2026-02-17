@@ -20,18 +20,10 @@ import {
 } from './indexFirebase';
 import { logActivity } from './utils/logActivity';
 import { HeroHeader } from './components/dashboard/HeroHeader';
-import { RoadmapSection } from './components/dashboard/RoadmapSection';
-import { FocusSection } from './components/dashboard/FocusSection';
 import { UsersSection } from './components/dashboard/UsersSection';
 import { AiValidationSection } from './components/dashboard/AiValidationSection';
 import { AiProfilesSection } from './components/dashboard/AiProfilesSection';
 import { AiManagementSection } from './components/dashboard/AiManagementSection';
-import {
-  roadmapPhases,
-  uxFocusDefinition,
-  iaFunctionality,
-  monetizationItems,
-} from './data/dashboardContent';
 import { AiProfile, Conversation, Timestamp, Utilisateur } from './types/dashboard';
 
 const statusBucket = (status?: string) => {
@@ -357,6 +349,40 @@ export default function AdminDashboard() {
       unsubUsers?.();
       unsubConversations?.();
       unsubAiProfiles?.();
+    };
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    const probeMetrics = async () => {
+      try {
+        const response = await fetch('/api/admin/metrics/probe', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          console.error('Sonde metrics admin en echec', data);
+          return;
+        }
+
+        console.info('Sonde metrics admin ok', data);
+      } catch (error) {
+        console.error('Erreur sonde metrics admin', error);
+      }
+    };
+
+    void probeMetrics();
+    const intervalId = window.setInterval(() => {
+      void probeMetrics();
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(intervalId);
     };
   }, [isAdmin]);
 
@@ -1324,37 +1350,6 @@ export default function AdminDashboard() {
               formatDate={formatDate}
             />
           </div>
-        </section>
-
-        <section className="space-y-6">
-          <RoadmapSection phases={roadmapPhases} />
-          <FocusSection
-            definitions={uxFocusDefinition}
-            functionality={iaFunctionality}
-            monetization={monetizationItems}
-          />
-        </section>
-        <section className="rounded-3xl border border-white/5 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
-          <h2 className="text-lg font-semibold">Notes pour étendre le panel</h2>
-          <ul className="mt-3 space-y-2 text-sm text-slate-400">
-            <li>
-              1. Ajouter la nouvelle collection Firestore dans <code>src/app/indexFirebase.ts</code>
-              et exposer un helper <code>fetchXRealTime</code> (voir utilisateurs/conversations/ia).
-            </li>
-            <li>
-              2. Dans ce fichier, créer un <code>useState</code> + <code>useEffect</code> pour
-              s’abonner en temps réel et gérer les états <code>loading</code>/<code>error</code>.
-            </li>
-            <li>
-              3. Ajouter des cards ou listes dans la grille principale, en utilisant les helpers{' '}
-              <code>formatDate</code>, <code>formatUserLabel</code> et les buckets de statut.
-            </li>
-          </ul>
-          <p className="mt-4 text-xs text-slate-500">
-            Exemple : pour intégrer les conversations push, fetchez la collection, affichez un badge
-            de statut, et enrichissez le tableau avec l’IA associée (grâce au lookup{' '}
-            <code>aiLookup</code>).
-          </p>
         </section>
       </div>
       {closeConversationDialog && (

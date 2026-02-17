@@ -57,6 +57,10 @@ yarn-error.log*
 !.env.sample
 !.env.template
 
+# Local monitoring secrets
+monitoring/secrets/gcp/*
+!monitoring/secrets/gcp/.gitkeep
+
 # vercel
 .vercel
 
