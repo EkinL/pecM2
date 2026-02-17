@@ -20,6 +20,7 @@
 		2891F3ED941D32EA9E90FA05 /* AdminDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37ED60142A4AAD014BDDCEFA /* AdminDashboardView.swift */; };
 		2899C834AAB82B0B2EFE1E53 /* StatusPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9C7D9DD97EBC74B23139216 /* StatusPill.swift */; };
 		295DF0C597B7C5C3714E8C87 /* AiProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CDE202EFDA2995FEEBD0E8 /* AiProfileService.swift */; };
+		04893CCDC56F3E083D961449 /* LogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE46122601AA72254F27C50 /* LogService.swift */; };
 		2FDD157D745532E02B170C0A /* UserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E40188805D5018D5B9E3A2B /* UserService.swift */; };
 		31EDA3E800F7CA1974E5E09A /* DemandeFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9DBC41009E7646024516BFF /* DemandeFormView.swift */; };
 		353A262C37F908AD6E634DCE /* ConversationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30BACD2B94DD347037EB0C56 /* ConversationView.swift */; };
@@ -444,6 +445,7 @@
 				CB3EB11BE764F39FE271C204 /* LocationManager.swift in Sources */,
 				9C8EBF2E4D05BB2334B8BE6C /* LogService.swift in Sources */,
 				FF7B4A05CD1D22562CAA2E6F /* MainTabView.swift in Sources */,
+				04893CCDC56F3E083D961449 /* LogService.swift in Sources */,
 				8FE5CB8C86B80D195F0BAB4D /* NextApiService.swift in Sources */,
 				0C938625504268D843524A11 /* Pecm2SwiftApp.swift in Sources */,
 				7A55A24E521583865FCF25D3 /* ProfileSetupView.swift in Sources */,
