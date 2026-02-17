@@ -46,11 +46,18 @@ platform :ios do
       build_number: latest_build + 1
     )
 
+    # Resolve SPM dependencies first to avoid timeout
+    sh("xcodebuild -resolvePackageDependencies -project Pecm2Swift.xcodeproj -scheme Pecm2Swift")
+
     build_app(
       project: "Pecm2Swift.xcodeproj",
       scheme: "Pecm2Swift",
       export_method: "app-store",
-      clean: true
+      clean: true,
+      buildlog_path: "./fastlane/logs",
+      xcodebuild_formatter: "xcpretty",
+      build_timing_summary: false,
+      skip_package_dependencies_resolution: true
     )
 
     upload_to_testflight(
