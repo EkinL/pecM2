@@ -377,13 +377,7 @@ type ResolvedImageUrl = {
 
 const AVATAR_CHUNK_SIZE = 450_000;
 
-const buildAvatarProxyUrl = ({
-  aiId,
-  version,
-}: {
-  aiId: string;
-  version?: string;
-}) => {
+const buildAvatarProxyUrl = ({ aiId, version }: { aiId: string; version?: string }) => {
   const encoded = encodeURIComponent(aiId);
   const base = (() => {
     try {
@@ -453,10 +447,7 @@ const storeAvatarInFirestore = async ({
   };
 };
 
-const resolveImageUrl = async (
-  data: unknown,
-  aiId: string,
-): Promise<ResolvedImageUrl | null> => {
+const resolveImageUrl = async (data: unknown, aiId: string): Promise<ResolvedImageUrl | null> => {
   const payload = extractImagePayload(data);
   if (!payload) {
     return null;
