@@ -25,6 +25,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lilian.pecm2
         INFOPLIST_FILE: Pecm2Swift/Info.plist
+        INFOPLIST_KEY_CFBundleDisplayName: MyTalk
     dependencies:
       - package: Firebase
         product: FirebaseAuth

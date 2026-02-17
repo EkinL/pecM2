@@ -592,6 +592,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = FCRBLG7A4X;
 				INFOPLIST_FILE = Pecm2Swift/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MyTalk;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -610,6 +611,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = FCRBLG7A4X;
 				INFOPLIST_FILE = Pecm2Swift/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MyTalk;
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
