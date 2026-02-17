@@ -72,6 +72,37 @@ struct ConversationService {
     return try snapshot.data(as: Conversation.self)
   }
 
+  static func deleteConversation(conversationId: String) async throws {
+    let db = FirebaseManager.shared.db
+    let conversationRef = collection.document(conversationId)
+    let messagesRef = db.collection(FirestoreCollections.conversationMessages(conversationId: conversationId))
+    let batchSize = 400
+
+    while true {
+      let snapshot = try await messagesRef.limit(to: batchSize).getDocuments()
+      let documents = snapshot.documents
+      if documents.isEmpty { break }
+
+      let batch = db.batch()
+      for document in documents {
+        batch.deleteDocument(document.reference)
+      }
+      try await batch.commit()
+
+      if documents.count < batchSize { break }
+    }
+
+    try await conversationRef.delete()
+
+    Task {
+      await LogService.log(
+        action: "conversation_delete",
+        targetType: "conversation",
+        targetId: conversationId
+      )
+    }
+  }
+
   static func createConversation(userId: String, aiId: String, status: String = "running") async throws -> Conversation {
     let aiSnapshot = try await aiCollection.document(aiId).getDocument()
     guard aiSnapshot.exists else { throw NSError(domain: "AI", code: 404, userInfo: [NSLocalizedDescriptionKey: "IA introuvable."]) }
