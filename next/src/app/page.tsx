@@ -18,12 +18,28 @@ import {
   updateConversationStatus,
   updateUtilisateurRole,
 } from './indexFirebase';
+import { apiFetch } from './utils/apiFetch';
 import { logActivity } from './utils/logActivity';
 import { HeroHeader } from './components/dashboard/HeroHeader';
 import { UsersSection } from './components/dashboard/UsersSection';
 import { AiValidationSection } from './components/dashboard/AiValidationSection';
 import { AiProfilesSection } from './components/dashboard/AiProfilesSection';
 import { AiManagementSection } from './components/dashboard/AiManagementSection';
+import { KpiCard } from './components/dashboard/KpiCard';
+import { MarketingLineChart } from './components/dashboard/MarketingLineChart';
+import { InsightsPanel } from './components/dashboard/InsightsPanel';
+import {
+  appendMetricsSnapshot,
+  buildMonitoringInsights,
+  buildMonitoringSeries,
+  computePeriodDelta,
+  createMetricsSnapshot,
+  formatObservedWindow,
+  getObservedWindowMs,
+  histogramQuantile,
+  MetricsSnapshot,
+  TrendDirection,
+} from './utils/prometheusMonitoring';
 import { AiProfile, Conversation, Timestamp, Utilisateur } from './types/dashboard';
 
 const statusBucket = (status?: string) => {
@@ -147,6 +163,81 @@ const formatMetricValue = (value?: number | null) => {
   return value.toLocaleString('fr-FR');
 };
 
+type TrendTone = 'positive' | 'warning' | 'neutral';
+
+const formatDecimal = (value: number, digits = 1) => value.toFixed(digits).replace('.', ',');
+
+const formatRatePerMinute = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return `${formatDecimal(value, value >= 100 ? 0 : 1)} req/min`;
+};
+
+const formatPercentValue = (value?: number | null, digits = 2) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return `${formatDecimal(value, digits)}%`;
+};
+
+const formatLatencyValue = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return `${formatDecimal(value, value >= 100 ? 0 : 1)} ms`;
+};
+
+const formatMemoryValue = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return `${formatDecimal(value, value >= 1024 ? 0 : 1)} MB`;
+};
+
+const formatUptimeValue = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  const totalSeconds = Math.max(0, Math.floor(value));
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (days > 0) {
+    return `${days}j ${hours}h`;
+  }
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m`;
+  }
+  return `${totalSeconds}s`;
+};
+
+const buildTrendTone = (direction: TrendDirection, higherIsBetter: boolean): TrendTone => {
+  if (direction === 'flat') {
+    return 'neutral';
+  }
+  if (higherIsBetter) {
+    return direction === 'up' ? 'positive' : 'warning';
+  }
+  return direction === 'down' ? 'positive' : 'warning';
+};
+
+const buildTrendLabel = (percentage: number | null, previous: number | null) => {
+  if (percentage !== null) {
+    return `${formatDecimal(Math.abs(percentage), 1)}% vs periode precedente`;
+  }
+  if (previous !== null) {
+    return 'Variation faible';
+  }
+  return 'Variation en cours';
+};
+
+const toSparkline = (values: Array<number | null>) => values.slice(-24);
+
 const buildLookPayload = (values: Record<string, string>) => {
   const next = Object.entries(values).reduce<Record<string, string>>((acc, [key, value]) => {
     const trimmed = value.trim();
@@ -247,6 +338,7 @@ export default function AdminDashboard() {
   const [metricsProbeFetching, setMetricsProbeFetching] = useState(false);
   const [metricsProbeError, setMetricsProbeError] = useState<string | null>(null);
   const [metricsProbeUpdatedAt, setMetricsProbeUpdatedAt] = useState<string | null>(null);
+  const [metricsHistory, setMetricsHistory] = useState<MetricsSnapshot[]>([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -389,20 +481,22 @@ export default function AdminDashboard() {
       setMetricsProbeFetching(false);
       setMetricsProbeError(null);
       setMetricsProbeUpdatedAt(null);
+      setMetricsHistory([]);
       return;
     }
 
     const probeMetrics = async () => {
       setMetricsProbeFetching(true);
       try {
-        const response = await fetch('/api/admin/metrics/probe?includeRaw=1', {
+        const capturedAt = Date.now();
+        const response = await apiFetch('/api/admin/metrics/probe?includeRaw=1', {
           method: 'GET',
           cache: 'no-store',
         });
         const data = await response.json().catch(() => ({}));
         const payload = data && typeof data === 'object' ? (data as AdminMetricsProbeResult) : null;
         setMetricsProbeUpdatedAt(
-          new Date().toLocaleString('fr-FR', {
+          new Date(capturedAt).toLocaleString('fr-FR', {
             dateStyle: 'short',
             timeStyle: 'short',
           }),
@@ -421,6 +515,14 @@ export default function AdminDashboard() {
         }
 
         setMetricsProbeError(null);
+        const snapshot = createMetricsSnapshot({
+          rawMetrics: payload?.rawMetrics,
+          summary: payload?.summary,
+          capturedAt,
+        });
+        if (snapshot) {
+          setMetricsHistory((history) => appendMetricsSnapshot(history, snapshot));
+        }
         console.info('Sonde metrics admin ok', payload);
       } catch (error) {
         setMetricsProbeError('Erreur sonde metrics admin.');
@@ -530,7 +632,7 @@ export default function AdminDashboard() {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch('/api/ai/image', {
+    const response = await apiFetch('/api/ai/image', {
       method: 'POST',
       headers,
       keepalive: true,
@@ -947,6 +1049,137 @@ export default function AdminDashboard() {
     typeof metricsProbe?.durationMs === 'number' && Number.isFinite(metricsProbe.durationMs)
       ? `${metricsProbe.durationMs} ms`
       : '—';
+
+  const monitoringSeries = useMemo(() => buildMonitoringSeries(metricsHistory), [metricsHistory]);
+
+  const monitoringObservedWindowMs = useMemo(
+    () => getObservedWindowMs(monitoringSeries),
+    [monitoringSeries],
+  );
+
+  const monitoringObservedWindowLabel = useMemo(
+    () => formatObservedWindow(monitoringObservedWindowMs),
+    [monitoringObservedWindowMs],
+  );
+
+  const monitoringInsights = useMemo(
+    () => buildMonitoringInsights(monitoringSeries),
+    [monitoringSeries],
+  );
+
+  const latestMetricsSnapshot =
+    metricsHistory.length > 0 ? metricsHistory[metricsHistory.length - 1] : null;
+  const latestMonitoringPoint =
+    monitoringSeries.length > 0 ? monitoringSeries[monitoringSeries.length - 1] : null;
+
+  const fallbackRequestsPerMin = useMemo(() => {
+    if (!latestMetricsSnapshot?.apiRequestsTotal || !latestMetricsSnapshot?.uptimeSeconds) {
+      return null;
+    }
+    const uptimeMinutes = latestMetricsSnapshot.uptimeSeconds / 60;
+    if (uptimeMinutes <= 0) {
+      return null;
+    }
+    return latestMetricsSnapshot.apiRequestsTotal / uptimeMinutes;
+  }, [latestMetricsSnapshot]);
+
+  const fallbackErrorRatePercent = useMemo(() => {
+    if (
+      !latestMetricsSnapshot?.apiRequestsTotal ||
+      typeof latestMetricsSnapshot.apiErrorsTotal !== 'number' ||
+      latestMetricsSnapshot.apiRequestsTotal <= 0
+    ) {
+      return null;
+    }
+    return (latestMetricsSnapshot.apiErrorsTotal / latestMetricsSnapshot.apiRequestsTotal) * 100;
+  }, [latestMetricsSnapshot]);
+
+  const fallbackP95LatencyMs = useMemo(() => {
+    if (!latestMetricsSnapshot?.apiLatencyBuckets?.length) {
+      return null;
+    }
+    const p95Seconds = histogramQuantile(latestMetricsSnapshot.apiLatencyBuckets, 0.95);
+    return typeof p95Seconds === 'number' && Number.isFinite(p95Seconds) ? p95Seconds * 1000 : null;
+  }, [latestMetricsSnapshot]);
+
+  const currentUptimeSeconds =
+    latestMonitoringPoint?.uptimeSeconds ?? latestMetricsSnapshot?.uptimeSeconds ?? null;
+  const currentRequestsPerMin = latestMonitoringPoint?.requestsPerMin ?? fallbackRequestsPerMin;
+  const currentErrorRatePercent =
+    latestMonitoringPoint?.errorRatePercent ?? fallbackErrorRatePercent;
+  const currentP95LatencyMs = latestMonitoringPoint?.p95LatencyMs ?? fallbackP95LatencyMs;
+  const currentCpuPercent = latestMonitoringPoint?.cpuPercent ?? null;
+  const currentRamMb =
+    latestMonitoringPoint?.ramMb ??
+    (typeof latestMetricsSnapshot?.residentMemoryBytes === 'number'
+      ? latestMetricsSnapshot.residentMemoryBytes / (1024 * 1024)
+      : null);
+
+  const uptimeDelta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.uptimeSeconds)),
+    [monitoringSeries],
+  );
+  const requestsDelta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.requestsPerMin)),
+    [monitoringSeries],
+  );
+  const errorsDelta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.errorRatePercent)),
+    [monitoringSeries],
+  );
+  const p95Delta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.p95LatencyMs)),
+    [monitoringSeries],
+  );
+  const infraDelta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.cpuPercent)),
+    [monitoringSeries],
+  );
+
+  const monitoringChartPoints = useMemo(
+    () =>
+      monitoringSeries.map((point) => ({
+        timestamp: point.timestamp,
+        requestsPerMin: point.requestsPerMin,
+        errorRatePercent: point.errorRatePercent,
+        p50LatencyMs: point.p50LatencyMs,
+        p95LatencyMs: point.p95LatencyMs,
+        cpuPercent: point.cpuPercent,
+        ramMb: point.ramMb,
+      })),
+    [monitoringSeries],
+  );
+
+  const hasInfraChartData = useMemo(
+    () =>
+      monitoringChartPoints.some(
+        (point) =>
+          (typeof point.cpuPercent === 'number' && Number.isFinite(point.cpuPercent)) ||
+          (typeof point.ramMb === 'number' && Number.isFinite(point.ramMb)),
+      ),
+    [monitoringChartPoints],
+  );
+
+  const uptimeSparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.uptimeSeconds)),
+    [monitoringSeries],
+  );
+  const requestsSparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.requestsPerMin)),
+    [monitoringSeries],
+  );
+  const errorsSparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.errorRatePercent)),
+    [monitoringSeries],
+  );
+  const p95Sparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.p95LatencyMs)),
+    [monitoringSeries],
+  );
+  const cpuSparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.cpuPercent)),
+    [monitoringSeries],
+  );
 
   const totalTokens = useMemo(
     () =>

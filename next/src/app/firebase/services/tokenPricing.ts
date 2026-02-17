@@ -8,6 +8,7 @@ import {
 } from '../helpers';
 import { settings } from '../collections';
 import { auth } from '../init';
+import { apiFetch } from '../../utils/apiFetch';
 
 export const fetchTokenPricingSettingsRealTime = (onData: any, onError: any) => {
   try {
@@ -78,7 +79,7 @@ export const getTokenPrice = async ({ lat, lng, currency, zoneId }: any = {}) =>
     }
   }
 
-  const response = await fetch('/api/token-price', {
+  const response = await apiFetch('/api/token-price', {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),

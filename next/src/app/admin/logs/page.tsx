@@ -23,6 +23,22 @@ import {
   signOutUser,
 } from '../../indexFirebase';
 import { adminLogs } from '../../firebase/collections';
+import { KpiCard } from '../../components/dashboard/KpiCard';
+import { MarketingLineChart } from '../../components/dashboard/MarketingLineChart';
+import { InsightsPanel } from '../../components/dashboard/InsightsPanel';
+import {
+  appendMetricsSnapshot,
+  buildMonitoringInsights,
+  buildMonitoringSeries,
+  computePeriodDelta,
+  createMetricsSnapshot,
+  formatObservedWindow,
+  getObservedWindowMs,
+  histogramQuantile,
+  MetricsSnapshot,
+  TrendDirection,
+} from '../../utils/prometheusMonitoring';
+import { apiFetch } from '../../utils/apiFetch';
 
 type Utilisateur = {
   id: string;
@@ -109,6 +125,106 @@ const formatUserLabel = (user?: Utilisateur) => {
   return `Utilisateur ${user.id.slice(0, 6)}`;
 };
 
+type AdminMetricsSummary = {
+  scrapeRequestsTotal?: number | null;
+  apiRequestsTotal?: number | null;
+  apiErrorsTotal?: number | null;
+  businessMessagesTotal?: number | null;
+};
+
+type AdminMetricsProbeResult = {
+  ok?: boolean;
+  source?: string;
+  durationMs?: number;
+  summary?: AdminMetricsSummary;
+  rawMetrics?: string;
+  error?: string;
+  failures?: Array<{ source: string; status?: number; error: string }>;
+  targets?: string[];
+};
+
+const formatMetricValue = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return value.toLocaleString('fr-FR');
+};
+
+type TrendTone = 'positive' | 'warning' | 'neutral';
+
+const formatDecimal = (value: number, digits = 1) => value.toFixed(digits).replace('.', ',');
+
+const formatRatePerMinute = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return `${formatDecimal(value, value >= 100 ? 0 : 1)} req/min`;
+};
+
+const formatPercentValue = (value?: number | null, digits = 2) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return `${formatDecimal(value, digits)}%`;
+};
+
+const formatLatencyValue = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return `${formatDecimal(value, value >= 100 ? 0 : 1)} ms`;
+};
+
+const formatMemoryValue = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return `${formatDecimal(value, value >= 1024 ? 0 : 1)} MB`;
+};
+
+const formatUptimeValue = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  const totalSeconds = Math.max(0, Math.floor(value));
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  if (days > 0) {
+    return `${days}j ${hours}h`;
+  }
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m`;
+  }
+  return `${totalSeconds}s`;
+};
+
+const buildTrendTone = (direction: TrendDirection, higherIsBetter: boolean): TrendTone => {
+  if (direction === 'flat') {
+    return 'neutral';
+  }
+  if (higherIsBetter) {
+    return direction === 'up' ? 'positive' : 'warning';
+  }
+  return direction === 'down' ? 'positive' : 'warning';
+};
+
+const buildTrendLabel = (percentage: number | null, previous: number | null) => {
+  if (percentage !== null) {
+    return `${formatDecimal(Math.abs(percentage), 1)}% vs periode precedente`;
+  }
+  if (previous !== null) {
+    return 'Variation faible';
+  }
+  return 'Variation en cours';
+};
+
+const toSparkline = (values: Array<number | null>) => values.slice(-24);
+
 type DatePreset = '24h' | '7d' | '30d' | 'custom' | 'all';
 
 const computeDateRange = (preset: DatePreset, customStart: string, customEnd: string) => {
@@ -155,6 +271,12 @@ export default function AdminLogsPage() {
   const [logsError, setLogsError] = useState<string | null>(null);
   const [cursor, setCursor] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [metricsProbe, setMetricsProbe] = useState<AdminMetricsProbeResult | null>(null);
+  const [metricsProbeRaw, setMetricsProbeRaw] = useState('');
+  const [metricsProbeFetching, setMetricsProbeFetching] = useState(false);
+  const [metricsProbeError, setMetricsProbeError] = useState<string | null>(null);
+  const [metricsProbeUpdatedAt, setMetricsProbeUpdatedAt] = useState<string | null>(null);
+  const [metricsHistory, setMetricsHistory] = useState<MetricsSnapshot[]>([]);
 
   const pageSize = 40;
 
@@ -211,6 +333,74 @@ export default function AdminLogsPage() {
     return () => unsubUsers?.();
   }, [isAdmin]);
 
+  useEffect(() => {
+    if (!isAdmin) {
+      setMetricsProbe(null);
+      setMetricsProbeRaw('');
+      setMetricsProbeFetching(false);
+      setMetricsProbeError(null);
+      setMetricsProbeUpdatedAt(null);
+      setMetricsHistory([]);
+      return;
+    }
+
+    const probeMetrics = async () => {
+      setMetricsProbeFetching(true);
+      try {
+        const capturedAt = Date.now();
+        const response = await apiFetch('/api/admin/metrics/probe?includeRaw=1', {
+          method: 'GET',
+          cache: 'no-store',
+        });
+        const data = await response.json().catch(() => ({}));
+        const payload = data && typeof data === 'object' ? (data as AdminMetricsProbeResult) : null;
+        setMetricsProbeUpdatedAt(
+          new Date(capturedAt).toLocaleString('fr-FR', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+          }),
+        );
+        setMetricsProbe(payload);
+        setMetricsProbeRaw(typeof payload?.rawMetrics === 'string' ? payload.rawMetrics : '');
+
+        if (!response.ok) {
+          const errorMessage =
+            typeof payload?.error === 'string'
+              ? payload.error
+              : 'Sonde metrics admin indisponible.';
+          setMetricsProbeError(errorMessage);
+          console.error('Sonde metrics admin en echec', payload);
+          return;
+        }
+
+        setMetricsProbeError(null);
+        const snapshot = createMetricsSnapshot({
+          rawMetrics: payload?.rawMetrics,
+          summary: payload?.summary,
+          capturedAt,
+        });
+        if (snapshot) {
+          setMetricsHistory((history) => appendMetricsSnapshot(history, snapshot));
+        }
+        console.info('Sonde metrics admin ok', payload);
+      } catch (error) {
+        setMetricsProbeError('Erreur sonde metrics admin.');
+        console.error('Erreur sonde metrics admin', error);
+      } finally {
+        setMetricsProbeFetching(false);
+      }
+    };
+
+    void probeMetrics();
+    const intervalId = window.setInterval(() => {
+      void probeMetrics();
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [isAdmin]);
+
   const usersById = useMemo(() => {
     const map: Record<string, Utilisateur> = {};
     users.forEach((user) => {
@@ -234,6 +424,143 @@ export default function AdminLogsPage() {
       })
       .slice(0, 40);
   }, [userSearch, users]);
+
+  const metricsSummary = metricsProbe?.summary;
+  const metricsProbeDurationLabel =
+    typeof metricsProbe?.durationMs === 'number' && Number.isFinite(metricsProbe.durationMs)
+      ? `${metricsProbe.durationMs} ms`
+      : '—';
+
+  const monitoringSeries = useMemo(() => buildMonitoringSeries(metricsHistory), [metricsHistory]);
+
+  const monitoringObservedWindowMs = useMemo(
+    () => getObservedWindowMs(monitoringSeries),
+    [monitoringSeries],
+  );
+
+  const monitoringObservedWindowLabel = useMemo(
+    () => formatObservedWindow(monitoringObservedWindowMs),
+    [monitoringObservedWindowMs],
+  );
+
+  const monitoringInsights = useMemo(
+    () => buildMonitoringInsights(monitoringSeries),
+    [monitoringSeries],
+  );
+
+  const latestMetricsSnapshot =
+    metricsHistory.length > 0 ? metricsHistory[metricsHistory.length - 1] : null;
+  const latestMonitoringPoint =
+    monitoringSeries.length > 0 ? monitoringSeries[monitoringSeries.length - 1] : null;
+
+  const fallbackRequestsPerMin = useMemo(() => {
+    if (!latestMetricsSnapshot?.apiRequestsTotal || !latestMetricsSnapshot?.uptimeSeconds) {
+      return null;
+    }
+    const uptimeMinutes = latestMetricsSnapshot.uptimeSeconds / 60;
+    if (uptimeMinutes <= 0) {
+      return null;
+    }
+    return latestMetricsSnapshot.apiRequestsTotal / uptimeMinutes;
+  }, [latestMetricsSnapshot]);
+
+  const fallbackErrorRatePercent = useMemo(() => {
+    if (
+      !latestMetricsSnapshot?.apiRequestsTotal ||
+      typeof latestMetricsSnapshot.apiErrorsTotal !== 'number' ||
+      latestMetricsSnapshot.apiRequestsTotal <= 0
+    ) {
+      return null;
+    }
+    return (latestMetricsSnapshot.apiErrorsTotal / latestMetricsSnapshot.apiRequestsTotal) * 100;
+  }, [latestMetricsSnapshot]);
+
+  const fallbackP95LatencyMs = useMemo(() => {
+    if (!latestMetricsSnapshot?.apiLatencyBuckets?.length) {
+      return null;
+    }
+    const p95Seconds = histogramQuantile(latestMetricsSnapshot.apiLatencyBuckets, 0.95);
+    return typeof p95Seconds === 'number' && Number.isFinite(p95Seconds) ? p95Seconds * 1000 : null;
+  }, [latestMetricsSnapshot]);
+
+  const currentUptimeSeconds =
+    latestMonitoringPoint?.uptimeSeconds ?? latestMetricsSnapshot?.uptimeSeconds ?? null;
+  const currentRequestsPerMin = latestMonitoringPoint?.requestsPerMin ?? fallbackRequestsPerMin;
+  const currentErrorRatePercent =
+    latestMonitoringPoint?.errorRatePercent ?? fallbackErrorRatePercent;
+  const currentP95LatencyMs = latestMonitoringPoint?.p95LatencyMs ?? fallbackP95LatencyMs;
+  const currentCpuPercent = latestMonitoringPoint?.cpuPercent ?? null;
+  const currentRamMb =
+    latestMonitoringPoint?.ramMb ??
+    (typeof latestMetricsSnapshot?.residentMemoryBytes === 'number'
+      ? latestMetricsSnapshot.residentMemoryBytes / (1024 * 1024)
+      : null);
+
+  const uptimeDelta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.uptimeSeconds)),
+    [monitoringSeries],
+  );
+  const requestsDelta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.requestsPerMin)),
+    [monitoringSeries],
+  );
+  const errorsDelta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.errorRatePercent)),
+    [monitoringSeries],
+  );
+  const p95Delta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.p95LatencyMs)),
+    [monitoringSeries],
+  );
+  const infraDelta = useMemo(
+    () => computePeriodDelta(monitoringSeries.map((point) => point.cpuPercent)),
+    [monitoringSeries],
+  );
+
+  const monitoringChartPoints = useMemo(
+    () =>
+      monitoringSeries.map((point) => ({
+        timestamp: point.timestamp,
+        requestsPerMin: point.requestsPerMin,
+        errorRatePercent: point.errorRatePercent,
+        p50LatencyMs: point.p50LatencyMs,
+        p95LatencyMs: point.p95LatencyMs,
+        cpuPercent: point.cpuPercent,
+        ramMb: point.ramMb,
+      })),
+    [monitoringSeries],
+  );
+
+  const hasInfraChartData = useMemo(
+    () =>
+      monitoringChartPoints.some(
+        (point) =>
+          (typeof point.cpuPercent === 'number' && Number.isFinite(point.cpuPercent)) ||
+          (typeof point.ramMb === 'number' && Number.isFinite(point.ramMb)),
+      ),
+    [monitoringChartPoints],
+  );
+
+  const uptimeSparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.uptimeSeconds)),
+    [monitoringSeries],
+  );
+  const requestsSparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.requestsPerMin)),
+    [monitoringSeries],
+  );
+  const errorsSparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.errorRatePercent)),
+    [monitoringSeries],
+  );
+  const p95Sparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.p95LatencyMs)),
+    [monitoringSeries],
+  );
+  const cpuSparkline = useMemo(
+    () => toSparkline(monitoringSeries.map((point) => point.cpuPercent)),
+    [monitoringSeries],
+  );
 
   const loadLogsPage = async ({ reset }: { reset: boolean }) => {
     if (!isAdmin) {
@@ -358,6 +685,220 @@ export default function AdminLogsPage() {
             </Link>
           </div>
         </header>
+
+        <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/75 p-6 shadow-xl shadow-black/45">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.18),transparent_46%),radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.12),transparent_50%)]" />
+          <div className="relative">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200/80">
+                  Monitoring Prometheus
+                </p>
+                <h2 className="mt-1 text-xl font-semibold text-slate-50 md:text-2xl">
+                  KPI operationnels et tendances live
+                </h2>
+                <p className="mt-1 text-sm text-slate-300 md:text-base">
+                  Lecture marketing des metriques Prometheus, sans changer la sonde source.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-200">
+                <span className="rounded-full border border-slate-700/80 bg-slate-950/50 px-3 py-1">
+                  Periode: {monitoringObservedWindowLabel}
+                </span>
+                <span className="rounded-full border border-slate-700/80 bg-slate-950/50 px-3 py-1">
+                  {metricsProbeFetching
+                    ? 'Sonde en cours...'
+                    : metricsProbeUpdatedAt
+                      ? `Derniere mise a jour: ${metricsProbeUpdatedAt}`
+                      : 'Aucune sonde'}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full border border-slate-700/70 bg-slate-950/50 px-3 py-1 text-slate-200">
+                Source: {metricsProbe?.source ?? '—'}
+              </span>
+              <span className="rounded-full border border-slate-700/70 bg-slate-950/50 px-3 py-1 text-slate-200">
+                Duree sonde: {metricsProbeDurationLabel}
+              </span>
+              <span
+                className={`rounded-full border px-3 py-1 ${
+                  metricsProbeError
+                    ? 'border-rose-400/60 bg-rose-500/15 text-rose-200'
+                    : 'border-emerald-400/50 bg-emerald-500/10 text-emerald-200'
+                }`}
+              >
+                {metricsProbeError ? `Etat: ${metricsProbeError}` : 'Etat: Sonde admin OK'}
+              </span>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              <KpiCard
+                title="Uptime"
+                value={formatUptimeValue(currentUptimeSeconds)}
+                subtitle={`Scrapes: ${formatMetricValue(metricsSummary?.scrapeRequestsTotal)}`}
+                trendDirection={uptimeDelta.direction}
+                trendLabel={buildTrendLabel(uptimeDelta.percentage, uptimeDelta.previous)}
+                trendTone={buildTrendTone(uptimeDelta.direction, true)}
+                tooltip="Temps de fonctionnement du process Node.js."
+                sparklineValues={uptimeSparkline}
+                sparklineStroke="#38bdf8"
+                sparklineFill="rgba(56, 189, 248, 0.18)"
+              />
+              <KpiCard
+                title="Requests / min"
+                value={formatRatePerMinute(currentRequestsPerMin)}
+                subtitle={`Total API: ${formatMetricValue(metricsSummary?.apiRequestsTotal)}`}
+                trendDirection={requestsDelta.direction}
+                trendLabel={buildTrendLabel(requestsDelta.percentage, requestsDelta.previous)}
+                trendTone={buildTrendTone(requestsDelta.direction, true)}
+                tooltip="Debit par minute calcule avec le delta du compteur app_api_requests_total."
+                sparklineValues={requestsSparkline}
+                sparklineStroke="#22d3ee"
+                sparklineFill="rgba(34, 211, 238, 0.18)"
+              />
+              <KpiCard
+                title="Error rate"
+                value={formatPercentValue(currentErrorRatePercent, 2)}
+                subtitle={`Erreurs API: ${formatMetricValue(metricsSummary?.apiErrorsTotal)}`}
+                trendDirection={errorsDelta.direction}
+                trendLabel={buildTrendLabel(errorsDelta.percentage, errorsDelta.previous)}
+                trendTone={buildTrendTone(errorsDelta.direction, false)}
+                tooltip="Taux d erreur calcule a partir des deltas app_api_errors_total / app_api_requests_total."
+                sparklineValues={errorsSparkline}
+                sparklineStroke="#fb7185"
+                sparklineFill="rgba(251, 113, 133, 0.18)"
+              />
+              <KpiCard
+                title="P95 latency"
+                value={formatLatencyValue(currentP95LatencyMs)}
+                subtitle={`P50: ${formatLatencyValue(latestMonitoringPoint?.p50LatencyMs ?? null)}`}
+                trendDirection={p95Delta.direction}
+                trendLabel={buildTrendLabel(p95Delta.percentage, p95Delta.previous)}
+                trendTone={buildTrendTone(p95Delta.direction, false)}
+                tooltip="P95 estime via l histogramme app_api_request_duration_seconds_bucket."
+                sparklineValues={p95Sparkline}
+                sparklineStroke="#f97316"
+                sparklineFill="rgba(249, 115, 22, 0.18)"
+              />
+              <KpiCard
+                title="CPU / RAM"
+                value={formatPercentValue(currentCpuPercent, 1)}
+                subtitle={`RAM: ${formatMemoryValue(currentRamMb)}`}
+                trendDirection={infraDelta.direction}
+                trendLabel={buildTrendLabel(infraDelta.percentage, infraDelta.previous)}
+                trendTone={buildTrendTone(infraDelta.direction, false)}
+                tooltip="CPU calcule via delta process_cpu_user_seconds_total + process_cpu_system_seconds_total."
+                sparklineValues={cpuSparkline}
+                sparklineStroke="#34d399"
+                sparklineFill="rgba(52, 211, 153, 0.18)"
+              />
+            </div>
+
+            <div className="mt-6 grid gap-4 xl:grid-cols-2">
+              <MarketingLineChart
+                title="Traffic"
+                subtitle="Requetes API par minute"
+                points={monitoringChartPoints}
+                series={[
+                  {
+                    key: 'requestsPerMin',
+                    label: 'Req/min',
+                    color: '#22d3ee',
+                    fill: '#22d3ee',
+                    showArea: true,
+                    formatter: (value) => formatRatePerMinute(value),
+                  },
+                ]}
+                yAxisFormatter={(value) => formatDecimal(value, value >= 100 ? 0 : 1)}
+                emptyLabel="Traffic indisponible: echantillons insuffisants."
+              />
+
+              <MarketingLineChart
+                title="Latency"
+                subtitle="Evolution des percentiles p50 / p95"
+                points={monitoringChartPoints}
+                series={[
+                  {
+                    key: 'p50LatencyMs',
+                    label: 'p50',
+                    color: '#f59e0b',
+                    formatter: (value) => formatLatencyValue(value),
+                  },
+                  {
+                    key: 'p95LatencyMs',
+                    label: 'p95',
+                    color: '#fb7185',
+                    fill: '#fb7185',
+                    showArea: true,
+                    formatter: (value) => formatLatencyValue(value),
+                  },
+                ]}
+                yAxisFormatter={(value) => `${formatDecimal(value, value >= 100 ? 0 : 1)} ms`}
+                emptyLabel="Latence indisponible: histogramme encore trop court."
+              />
+
+              <MarketingLineChart
+                title="Errors"
+                subtitle="Taux d erreur API (%)"
+                points={monitoringChartPoints}
+                series={[
+                  {
+                    key: 'errorRatePercent',
+                    label: 'Error rate',
+                    color: '#fb7185',
+                    fill: '#fb7185',
+                    showArea: true,
+                    formatter: (value) => formatPercentValue(value, 2),
+                  },
+                ]}
+                yAxisFormatter={(value) => `${formatDecimal(value, 2)}%`}
+                emptyLabel="Erreur rate indisponible: volume de requetes insuffisant."
+              />
+
+              {hasInfraChartData ? (
+                <MarketingLineChart
+                  title="Infra health"
+                  subtitle="CPU (%) et RAM (MB)"
+                  points={monitoringChartPoints}
+                  series={[
+                    {
+                      key: 'cpuPercent',
+                      label: 'CPU',
+                      color: '#34d399',
+                      formatter: (value) => formatPercentValue(value, 1),
+                    },
+                    {
+                      key: 'ramMb',
+                      label: 'RAM',
+                      color: '#a78bfa',
+                      formatter: (value) => formatMemoryValue(value),
+                    },
+                  ]}
+                  yAxisFormatter={(value) => formatDecimal(value, value >= 100 ? 0 : 1)}
+                  emptyLabel="Infra health indisponible."
+                />
+              ) : null}
+            </div>
+
+            <div className="mt-6">
+              <InsightsPanel
+                insights={monitoringInsights}
+                observedWindowLabel={monitoringObservedWindowLabel}
+              />
+            </div>
+
+            <details className="mt-5 rounded-2xl border border-slate-800/80 bg-slate-950/45 p-4">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.12em] text-slate-200">
+                Payload brut scrape /api/metrics
+              </summary>
+              <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-slate-950/75 p-3 text-[11px] text-slate-300">
+                {metricsProbeRaw || 'Aucune metrique brute recue.'}
+              </pre>
+            </details>
+          </div>
+        </section>
 
         <section className="rounded-3xl border border-white/5 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
           <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr_0.8fr_0.6fr]">

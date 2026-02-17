@@ -23,6 +23,7 @@ import {
   updateConversationCountry,
   updateConversationLocation,
 } from '../../indexFirebase';
+import { apiFetch } from '../../utils/apiFetch';
 import { logActivity } from '../../utils/logActivity';
 import {
   countryLabelByCode,
@@ -381,7 +382,7 @@ export default function ConversationPage() {
         }
         lastCountryLookupAt.current = now;
 
-        const response = await fetch('/api/location/country', {
+        const response = await apiFetch('/api/location/country', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -730,7 +731,7 @@ export default function ConversationPage() {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const response = await fetch('/api/ai/tts', {
+      const response = await apiFetch('/api/ai/tts', {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -881,7 +882,7 @@ export default function ConversationPage() {
       if (token) {
         headers.Authorization = `Bearer ${token}`;
       }
-      const response = await fetch(endpoint, {
+      const response = await apiFetch(endpoint, {
         method: 'POST',
         headers,
         body: JSON.stringify({

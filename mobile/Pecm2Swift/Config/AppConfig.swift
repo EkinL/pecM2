@@ -11,6 +11,7 @@ struct AppConfig {
   let firebaseAppId: String
   let firebaseMeasurementId: String
   let nextApiBaseUrl: URL
+  let nextApiBaseUrls: [URL]
   let openAiApiKey: String
   let openAiModel: String
   let openAiTtsModel: String
@@ -36,6 +37,47 @@ struct AppConfig {
     } else {
       nextApiBaseUrl = Self.fallbackNextApiBaseUrl
     }
+
+    let fallbackUrl = URL(string: "http://localhost:3000")!
+    nextApiBaseUrls = AppConfig.uniqueUrls([nextApiBaseUrl, fallbackUrl])
+  }
+
+  func resolvedRemoteURLString(_ rawValue: String?) -> String? {
+    guard let rawValue else { return nil }
+    let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+
+    if let absolute = URL(string: trimmed), absolute.scheme != nil {
+      if Self.isLoopbackUrl(absolute) {
+        return replacingOrigin(of: absolute, with: nextApiBaseUrl)?.absoluteString ?? trimmed
+      }
+      return absolute.absoluteString
+    }
+
+    if let resolved = URL(string: trimmed, relativeTo: nextApiBaseUrl)?.absoluteURL {
+      return resolved.absoluteString
+    }
+
+    return trimmed
+  }
+
+  private static func isLoopbackUrl(_ url: URL) -> Bool {
+    guard let host = url.host?.lowercased() else { return false }
+    return host == "localhost" || host == "127.0.0.1" || host == "::1"
+  }
+
+  private func replacingOrigin(of url: URL, with origin: URL) -> URL? {
+    guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+          let originComponents = URLComponents(url: origin, resolvingAgainstBaseURL: false),
+          let scheme = originComponents.scheme,
+          let host = originComponents.host else {
+      return nil
+    }
+
+    components.scheme = scheme
+    components.host = host
+    components.port = originComponents.port
+    return components.url
   }
 
   func resolvedRemoteURLString(_ rawValue: String?) -> String? {
@@ -83,5 +125,19 @@ struct AppConfig {
       return [:]
     }
     return plist
+  }
+
+  private static func uniqueUrls(_ urls: [URL]) -> [URL] {
+    var seen = Set<String>()
+    var result: [URL] = []
+
+    for url in urls {
+      let key = url.absoluteString
+      if seen.insert(key).inserted {
+        result.append(url)
+      }
+    }
+
+    return result
   }
 }
