@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Conversation, Timestamp, Utilisateur } from '../../types/dashboard';
 
 type UserRoleAction = null | {
@@ -67,6 +68,14 @@ const UserListItem = ({
       </p>
       <p className="mt-1 text-xs text-slate-500">Créé le : {formatDate(user.createdAt)}</p>
       <p className="mt-2 text-xs text-slate-400">Conversations associées : {userConversations}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Link
+          href={`/admin/users/${user.id}/logs`}
+          className="rounded-lg border border-slate-800/80 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600"
+        >
+          Voir logs
+        </Link>
+      </div>
       {!isAdmin && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button

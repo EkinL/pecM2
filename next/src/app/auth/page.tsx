@@ -12,6 +12,7 @@ import {
   signInWithGoogle,
   signUpWithEmail,
 } from '../indexFirebase';
+import { logActivity } from '../utils/logActivity';
 
 const roleOptions = [{ value: 'client', label: 'Client' }];
 
@@ -90,6 +91,16 @@ export default function AuthPage() {
       user,
       role,
       pseudo: payload?.pseudo,
+    });
+
+    void logActivity({
+      action: 'profile_setup',
+      targetType: 'user',
+      targetId: user.uid,
+      details: {
+        isNew: profileResult.isNew,
+        role,
+      },
     });
 
     const destination = profileResult.isNew ? '/ia/create' : '/';

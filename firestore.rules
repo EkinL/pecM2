@@ -85,8 +85,8 @@ service cloud.firestore {
 
     match /adminLogs/{logId} {
       allow read: if isAdmin();
-      allow create: if isAdmin();
-      allow update, delete: if false;
+      // Ecriture interdite côté client : logs écrits via serveur (Firebase Admin SDK).
+      allow create, update, delete: if false;
     }
 
     match /cours/{coursId} {

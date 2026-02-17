@@ -34,6 +34,12 @@ export const HeroHeader = ({
         <span>{profile?.mail ?? 'Profil non chargé'}</span>
         <span>{profile?.tokens ?? 0} tokens</span>
         <Link
+          href="/admin/logs"
+          className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
+        >
+          Logs
+        </Link>
+        <Link
           href="/demandes/client"
           className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
         >

@@ -23,6 +23,7 @@ import {
   writeStoredManualCountry,
 } from '../../data/countries';
 import { hasActiveSubscription, SubscriptionAwareProfile } from '../../utils/subscriptionUtils';
+import { logActivity } from '../../utils/logActivity';
 
 const toLookPayload = (values: Record<string, string>) => {
   const look = Object.entries(values).reduce<Record<string, string>>((acc, [key, value]) => {
@@ -284,6 +285,16 @@ export default function CreateAiPage() {
       });
 
       setCreatedId(docRef.id);
+      void logActivity({
+        action: 'ai_profile_create',
+        targetType: 'aiProfile',
+        targetId: docRef.id,
+        details: {
+          visibility,
+          accessType,
+          status: 'pending',
+        },
+      });
       setSuccess('IA creee. En attente de validation admin. Avatar genere apres validation.');
       setName('');
       setMentality('');

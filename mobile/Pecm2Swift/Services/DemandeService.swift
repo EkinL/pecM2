@@ -72,7 +72,18 @@ struct DemandeService {
       payload["locationUpdatedAt"] = FieldValue.serverTimestamp()
     }
 
-    try await collection.addDocument(data: payload)
+    let docRef = try await collection.addDocument(data: payload)
+    Task {
+      await LogService.log(
+        action: "demande_create",
+        targetType: "demande",
+        targetId: docRef.documentID,
+        details: [
+          "status": matched == nil ? "pending" : "matched",
+          "prestataireId": matched?.id ?? NSNull()
+        ]
+      )
+    }
   }
 
   static func updateLocation(demandeId: String, location: GeoLocation) async throws {

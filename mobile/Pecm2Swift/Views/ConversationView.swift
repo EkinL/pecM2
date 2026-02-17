@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct ConversationView: View {
+  @EnvironmentObject private var session: SessionStore
   @EnvironmentObject private var locationManager: LocationManager
   @Environment(\.dismiss) private var dismiss
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -121,13 +122,23 @@ struct ConversationView: View {
     .onAppear {
       viewModel.startListening()
       if !isReadOnly {
-        ensureLocation()
+        if shouldSyncLocation {
+          ensureLocation()
+        }
       }
     }
     .onChange(of: locationManager.location) { _ in
       if !isReadOnly {
-        ensureLocation()
+        if shouldSyncLocation {
+          ensureLocation()
+        }
       }
+    }
+    .onChange(of: session.profile?.useLiveLocationPricing ?? false) { enabled in
+      guard !isReadOnly else { return }
+      guard enabled else { return }
+      didSyncLocation = false
+      ensureLocation()
     }
     .task(id: aiId) {
       aiProfile = try? await AiProfileService.fetchById(aiId)
@@ -164,9 +175,17 @@ struct ConversationView: View {
     return "…"
   }
 
+  private var shouldSyncLocation: Bool {
+    session.profile?.useLiveLocationPricing ?? false
+  }
+
   private func ensureLocation() {
+    guard shouldSyncLocation else { return }
     guard !didSyncLocation else { return }
-    guard conversation.countryCode == nil && conversation.location == nil else {
+    let storedCountryCode = conversation.countryCode?.trimmingCharacters(in: .whitespacesAndNewlines)
+    let hasStoredCountryCode = (storedCountryCode?.isEmpty == false)
+    let hasStoredLocation = (conversation.location?.lat != nil) && (conversation.location?.lng != nil)
+    guard !hasStoredCountryCode && !hasStoredLocation else {
       didSyncLocation = true
       return
     }
@@ -184,16 +203,23 @@ struct ConversationView: View {
     isSyncingLocation = true
     Task {
       let geo = GeoLocation(lat: location.coordinate.latitude, lng: location.coordinate.longitude, accuracy: location.horizontalAccuracy)
-      try? await ConversationService.updateLocation(conversationId: conversationId, location: geo)
-      if let data = try? await NextApiService.countryLookup(lat: geo.lat ?? 0, lng: geo.lng ?? 0) {
-        if let code = data["countryCode"] as? String,
-           let label = data["countryLabel"] as? String {
-          try? await ConversationService.updateCountry(conversationId: conversationId, countryCode: code, countryLabel: label)
+      do {
+        try await ConversationService.updateLocation(conversationId: conversationId, location: geo)
+        if let data = try? await NextApiService.countryLookup(lat: geo.lat ?? 0, lng: geo.lng ?? 0) {
+          if let code = data["countryCode"] as? String,
+             let label = data["countryLabel"] as? String {
+            try? await ConversationService.updateCountry(conversationId: conversationId, countryCode: code, countryLabel: label)
+          }
         }
-      }
-      await MainActor.run {
-        didSyncLocation = true
-        isSyncingLocation = false
+
+        await MainActor.run {
+          didSyncLocation = true
+          isSyncingLocation = false
+        }
+      } catch {
+        await MainActor.run {
+          isSyncingLocation = false
+        }
       }
     }
   }

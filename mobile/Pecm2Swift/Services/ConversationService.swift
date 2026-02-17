@@ -97,6 +97,17 @@ struct ConversationService {
     try await docRef.setData(payload)
 
     let snapshot = try await docRef.getDocument()
+    Task {
+      await LogService.log(
+        action: "conversation_create",
+        targetType: "conversation",
+        targetId: docRef.documentID,
+        details: [
+          "aiId": aiId,
+          "status": status
+        ]
+      )
+    }
     return try snapshot.data(as: Conversation.self)
   }
 
@@ -151,7 +162,9 @@ struct ConversationService {
     let messageRef = db.collection(FirestoreCollections.conversationMessages(conversationId: conversationId)).document()
     let settingsRef = settingsCollection.document("tokenPricingIdf")
 
-    let finalPayload = try await db.runTransaction { (transaction, errorPointer) -> Any? in
+    var finalTokenCostForLog: Int?
+    do {
+      _ = try await db.runTransaction { (transaction, errorPointer) -> Any? in
       // Helper to convert thrown errors into NSError via errorPointer
       func fail(_ error: NSError) -> Any? {
         errorPointer?.pointee = error
@@ -168,12 +181,21 @@ struct ConversationService {
         return fail(NSError(domain: "Conversation", code: 404, userInfo: [NSLocalizedDescriptionKey: "Conversation introuvable."]))
       }
       let conversationData = conversationSnapshot.data() ?? [:]
-      let location = conversationData["location"] as? [String: Any]
-      let hasLocation = (location?["lat"] as? Double) != nil && (location?["lng"] as? Double) != nil
-      let countryCode = conversationData["countryCode"] as? String
-      if !hasLocation && (countryCode ?? "").isEmpty {
-        return fail(NSError(domain: "Conversation", code: 400, userInfo: [NSLocalizedDescriptionKey: "Localisation requise."]))
+
+      let userSnapshot: DocumentSnapshot
+      do {
+        userSnapshot = try transaction.getDocument(userRef)
+      } catch {
+        return fail(NSError(domain: "User", code: 500, userInfo: [NSLocalizedDescriptionKey: "Echec lecture utilisateur."]))
       }
+      guard userSnapshot.exists else {
+        return fail(NSError(domain: "User", code: 404, userInfo: [NSLocalizedDescriptionKey: "Utilisateur introuvable."]))
+      }
+      let userData = userSnapshot.data() ?? [:]
+      let useLiveLocationPricing = (userData["useLiveLocationPricing"] as? Bool) ?? false
+
+      let rawCountryCode = (conversationData["countryCode"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+      let conversationCountryCode = (rawCountryCode?.isEmpty == false) ? rawCountryCode : nil
 
       let aiId = conversationData["aiId"] as? String ?? ""
       if aiId.isEmpty {
@@ -207,7 +229,8 @@ struct ConversationService {
       }
       let settingsData = settingsSnapshot.data() ?? [:]
       let basePricing = settingsData["base"] as? [String: Any] ?? [:]
-      let countryPricing = (countryCode != nil) ? (settingsData["countries"] as? [String: Any])?[countryCode ?? ""] as? [String: Any] ?? [:] : [:]
+      let countryCodeForPricing = useLiveLocationPricing ? conversationCountryCode : nil
+      let countryPricing = (countryCodeForPricing != nil) ? (settingsData["countries"] as? [String: Any])?[countryCodeForPricing ?? ""] as? [String: Any] ?? [:] : [:]
       let conversationPricing = conversationData["tokenPricing"] as? [String: Any] ?? [:]
 
       let baseCosts: [String: Int] = ["text": 1, "image": 5]
@@ -215,24 +238,15 @@ struct ConversationService {
       let countryCost = intValue(countryPricing[kind])
       let baseCost = intValue(basePricing[kind])
       let fallbackCost = baseCosts[kind] ?? tokenCost ?? 1
-      let finalTokenCost = overrideCost ?? countryCost ?? baseCost ?? fallbackCost
-
+      var finalTokenCost = overrideCost ?? countryCost ?? baseCost ?? fallbackCost
       if finalTokenCost <= 0 {
-        return fail(NSError(domain: "Conversation", code: 400, userInfo: [NSLocalizedDescriptionKey: "Cout token invalide."]))
+        finalTokenCost = max(fallbackCost, 1)
       }
+      finalTokenCostForLog = finalTokenCost
 
-      let userSnapshot: DocumentSnapshot
-      do {
-        userSnapshot = try transaction.getDocument(userRef)
-      } catch {
-        return fail(NSError(domain: "User", code: 500, userInfo: [NSLocalizedDescriptionKey: "Echec lecture utilisateur."]))
-      }
-      guard userSnapshot.exists else {
-        return fail(NSError(domain: "User", code: 404, userInfo: [NSLocalizedDescriptionKey: "Utilisateur introuvable."]))
-      }
-      let currentTokens = intValue(userSnapshot.data()?["tokens"]) ?? 0
+      let currentTokens = intValue(userData["tokens"]) ?? 0
       if currentTokens < finalTokenCost {
-        return fail(NSError(domain: "User", code: 403, userInfo: [NSLocalizedDescriptionKey: "Solde insuffisant."]))
+        return fail(NSError(domain: "User", code: 403, userInfo: [NSLocalizedDescriptionKey: "Solde insuffisant. Demandez des tokens à un admin."]))
       }
 
       let payload: [String: Any] = [
@@ -256,11 +270,40 @@ struct ConversationService {
       ], forDocument: userRef, merge: true)
 
       return payload
+      }
+    } catch {
+      let message = (error as NSError).localizedDescription
+      if message.lowercased().contains("solde insuffisant") {
+        Task {
+          await LogService.log(
+            action: "tokens_insufficient",
+            targetType: "conversation",
+            targetId: conversationId,
+            details: [
+              "kind": kind,
+              "tokenCost": finalTokenCostForLog ?? NSNull()
+            ]
+          )
+        }
+      }
+      throw error
     }
 
-    _ = finalPayload
     let snapshot = try await messageRef.getDocument()
-    return try snapshot.data(as: ConversationMessage.self)
+    let message = try snapshot.data(as: ConversationMessage.self)
+    Task {
+      await LogService.log(
+        action: "message_send",
+        targetType: "conversation",
+        targetId: conversationId,
+        details: [
+          "messageId": messageRef.documentID,
+          "kind": kind,
+          "tokenCost": message.tokenCost ?? NSNull()
+        ]
+      )
+    }
+    return message
   }
 
   private static func intValue(_ value: Any?) -> Int? {

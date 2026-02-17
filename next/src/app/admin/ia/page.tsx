@@ -13,6 +13,7 @@ import {
   deleteAiProfileAndConversations,
   updateAiProfileStatus,
 } from '../../indexFirebase';
+import { logActivity } from '../../utils/logActivity';
 import { formatLookSummary } from '../../ia/aiOptions';
 
 type Timestamp = {
@@ -237,11 +238,25 @@ export default function AdminIaPage() {
   );
 
   const triggerAvatarGeneration = async (profileId: string) => {
+    let token: string | null = null;
+    try {
+      const user = auth.currentUser;
+      token = user ? await user.getIdToken() : null;
+    } catch (error) {
+      console.warn("Impossible d'obtenir le token Firebase pour l'avatar IA", error);
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-pecm2-platform': 'web',
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const response = await fetch('/api/ai/image', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       keepalive: true,
       body: JSON.stringify({
         aiId: profileId,
@@ -278,6 +293,12 @@ export default function AdminIaPage() {
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
+      });
+      void logActivity({
+        action: 'ai_profile_status',
+        targetType: 'aiProfile',
+        targetId: profileId,
+        details: { status: 'active' },
       });
       if (!hasAvatar) {
         const { imageUrl: generatedImageUrl, updateError } =
@@ -329,6 +350,12 @@ export default function AdminIaPage() {
         adminMail: adminUser?.mail ?? undefined,
         note: undefined,
       });
+      void logActivity({
+        action: 'ai_profile_status',
+        targetType: 'aiProfile',
+        targetId: profileId,
+        details: { status: 'rejected' },
+      });
       setAiActionSuccess('IA refusee.');
     } catch (error) {
       console.error('Erreur lors du refus IA', error);
@@ -355,6 +382,12 @@ export default function AdminIaPage() {
         profileId,
         adminId: adminUser?.uid,
         adminMail: adminUser?.mail ?? undefined,
+      });
+      void logActivity({
+        action: 'ai_profile_delete',
+        targetType: 'aiProfile',
+        targetId: profileId,
+        details: { cascade: true },
       });
       setAiActionSuccess('IA supprimee avec ses conversations.');
     } catch (error) {
@@ -427,6 +460,12 @@ export default function AdminIaPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
             <span>{adminUser?.mail ?? 'Compte admin'}</span>
+            <Link
+              href="/admin/logs"
+              className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
+            >
+              Logs
+            </Link>
             <Link
               href="/"
               className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
@@ -516,6 +555,14 @@ export default function AdminIaPage() {
                         Creee le {formatDate(profile.createdAt)}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
+                        {profile.ownerId ? (
+                          <Link
+                            href={`/admin/users/${profile.ownerId}/logs`}
+                            className="rounded-lg border border-slate-800/80 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600"
+                          >
+                            Logs user
+                          </Link>
+                        ) : null}
                         <button
                           type="button"
                           onClick={() => handleApproveAi(profile.id)}
@@ -611,6 +658,14 @@ export default function AdminIaPage() {
                         Maj {formatDate(profile.updatedAt)}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2">
+                        {profile.ownerId ? (
+                          <Link
+                            href={`/admin/users/${profile.ownerId}/logs`}
+                            className="rounded-lg border border-slate-800/80 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600"
+                          >
+                            Logs user
+                          </Link>
+                        ) : null}
                         {canActivate && (
                           <button
                             type="button"
