@@ -20,12 +20,16 @@ const isFirebaseAdminConfigurationError = (error: unknown) => {
     message.includes('credential introuvable') ||
     message.includes('default credentials') ||
     message.includes('application default') ||
+    message.includes('could not load the default credentials') ||
+    message.includes('credential implementation provided') ||
     message.includes('unable to detect a project id') ||
     message.includes('project id') ||
     message.includes('projectid') ||
     message.includes('project_id') ||
     message.includes('google_cloud_project') ||
     message.includes('gcloud_project') ||
+    message.includes('database (default) does not exist') ||
+    message.includes('permission denied') ||
     message.includes('service account') ||
     message.includes('private key') ||
     message.includes('client_email') ||
@@ -545,6 +549,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(payload, { status: replyPersisted ? 200 : 202 });
   } catch (error) {
+    if (isFirebaseAdminConfigurationError(error)) {
+      console.error('Firebase Admin non configuré pour /api/ai/reply', error);
+      return NextResponse.json({ error: 'Service indisponible.' }, { status: 503 });
+    }
     console.error('Erreur AI reply', error);
     const message = error instanceof Error ? error.message : 'Erreur generation IA.';
     return NextResponse.json(
