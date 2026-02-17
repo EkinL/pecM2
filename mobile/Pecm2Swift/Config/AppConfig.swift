@@ -2,6 +2,7 @@ import Foundation
 
 struct AppConfig {
   static let shared = AppConfig()
+  private static let fallbackNextApiBaseUrl = URL(string: "https://pec-m2.vercel.app")!
 
   let firebaseApiKey: String
   let firebaseProjectId: String
@@ -29,11 +30,50 @@ struct AppConfig {
     openAiTtsVoice = values["openAiTtsVoice"] as? String ?? ""
 
     if let baseUrlString = values["nextApiBaseUrl"] as? String,
-       let url = URL(string: baseUrlString) {
+       let url = URL(string: baseUrlString),
+       !Self.isLoopbackUrl(url) {
       nextApiBaseUrl = url
     } else {
-      nextApiBaseUrl = URL(string: "https://pec-m2.vercel.app")!
+      nextApiBaseUrl = Self.fallbackNextApiBaseUrl
     }
+  }
+
+  func resolvedRemoteURLString(_ rawValue: String?) -> String? {
+    guard let rawValue else { return nil }
+    let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+
+    if let absolute = URL(string: trimmed), absolute.scheme != nil {
+      if Self.isLoopbackUrl(absolute) {
+        return replacingOrigin(of: absolute, with: nextApiBaseUrl)?.absoluteString ?? trimmed
+      }
+      return absolute.absoluteString
+    }
+
+    if let resolved = URL(string: trimmed, relativeTo: nextApiBaseUrl)?.absoluteURL {
+      return resolved.absoluteString
+    }
+
+    return trimmed
+  }
+
+  private static func isLoopbackUrl(_ url: URL) -> Bool {
+    guard let host = url.host?.lowercased() else { return false }
+    return host == "localhost" || host == "127.0.0.1" || host == "::1"
+  }
+
+  private func replacingOrigin(of url: URL, with origin: URL) -> URL? {
+    guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+          let originComponents = URLComponents(url: origin, resolvingAgainstBaseURL: false),
+          let scheme = originComponents.scheme,
+          let host = originComponents.host else {
+      return nil
+    }
+
+    components.scheme = scheme
+    components.host = host
+    components.port = originComponents.port
+    return components.url
   }
 
   private static func load(bundle: Bundle) -> [String: Any] {

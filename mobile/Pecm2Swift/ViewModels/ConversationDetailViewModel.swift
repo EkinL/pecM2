@@ -53,13 +53,7 @@ final class ConversationDetailViewModel: ObservableObject {
     isSending = true
     errorMessage = nil
     do {
-      _ = try await ConversationService.sendMessageWithTokens(
-        conversationId: conversationId,
-        userId: userId,
-        authorRole: "client",
-        content: trimmed,
-        kind: "text"
-      )
+      try await persistClientMessage(conversationId: conversationId, message: trimmed)
       do {
         _ = try await NextApiService.aiReply(conversationId: conversationId, aiId: aiId, message: trimmed)
       } catch {
@@ -69,6 +63,45 @@ final class ConversationDetailViewModel: ObservableObject {
       errorMessage = error.localizedDescription
     }
     isSending = false
+  }
+
+  private func persistClientMessage(conversationId: String, message: String) async throws {
+    do {
+      _ = try await ConversationService.sendMessageWithTokens(
+        conversationId: conversationId,
+        userId: userId,
+        authorRole: "client",
+        content: message,
+        kind: "text"
+      )
+      return
+    } catch {
+      guard shouldFallbackToApiAfterFirestoreError(error) else {
+        throw error
+      }
+    }
+
+    _ = try await NextApiService.sendConversationMessage(
+      conversationId: conversationId,
+      aiId: aiId,
+      message: message,
+      kind: "text"
+    )
+  }
+
+  private func shouldFallbackToApiAfterFirestoreError(_ error: Error) -> Bool {
+    let nsError = error as NSError
+    if nsError.code == FirestoreErrorCode.permissionDenied.rawValue {
+      return true
+    }
+    if nsError.domain == FirestoreErrorDomain &&
+        nsError.code == FirestoreErrorCode.permissionDenied.rawValue {
+      return true
+    }
+
+    let normalized = nsError.localizedDescription.lowercased()
+    return normalized.contains("missing or insufficient permissions") ||
+      normalized.contains("permission denied")
   }
 
   func playTTS(for message: ConversationMessage) async {
