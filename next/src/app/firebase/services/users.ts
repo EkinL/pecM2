@@ -24,6 +24,7 @@ import {
   sanitizeOptionalString,
   createRealtimeListener,
 } from '../helpers';
+import { recordBusinessTokensGranted, trackFirestoreCall } from '../../observability/metrics';
 
 export const fetchUtilisateurs = async () => {
   try {
@@ -255,5 +256,12 @@ export const grantUserTokensWithPassword = async ({
   const batch2 = writeBatch(firestore);
   batch2.update(docRef, updatePayload);
 
-  return batch2.commit();
+  const commitResult = await trackFirestoreCall('writeBatch.commit', 'utilisateurs.adminLogs', () =>
+    batch2.commit(),
+  );
+  recordBusinessTokensGranted({
+    source: 'admin_grant',
+    amount: normalizedAmount,
+  });
+  return commitResult;
 };
