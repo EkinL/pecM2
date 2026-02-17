@@ -1,6 +1,7 @@
 'use client';
 
 import { auth } from '../indexFirebase';
+import { apiFetch } from './apiFetch';
 
 export type ActivityLogRequest = {
   action: string;
@@ -27,7 +28,7 @@ export const logActivity = async (payload: ActivityLogRequest) => {
   }
 
   try {
-    const response = await fetch('/api/logs', {
+    const response = await apiFetch('/api/logs', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -7,19 +7,29 @@ struct NextApiService {
     var errorDescription: String? { message }
   }
 
-  private static var baseUrl: URL { AppConfig.shared.nextApiBaseUrl }
+  private static var baseUrls: [URL] { AppConfig.shared.nextApiBaseUrls }
 
-  private static func endpointURL(path: String) throws -> URL {
+  private static func endpointURLs(path: String) throws -> [URL] {
     let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else {
       throw ApiError(message: "Endpoint invalide.")
     }
 
-    var url = baseUrl
-    for component in trimmed.split(separator: "/") {
-      url.appendPathComponent(String(component))
+    return baseUrls.map { baseUrl in
+      var url = baseUrl
+      for component in trimmed.split(separator: "/") {
+        url.appendPathComponent(String(component))
+      }
+      return url
     }
-    return url
+  }
+
+  private static func shouldTryFallback(for statusCode: Int) -> Bool {
+    statusCode == 404 || statusCode >= 500
+  }
+
+  private static func networkErrorMessage(for url: URL, error: Error) -> String {
+    "Impossible de contacter \(url.absoluteString) (\(error.localizedDescription)). Verifiez nextApiBaseUrl."
   }
 
   static func aiReply(conversationId: String, aiId: String, message: String) async throws -> String {
@@ -64,35 +74,69 @@ struct NextApiService {
     if let aiId { payload["aiId"] = aiId }
     if let voice { payload["voice"] = voice }
 
-    let url = try endpointURL(path: "api/ai/tts")
-    var request = URLRequest(url: url)
-    request.httpMethod = "POST"
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.setValue("ios", forHTTPHeaderField: "x-pecm2-platform")
+    let urls = try endpointURLs(path: "api/ai/tts")
+    let body = try JSONSerialization.data(withJSONObject: payload, options: [])
+    var token: String? = nil
     if let user = Auth.auth().currentUser {
       do {
-        let token = try await user.getIDToken()
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        token = try await user.getIDToken()
       } catch {
         // On garde une requête best-effort si le token n'est pas disponible.
       }
     }
-    request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
 
-    let (data, response): (Data, URLResponse)
-    do {
-      (data, response) = try await URLSession.shared.data(for: request)
-    } catch {
-      throw ApiError(message: "Impossible de contacter \(url.absoluteString) (\(error.localizedDescription)). Vérifiez nextApiBaseUrl.")
+    var lastError: ApiError? = nil
+
+    for (index, url) in urls.enumerated() {
+      let isLastAttempt = index == urls.count - 1
+      var request = URLRequest(url: url)
+      request.httpMethod = "POST"
+      request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+      request.setValue("ios", forHTTPHeaderField: "x-pecm2-platform")
+      if let token {
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+      }
+      request.httpBody = body
+
+      let data: Data
+      let response: URLResponse
+      do {
+        (data, response) = try await URLSession.shared.data(for: request)
+      } catch {
+        let apiError = ApiError(message: networkErrorMessage(for: url, error: error))
+        lastError = apiError
+        if isLastAttempt {
+          throw apiError
+        }
+        continue
+      }
+
+      guard let httpResponse = response as? HTTPURLResponse else {
+        let apiError = ApiError(message: "Réponse invalide.")
+        lastError = apiError
+        if isLastAttempt {
+          throw apiError
+        }
+        continue
+      }
+
+      if httpResponse.statusCode >= 300 {
+        let errorMessage = parseErrorMessage(from: data) ?? "Erreur TTS."
+        let apiError = ApiError(message: errorMessage)
+        lastError = apiError
+        if isLastAttempt || !shouldTryFallback(for: httpResponse.statusCode) {
+          throw apiError
+        }
+        continue
+      }
+
+      return data
     }
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw ApiError(message: "Réponse invalide.")
+
+    if let lastError {
+      throw lastError
     }
-    if httpResponse.statusCode >= 300 {
-      let errorMessage = parseErrorMessage(from: data) ?? "Erreur TTS."
-      throw ApiError(message: errorMessage)
-    }
-    return data
+    throw ApiError(message: "Service TTS indisponible.")
   }
 
   static func tokenPrice(lat: Double?, lng: Double?, currency: String?, zoneId: String?) async throws -> [String: Any] {
@@ -114,10 +158,10 @@ struct NextApiService {
   }
 
   private static func sendJSON(path: String, payload: [String: Any], includeAuthToken: Bool = false) async throws -> [String: Any] {
-    let url = try endpointURL(path: path)
+    let urls = try endpointURLs(path: path)
     let body = try JSONSerialization.data(withJSONObject: payload, options: [])
 
-    func performRequest(withToken token: String?) async throws -> (data: Data, http: HTTPURLResponse) {
+    func performRequest(url: URL, withToken token: String?) async throws -> (data: Data, http: HTTPURLResponse) {
       var request = URLRequest(url: url)
       request.httpMethod = "POST"
       request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -127,13 +171,7 @@ struct NextApiService {
       }
       request.httpBody = body
 
-      let data: Data
-      let response: URLResponse
-      do {
-        (data, response) = try await URLSession.shared.data(for: request)
-      } catch {
-        throw ApiError(message: "Impossible de contacter \(url.absoluteString) (\(error.localizedDescription)). Vérifiez nextApiBaseUrl.")
-      }
+      let (data, response) = try await URLSession.shared.data(for: request)
       guard let http = response as? HTTPURLResponse else {
         throw ApiError(message: "Réponse invalide.")
       }
@@ -145,53 +183,94 @@ struct NextApiService {
       tokenToUse = try await user.getIDToken()
     }
 
-    var (data, http) = try await performRequest(withToken: tokenToUse)
+    var lastError: ApiError? = nil
 
-    if includeAuthToken, http.statusCode == 401, let user = Auth.auth().currentUser {
+    for (index, url) in urls.enumerated() {
+      let isLastAttempt = index == urls.count - 1
+
+      var data: Data
+      var http: HTTPURLResponse
       do {
-        let tokenResult = try await user.getIDTokenResult(forcingRefresh: true)
-        let refreshed = tokenResult.token
-        (data, http) = try await performRequest(withToken: refreshed)
+        (data, http) = try await performRequest(url: url, withToken: tokenToUse)
       } catch {
-        // On conserve la réponse initiale si refresh impossible
+        let apiError: ApiError
+        if let apiErrorMessage = error as? ApiError {
+          apiError = apiErrorMessage
+        } else {
+          apiError = ApiError(message: networkErrorMessage(for: url, error: error))
+        }
+        lastError = apiError
+        if isLastAttempt {
+          throw apiError
+        }
+        continue
+      }
+
+      if includeAuthToken, http.statusCode == 401, let user = Auth.auth().currentUser {
+        do {
+          let tokenResult = try await user.getIDTokenResult(forcingRefresh: true)
+          let refreshed = tokenResult.token
+          (data, http) = try await performRequest(url: url, withToken: refreshed)
+        } catch {
+          // On conserve la réponse initiale si refresh impossible
+        }
+      }
+
+      if http.statusCode >= 300 {
+        var message = parseErrorMessage(from: data) ?? "Erreur réseau."
+        let normalized = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        if normalized.isEmpty {
+          message = "Erreur réseau."
+        } else {
+          message = normalized
+        }
+
+        if message.lowercased().contains("<!doctype html") || message.lowercased().contains("<html") {
+          message = "Erreur \(http.statusCode). Verifiez nextApiBaseUrl."
+        } else if http.statusCode == 401 {
+          message = "Session expirée. Déconnectez-vous puis reconnectez-vous."
+        } else if http.statusCode == 404 {
+          message = "Endpoint introuvable (404). Verifiez nextApiBaseUrl."
+        } else if http.statusCode >= 500 {
+          message = "Service indisponible (\(http.statusCode)). Réessayez plus tard."
+        }
+
+        if message.count > 400 {
+          let index = message.index(message.startIndex, offsetBy: 400)
+          message = String(message[..<index]) + "…"
+        }
+
+        let apiError = ApiError(message: message)
+        lastError = apiError
+
+        if isLastAttempt || !shouldTryFallback(for: http.statusCode) {
+          throw apiError
+        }
+        continue
+      }
+
+      do {
+        let json = try JSONSerialization.jsonObject(with: data, options: [])
+        if let dict = json as? [String: Any] {
+          return dict
+        }
+        if let array = json as? [Any] {
+          return ["data": array]
+        }
+        return [:]
+      } catch {
+        let apiError = ApiError(message: "Réponse invalide.")
+        lastError = apiError
+        if isLastAttempt {
+          throw apiError
+        }
       }
     }
 
-    if http.statusCode >= 300 {
-      var message = parseErrorMessage(from: data) ?? "Erreur réseau."
-      let normalized = message.trimmingCharacters(in: .whitespacesAndNewlines)
-      if normalized.isEmpty {
-        message = "Erreur réseau."
-      } else {
-        message = normalized
-      }
-
-      if message.lowercased().contains("<!doctype html") || message.lowercased().contains("<html") {
-        message = "Erreur \(http.statusCode). Vérifiez nextApiBaseUrl."
-      } else if http.statusCode == 401 {
-        message = "Session expirée. Déconnectez-vous puis reconnectez-vous."
-      } else if http.statusCode == 404 {
-        message = "Endpoint introuvable (404). Vérifiez nextApiBaseUrl."
-      } else if http.statusCode >= 500 {
-        message = "Service indisponible (\(http.statusCode)). Réessayez plus tard."
-      }
-
-      if message.count > 400 {
-        let index = message.index(message.startIndex, offsetBy: 400)
-        message = String(message[..<index]) + "…"
-      }
-
-      throw ApiError(message: message)
+    if let lastError {
+      throw lastError
     }
-
-    let json = try JSONSerialization.jsonObject(with: data, options: [])
-    if let dict = json as? [String: Any] {
-      return dict
-    }
-    if let array = json as? [Any] {
-      return ["data": array]
-    }
-    return [:]
+    throw ApiError(message: "Service indisponible.")
   }
 
   private static func parseErrorMessage(from data: Data) -> String? {

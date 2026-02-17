@@ -18,19 +18,21 @@ actor LogThrottleStore {
 struct LogService {
   private static let throttleStore = LogThrottleStore()
 
-  private static var baseUrl: URL { AppConfig.shared.nextApiBaseUrl }
+  private static var baseUrls: [URL] { AppConfig.shared.nextApiBaseUrls }
 
-  private static func endpointURL(path: String) throws -> URL {
+  private static func endpointURLs(path: String) throws -> [URL] {
     let trimmed = path.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else {
       throw NSError(domain: "Logs", code: 400, userInfo: [NSLocalizedDescriptionKey: "Endpoint invalide."])
     }
 
-    var url = baseUrl
-    for component in trimmed.split(separator: "/") {
-      url.appendPathComponent(String(component))
+    return baseUrls.map { baseUrl in
+      var url = baseUrl
+      for component in trimmed.split(separator: "/") {
+        url.appendPathComponent(String(component))
+      }
+      return url
     }
-    return url
   }
 
   static func log(action: String,
@@ -50,7 +52,7 @@ struct LogService {
 
     do {
       let token = try await user.getIDToken()
-      let url = try endpointURL(path: "/api/logs")
+      let urls = try endpointURLs(path: "/api/logs")
 
       var payload: [String: Any] = [
         "action": normalizedAction,
@@ -63,19 +65,28 @@ struct LogService {
         payload["details"] = details
       }
 
-      var request = URLRequest(url: url)
-      request.httpMethod = "POST"
-      request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-      request.setValue("ios", forHTTPHeaderField: "x-pecm2-platform")
-      request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-      request.httpBody = try JSONSerialization.data(withJSONObject: payload, options: [])
+      let body = try JSONSerialization.data(withJSONObject: payload, options: [])
 
-      let (_, response) = try await URLSession.shared.data(for: request)
-      guard let httpResponse = response as? HTTPURLResponse else { return }
-      guard (200..<300).contains(httpResponse.statusCode) else { return }
+      for url in urls {
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("ios", forHTTPHeaderField: "x-pecm2-platform")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.httpBody = body
+
+        do {
+          let (_, response) = try await URLSession.shared.data(for: request)
+          guard let httpResponse = response as? HTTPURLResponse else { continue }
+          if (200..<300).contains(httpResponse.statusCode) {
+            return
+          }
+        } catch {
+          continue
+        }
+      }
     } catch {
       // Best-effort: ne pas bloquer le flux utilisateur si le log échoue.
     }
   }
 }
-
