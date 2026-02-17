@@ -62,9 +62,33 @@ const persistBufferImage = async (buffer: Buffer, aiId: string, extension = 'png
   return fileName;
 };
 
-const buildCachedImageUrl = (fileName: string, request: Request) => {
+const resolvePublicApiOrigin = () => {
+  const fromEnvCandidates = [
+    process.env.PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+  ];
+
+  for (const candidate of fromEnvCandidates) {
+    if (!candidate || !candidate.trim()) {
+      continue;
+    }
+    try {
+      const url = new URL(candidate);
+      if (url.protocol === 'https:' || url.protocol === 'http:') {
+        return url.origin;
+      }
+    } catch {
+      // Ignore invalid env values and continue fallback resolution.
+    }
+  }
+
+  return 'https://pec-m2.vercel.app';
+};
+
+const buildCachedImageUrl = (fileName: string) => {
   try {
-    const origin = new URL(request.url).origin;
+    const origin = resolvePublicApiOrigin();
     return `${origin}/api/ai/image/file/${fileName}`;
   } catch {
     return `/api/ai/image/file/${fileName}`;
@@ -355,17 +379,15 @@ const AVATAR_CHUNK_SIZE = 450_000;
 
 const buildAvatarProxyUrl = ({
   aiId,
-  request,
   version,
 }: {
   aiId: string;
-  request: Request;
   version?: string;
 }) => {
   const encoded = encodeURIComponent(aiId);
   const base = (() => {
     try {
-      const origin = new URL(request.url).origin;
+      const origin = resolvePublicApiOrigin();
       return `${origin}/api/ai/avatar/${encoded}`;
     } catch {
       return `/api/ai/avatar/${encoded}`;
@@ -434,7 +456,6 @@ const storeAvatarInFirestore = async ({
 const resolveImageUrl = async (
   data: unknown,
   aiId: string,
-  request: Request,
 ): Promise<ResolvedImageUrl | null> => {
   const payload = extractImagePayload(data);
   if (!payload) {
@@ -476,7 +497,7 @@ const resolveImageUrl = async (
       const extension = extensionFromContentType(detectedContentType);
       const fileName = await persistBufferImage(buffer, aiId, extension);
       return {
-        imageUrl: buildCachedImageUrl(fileName, request),
+        imageUrl: buildCachedImageUrl(fileName),
         persisted: false,
         buffer,
         contentType: detectedContentType,
@@ -808,7 +829,7 @@ export async function POST(request: Request) {
     }
 
     const data = await response.json().catch(() => null);
-    const resolvedUrl = await resolveImageUrl(data, aiId, request);
+    const resolvedUrl = await resolveImageUrl(data, aiId);
     if (!resolvedUrl?.imageUrl) {
       return NextResponse.json({ error: 'Image OpenAI indisponible.' }, { status: 502 });
     }
@@ -832,7 +853,7 @@ export async function POST(request: Request) {
               contentType: resolvedUrl.contentType,
             });
             const version = stored.sha256.slice(0, 12);
-            const avatarUrl = buildAvatarProxyUrl({ aiId, request, version });
+            const avatarUrl = buildAvatarProxyUrl({ aiId, version });
 
             await aiRef.set(
               {

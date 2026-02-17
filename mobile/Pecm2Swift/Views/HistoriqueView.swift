@@ -641,7 +641,8 @@ private struct ConversationHistoryCard: View {
 
   @ViewBuilder
   private var avatar: some View {
-    if let urlString = aiProfile?.imageUrl, let url = URL(string: urlString) {
+    if let urlString = AppConfig.shared.resolvedRemoteURLString(aiProfile?.imageUrl),
+       let url = URL(string: urlString) {
       AsyncImage(url: url) { phase in
         switch phase {
         case .success(let image):

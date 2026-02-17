@@ -451,7 +451,8 @@ private struct AiProfileCard: View {
 
   @ViewBuilder
   private var thumbnail: some View {
-    if let urlString = profile.imageUrl, let url = URL(string: urlString) {
+    if let urlString = AppConfig.shared.resolvedRemoteURLString(profile.imageUrl),
+       let url = URL(string: urlString) {
       AsyncImage(url: url) { phase in
         switch phase {
         case .success(let image):

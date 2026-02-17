@@ -35,6 +35,16 @@ struct NextApiService {
     return reply
   }
 
+  static func sendConversationMessage(conversationId: String, aiId: String, message: String, kind: String = "text") async throws -> [String: Any] {
+    let payload: [String: Any] = [
+      "conversationId": conversationId,
+      "aiId": aiId,
+      "message": message,
+      "kind": kind
+    ]
+    return try await sendJSON(path: "/api/conversation/send", payload: payload, includeAuthToken: true)
+  }
+
   static func aiImage(mode: String, conversationId: String?, userId: String?, aiId: String, message: String?) async throws -> [String: Any] {
     var payload: [String: Any] = [
       "mode": mode,
