@@ -69,6 +69,14 @@ const readMetricValue = (metricsText: string, metricName: string) => {
 export async function GET(request: Request) {
   const startedAt = Date.now();
   const probeTargets = getProbeTargets(request);
+  let includeRawMetrics = false;
+  try {
+    const requestUrl = new URL(request.url);
+    const rawFlag = requestUrl.searchParams.get('includeRaw');
+    includeRawMetrics = rawFlag === '1' || rawFlag === 'true';
+  } catch {
+    includeRawMetrics = false;
+  }
   const failures: Array<{ source: string; status?: number; error: string }> = [];
 
   for (const source of probeTargets) {
@@ -104,6 +112,7 @@ export async function GET(request: Request) {
         source,
         durationMs: Date.now() - startedAt,
         summary,
+        ...(includeRawMetrics ? { rawMetrics: metricsText } : {}),
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'unknown_error';

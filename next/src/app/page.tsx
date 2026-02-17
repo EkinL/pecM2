@@ -122,6 +122,31 @@ const aiStatusStyles: Record<string, string> = {
   rejected: 'bg-rose-100/80 text-rose-700 border border-rose-400/70',
 };
 
+type AdminMetricsSummary = {
+  scrapeRequestsTotal?: number | null;
+  apiRequestsTotal?: number | null;
+  apiErrorsTotal?: number | null;
+  businessMessagesTotal?: number | null;
+};
+
+type AdminMetricsProbeResult = {
+  ok?: boolean;
+  source?: string;
+  durationMs?: number;
+  summary?: AdminMetricsSummary;
+  rawMetrics?: string;
+  error?: string;
+  failures?: Array<{ source: string; status?: number; error: string }>;
+  targets?: string[];
+};
+
+const formatMetricValue = (value?: number | null) => {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return '—';
+  }
+  return value.toLocaleString('fr-FR');
+};
+
 const buildLookPayload = (values: Record<string, string>) => {
   const next = Object.entries(values).reduce<Record<string, string>>((acc, [key, value]) => {
     const trimmed = value.trim();
@@ -217,6 +242,11 @@ export default function AdminDashboard() {
   const [clientConversationsError, setClientConversationsError] = useState<string | null>(null);
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [signOutError, setSignOutError] = useState<string | null>(null);
+  const [metricsProbe, setMetricsProbe] = useState<AdminMetricsProbeResult | null>(null);
+  const [metricsProbeRaw, setMetricsProbeRaw] = useState('');
+  const [metricsProbeFetching, setMetricsProbeFetching] = useState(false);
+  const [metricsProbeError, setMetricsProbeError] = useState<string | null>(null);
+  const [metricsProbeUpdatedAt, setMetricsProbeUpdatedAt] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -354,25 +384,50 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (!isAdmin) {
+      setMetricsProbe(null);
+      setMetricsProbeRaw('');
+      setMetricsProbeFetching(false);
+      setMetricsProbeError(null);
+      setMetricsProbeUpdatedAt(null);
       return;
     }
 
     const probeMetrics = async () => {
+      setMetricsProbeFetching(true);
       try {
-        const response = await fetch('/api/admin/metrics/probe', {
+        const response = await fetch('/api/admin/metrics/probe?includeRaw=1', {
           method: 'GET',
           cache: 'no-store',
         });
         const data = await response.json().catch(() => ({}));
+        const payload =
+          data && typeof data === 'object' ? (data as AdminMetricsProbeResult) : null;
+        setMetricsProbeUpdatedAt(
+          new Date().toLocaleString('fr-FR', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+          }),
+        );
+        setMetricsProbe(payload);
+        setMetricsProbeRaw(typeof payload?.rawMetrics === 'string' ? payload.rawMetrics : '');
 
         if (!response.ok) {
-          console.error('Sonde metrics admin en echec', data);
+          const errorMessage =
+            typeof payload?.error === 'string'
+              ? payload.error
+              : 'Sonde metrics admin indisponible.';
+          setMetricsProbeError(errorMessage);
+          console.error('Sonde metrics admin en echec', payload);
           return;
         }
 
-        console.info('Sonde metrics admin ok', data);
+        setMetricsProbeError(null);
+        console.info('Sonde metrics admin ok', payload);
       } catch (error) {
+        setMetricsProbeError('Erreur sonde metrics admin.');
         console.error('Erreur sonde metrics admin', error);
+      } finally {
+        setMetricsProbeFetching(false);
       }
     };
 
@@ -888,6 +943,11 @@ export default function AdminDashboard() {
     dateStyle: 'short',
     timeStyle: 'short',
   });
+  const metricsSummary = metricsProbe?.summary;
+  const metricsProbeDurationLabel =
+    typeof metricsProbe?.durationMs === 'number' && Number.isFinite(metricsProbe.durationMs)
+      ? `${metricsProbe.durationMs} ms`
+      : '—';
 
   const totalTokens = useMemo(
     () =>
@@ -1283,6 +1343,70 @@ export default function AdminDashboard() {
             </div>
           </div>
         </HeroHeader>
+
+        <section className="rounded-3xl border border-white/5 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold">Monitoring Prometheus</h2>
+              <p className="text-sm text-slate-400">
+                Donnees recuperees par la sonde admin (source de Grafana).
+              </p>
+            </div>
+            <span className="text-xs text-slate-400">
+              {metricsProbeFetching
+                ? 'Sonde en cours...'
+                : metricsProbeUpdatedAt
+                  ? `Derniere sonde: ${metricsProbeUpdatedAt}`
+                  : 'Aucune sonde'}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Scrapes /api/metrics</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatMetricValue(metricsSummary?.scrapeRequestsTotal)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Requetes API</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatMetricValue(metricsSummary?.apiRequestsTotal)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Erreurs API</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatMetricValue(metricsSummary?.apiErrorsTotal)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Messages metier</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatMetricValue(metricsSummary?.businessMessagesTotal)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-1 text-xs text-slate-400">
+            <p>Source sondee: {metricsProbe?.source ?? '—'}</p>
+            <p>Duree de sonde: {metricsProbeDurationLabel}</p>
+            {metricsProbeError ? (
+              <p className="text-rose-300">{metricsProbeError}</p>
+            ) : (
+              <p className="text-emerald-300">Sonde admin OK.</p>
+            )}
+          </div>
+
+          <details className="mt-4 rounded-2xl border border-slate-800/80 bg-slate-950/30 p-4">
+            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
+              Payload brut scrape /api/metrics
+            </summary>
+            <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-slate-950/60 p-3 text-[11px] text-slate-300">
+              {metricsProbeRaw || 'Aucune metrique brute recue.'}
+            </pre>
+          </details>
+        </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6">
