@@ -13,6 +13,7 @@ import {
   deleteAiProfileAndConversations,
   updateAiProfileStatus,
 } from '../../indexFirebase';
+import { apiFetch } from '../../utils/apiFetch';
 import { logActivity } from '../../utils/logActivity';
 import { formatLookSummary } from '../../ia/aiOptions';
 
@@ -254,7 +255,7 @@ export default function AdminIaPage() {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch('/api/ai/image', {
+    const response = await apiFetch('/api/ai/image', {
       method: 'POST',
       headers,
       keepalive: true,
