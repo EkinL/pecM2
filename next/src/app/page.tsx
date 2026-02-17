@@ -1576,6 +1576,70 @@ export default function AdminDashboard() {
           </div>
         </HeroHeader>
 
+        <section className="rounded-3xl border border-white/5 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-semibold">Monitoring Prometheus</h2>
+              <p className="text-sm text-slate-400">
+                Donnees recuperees par la sonde admin (source de Grafana).
+              </p>
+            </div>
+            <span className="text-xs text-slate-400">
+              {metricsProbeFetching
+                ? 'Sonde en cours...'
+                : metricsProbeUpdatedAt
+                  ? `Derniere sonde: ${metricsProbeUpdatedAt}`
+                  : 'Aucune sonde'}
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Scrapes /api/metrics</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatMetricValue(metricsSummary?.scrapeRequestsTotal)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Requetes API</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatMetricValue(metricsSummary?.apiRequestsTotal)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Erreurs API</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatMetricValue(metricsSummary?.apiErrorsTotal)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
+              <p className="text-xs uppercase tracking-wide text-slate-400">Messages metier</p>
+              <p className="mt-2 text-2xl font-semibold">
+                {formatMetricValue(metricsSummary?.businessMessagesTotal)}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-1 text-xs text-slate-400">
+            <p>Source sondee: {metricsProbe?.source ?? '—'}</p>
+            <p>Duree de sonde: {metricsProbeDurationLabel}</p>
+            {metricsProbeError ? (
+              <p className="text-rose-300">{metricsProbeError}</p>
+            ) : (
+              <p className="text-emerald-300">Sonde admin OK.</p>
+            )}
+          </div>
+
+          <details className="mt-4 rounded-2xl border border-slate-800/80 bg-slate-950/30 p-4">
+            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
+              Payload brut scrape /api/metrics
+            </summary>
+            <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-slate-950/60 p-3 text-[11px] text-slate-300">
+              {metricsProbeRaw || 'Aucune metrique brute recue.'}
+            </pre>
+          </details>
+        </section>
+
         <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="space-y-6">
             <UsersSection
