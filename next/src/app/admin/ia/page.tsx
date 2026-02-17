@@ -467,6 +467,12 @@ export default function AdminIaPage() {
               Logs
             </Link>
             <Link
+              href="/admin/rgpd"
+              className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
+            >
+              RGPD
+            </Link>
+            <Link
               href="/"
               className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
             >

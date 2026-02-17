@@ -57,7 +57,7 @@ private struct ToastBanner: View {
 }
 
 private struct ToastModifier: ViewModifier {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.appShouldReduceMotion) private var reduceMotion
   @Binding var toast: ToastData?
 
   @State private var dismissWorkItem: DispatchWorkItem?
@@ -91,4 +91,3 @@ extension View {
     modifier(ToastModifier(toast: toast))
   }
 }
-

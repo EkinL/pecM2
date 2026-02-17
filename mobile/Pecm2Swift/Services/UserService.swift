@@ -124,4 +124,26 @@ struct UserService {
       "updatedAt": FieldValue.serverTimestamp()
     ], merge: true)
   }
+
+  static func requestAccountDeletion(userId: String, email: String?, pseudo: String?) async throws {
+    let normalizedEmail = email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    let normalizedPseudo = pseudo?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+    var payload: [String: Any] = [
+      "accountDeletionRequestedAt": FieldValue.serverTimestamp(),
+      "accountDeletionRequestStatus": "pending",
+      "accountDeletionRequestSource": "ios",
+      "updatedAt": FieldValue.serverTimestamp()
+    ]
+
+    if !normalizedEmail.isEmpty {
+      payload["accountDeletionRequestContactEmail"] = normalizedEmail
+    }
+    if !normalizedPseudo.isEmpty {
+      payload["accountDeletionRequestPseudo"] = normalizedPseudo
+    }
+
+    let docRef = collection.document(userId)
+    try await docRef.setData(payload, merge: true)
+  }
 }
