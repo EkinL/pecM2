@@ -10,6 +10,7 @@ struct AppConfig {
   let firebaseAppId: String
   let firebaseMeasurementId: String
   let nextApiBaseUrl: URL
+  let nextApiBaseUrls: [URL]
   let openAiApiKey: String
   let openAiModel: String
   let openAiTtsModel: String
@@ -34,6 +35,9 @@ struct AppConfig {
     } else {
       nextApiBaseUrl = URL(string: "https://pec-m2.vercel.app")!
     }
+
+    let fallbackUrl = URL(string: "http://localhost:3000")!
+    nextApiBaseUrls = AppConfig.uniqueUrls([nextApiBaseUrl, fallbackUrl])
   }
 
   private static func load(bundle: Bundle) -> [String: Any] {
@@ -43,5 +47,19 @@ struct AppConfig {
       return [:]
     }
     return plist
+  }
+
+  private static func uniqueUrls(_ urls: [URL]) -> [URL] {
+    var seen = Set<String>()
+    var result: [URL] = []
+
+    for url in urls {
+      let key = url.absoluteString
+      if seen.insert(key).inserted {
+        result.append(url)
+      }
+    }
+
+    return result
   }
 }
