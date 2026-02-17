@@ -2,27 +2,37 @@ import SwiftUI
 import UIKit
 
 enum AppColors {
-  // Source of truth (Dark UI premium)
-  static let background = Color(hex: "#0D0F14")
-  static let backgroundSecondary = Color(hex: "#151922")
-  static let inputBackground = Color(hex: "#1C2130")
+  static let background = themedColor(light: "#F3F6FC", dark: "#0D0F14")
+  static let backgroundSecondary = themedColor(light: "#FFFFFF", dark: "#151922")
+  static let inputBackground = themedColor(light: "#DFE6F4", dark: "#1C2130")
 
-  static let messageUser = Color(hex: "#3A63F3")
-  static let messageAI = Color(hex: "#22293A")
+  static let messageUser = themedColor(light: "#355CE0", dark: "#3A63F3")
+  static let messageAI = themedColor(light: "#EAF0FB", dark: "#22293A")
 
-  static let textPrimary = Color(hex: "#F1F4FF")
-  static let textSecondary = Color(hex: "#A0A7C0")
+  static let textPrimary = themedColor(light: "#16233B", dark: "#F1F4FF")
+  static let textSecondary = themedColor(light: "#5E6D8B", dark: "#A0A7C0")
+  static let onAccent = themedColor(light: "#F9FBFF", dark: "#F1F4FF")
 
-  static let accent = Color(hex: "#6C8CFF")
-  static let error = Color(hex: "#FF5A5A")
+  static let accent = themedColor(light: "#4E6EFF", dark: "#6C8CFF")
+  static let error = themedColor(light: "#CC2C2C", dark: "#FF5A5A")
 
-  // UIKit counterparts for appearance APIs
-  static let uiBackground = UIColor(hex: "#0D0F14")
-  static let uiBackgroundSecondary = UIColor(hex: "#151922")
-  static let uiTextPrimary = UIColor(hex: "#F1F4FF")
-  static let uiTextSecondary = UIColor(hex: "#A0A7C0")
-  static let uiAccent = UIColor(hex: "#6C8CFF")
-  static let uiError = UIColor(hex: "#FF5A5A")
+  static let uiBackground = themedUIColor(light: "#F3F6FC", dark: "#0D0F14")
+  static let uiBackgroundSecondary = themedUIColor(light: "#FFFFFF", dark: "#151922")
+  static let uiTextPrimary = themedUIColor(light: "#16233B", dark: "#F1F4FF")
+  static let uiTextSecondary = themedUIColor(light: "#5E6D8B", dark: "#A0A7C0")
+  static let uiAccent = themedUIColor(light: "#4E6EFF", dark: "#6C8CFF")
+  static let uiError = themedUIColor(light: "#CC2C2C", dark: "#FF5A5A")
+
+  private static func themedColor(light: String, dark: String) -> Color {
+    Color(uiColor: themedUIColor(light: light, dark: dark))
+  }
+
+  private static func themedUIColor(light: String, dark: String) -> UIColor {
+    UIColor { traits in
+      let hex = traits.userInterfaceStyle == .dark ? dark : light
+      return UIColor(hex: hex)
+    }
+  }
 }
 
 extension Color {
@@ -70,4 +80,3 @@ private enum HexColorParser {
     return (r, g, b, a)
   }
 }
-

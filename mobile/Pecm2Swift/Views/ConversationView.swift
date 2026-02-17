@@ -5,7 +5,7 @@ struct ConversationView: View {
   @EnvironmentObject private var session: SessionStore
   @EnvironmentObject private var locationManager: LocationManager
   @Environment(\.dismiss) private var dismiss
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.appShouldReduceMotion) private var reduceMotion
   let conversation: Conversation
   let userId: String
   let aiId: String
@@ -337,11 +337,11 @@ private struct ConversationComposerBar: View {
 
             if isSending {
               ProgressView()
-                .tint(AppColors.textPrimary)
+                .tint(AppColors.onAccent)
             } else {
               Image(systemName: "paperplane.fill")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(AppColors.textPrimary)
+                .foregroundColor(AppColors.onAccent)
             }
           }
           .appGlow()
@@ -398,7 +398,7 @@ private struct ScrollToBottomButton: View {
 }
 
 private struct TypingIndicatorBubble: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.appShouldReduceMotion) private var reduceMotion
   @State private var animateDots = false
 
   var body: some View {
@@ -466,7 +466,6 @@ struct EvaluationSheet: View {
       }
     }
     .tint(AppColors.accent)
-    .preferredColorScheme(.dark)
   }
 }
 
@@ -489,7 +488,7 @@ struct MessageBubbleView: View {
       if let content = message.content {
         breakableText(content)
           .font(message.kind == "image" ? AppTypography.footnote : AppTypography.body)
-          .foregroundColor(isClientMessage ? AppColors.textPrimary : (message.kind == "image" ? AppColors.textSecondary : AppColors.textPrimary))
+          .foregroundColor(isClientMessage ? AppColors.onAccent : (message.kind == "image" ? AppColors.textSecondary : AppColors.textPrimary))
           .lineLimit(nil)
           .multilineTextAlignment(.leading)
           .fixedSize(horizontal: false, vertical: true)

@@ -43,7 +43,7 @@ enum AppTheme {
     UICollectionView.appearance().backgroundColor = AppColors.uiBackground
 
     // Keyboard / inputs
-    UITextField.appearance().keyboardAppearance = .dark
+    UITextField.appearance().keyboardAppearance = .default
   }
 }
 

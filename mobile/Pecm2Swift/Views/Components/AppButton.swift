@@ -1,7 +1,7 @@
 import SwiftUI
 
 private struct AppPressableButtonStyle: ButtonStyle {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.appShouldReduceMotion) private var reduceMotion
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
@@ -25,7 +25,7 @@ struct PrimaryButton: View {
       HStack(spacing: 10) {
         if isLoading {
           ProgressView()
-            .tint(AppColors.textPrimary)
+            .tint(AppColors.onAccent)
         } else if let systemImage {
           Image(systemName: systemImage)
             .font(.system(size: 16, weight: .semibold))
@@ -34,7 +34,7 @@ struct PrimaryButton: View {
           .font(AppTypography.headline)
           .lineLimit(1)
       }
-      .foregroundColor(AppColors.textPrimary)
+      .foregroundColor(AppColors.onAccent)
       .frame(maxWidth: .infinity, minHeight: AppLayout.controlHeight)
       .padding(.horizontal, 14)
       .background(
@@ -96,4 +96,3 @@ struct SecondaryButton: View {
     .opacity((isDisabled || isLoading) ? 0.60 : 1)
   }
 }
-

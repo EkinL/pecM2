@@ -27,6 +27,7 @@ struct Pecm2SwiftApp: App {
   @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
   @StateObject private var session = SessionStore()
   @StateObject private var locationManager = LocationManager()
+  @StateObject private var accessibilitySettings = AppAccessibilitySettings()
 
   var body: some Scene {
     WindowGroup {
@@ -35,7 +36,10 @@ struct Pecm2SwiftApp: App {
         RootView()
       }
       .tint(AppColors.accent)
-      .preferredColorScheme(.dark)
+      .preferredColorScheme(accessibilitySettings.preferredColorScheme)
+      .dynamicTypeSize(accessibilitySettings.dynamicTypeSize)
+      .appReduceMotionPreference(accessibilitySettings.reduceMotion)
+      .environmentObject(accessibilitySettings)
       .environmentObject(session)
       .environmentObject(locationManager)
     }
