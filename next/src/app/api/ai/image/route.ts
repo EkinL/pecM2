@@ -62,7 +62,10 @@ const persistBufferImage = async (buffer: Buffer, aiId: string, extension = 'png
   return fileName;
 };
 
-const buildCachedImageUrl = (fileName: string, request: Request) => {
+const buildCachedImageUrl = (fileName: string, request?: Request) => {
+  if (!request) {
+    return `/api/ai/image/file/${fileName}`;
+  }
   try {
     const origin = new URL(request.url).origin;
     return `${origin}/api/ai/image/file/${fileName}`;
