@@ -54,7 +54,9 @@ export const Sparkline = memo(function Sparkline({
     });
 
     const linePathBuilt = points
-      .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
+      .map(
+        (point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+      )
       .join(' ');
 
     if (points.length < 2) {

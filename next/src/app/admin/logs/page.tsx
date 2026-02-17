@@ -353,8 +353,7 @@ export default function AdminLogsPage() {
           cache: 'no-store',
         });
         const data = await response.json().catch(() => ({}));
-        const payload =
-          data && typeof data === 'object' ? (data as AdminMetricsProbeResult) : null;
+        const payload = data && typeof data === 'object' ? (data as AdminMetricsProbeResult) : null;
         setMetricsProbeUpdatedAt(
           new Date(capturedAt).toLocaleString('fr-FR', {
             dateStyle: 'short',
@@ -487,7 +486,8 @@ export default function AdminLogsPage() {
   const currentUptimeSeconds =
     latestMonitoringPoint?.uptimeSeconds ?? latestMetricsSnapshot?.uptimeSeconds ?? null;
   const currentRequestsPerMin = latestMonitoringPoint?.requestsPerMin ?? fallbackRequestsPerMin;
-  const currentErrorRatePercent = latestMonitoringPoint?.errorRatePercent ?? fallbackErrorRatePercent;
+  const currentErrorRatePercent =
+    latestMonitoringPoint?.errorRatePercent ?? fallbackErrorRatePercent;
   const currentP95LatencyMs = latestMonitoringPoint?.p95LatencyMs ?? fallbackP95LatencyMs;
   const currentCpuPercent = latestMonitoringPoint?.cpuPercent ?? null;
   const currentRamMb =

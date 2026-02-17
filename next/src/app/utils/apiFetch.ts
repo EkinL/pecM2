@@ -16,11 +16,9 @@ const normalizeOrigin = (value?: string): string | null => {
 
 const resolveApiOrigins = () => {
   const envOrigin = normalizeOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
-  const origins = [
-    envOrigin,
-    DEFAULT_PRIMARY_API_ORIGIN,
-    DEFAULT_FALLBACK_API_ORIGIN,
-  ].filter((origin): origin is string => Boolean(origin));
+  const origins = [envOrigin, DEFAULT_PRIMARY_API_ORIGIN, DEFAULT_FALLBACK_API_ORIGIN].filter(
+    (origin): origin is string => Boolean(origin),
+  );
   return [...new Set(origins)];
 };
 

@@ -49,7 +49,9 @@ export const KpiCard = memo(function KpiCard({
   return (
     <article className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/90 via-slate-900/75 to-slate-950/80 p-4 shadow-lg shadow-black/30">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">{title}</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300">
+          {title}
+        </h3>
         {tooltip ? (
           <span
             className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-slate-700/80 text-[11px] text-slate-300"

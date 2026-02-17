@@ -1105,7 +1105,8 @@ export default function AdminDashboard() {
   const currentUptimeSeconds =
     latestMonitoringPoint?.uptimeSeconds ?? latestMetricsSnapshot?.uptimeSeconds ?? null;
   const currentRequestsPerMin = latestMonitoringPoint?.requestsPerMin ?? fallbackRequestsPerMin;
-  const currentErrorRatePercent = latestMonitoringPoint?.errorRatePercent ?? fallbackErrorRatePercent;
+  const currentErrorRatePercent =
+    latestMonitoringPoint?.errorRatePercent ?? fallbackErrorRatePercent;
   const currentP95LatencyMs = latestMonitoringPoint?.p95LatencyMs ?? fallbackP95LatencyMs;
   const currentCpuPercent = latestMonitoringPoint?.cpuPercent ?? null;
   const currentRamMb =

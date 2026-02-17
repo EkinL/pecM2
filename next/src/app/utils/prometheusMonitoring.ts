@@ -86,10 +86,7 @@ const parseLabels = (rawLabels?: string): LabelMap => {
   while (match) {
     const key = match[1];
     const rawValue = match[2] ?? '';
-    labels[key] = rawValue
-      .replace(/\\\\/g, '\\')
-      .replace(/\\"/g, '"')
-      .replace(/\\n/g, '\n');
+    labels[key] = rawValue.replace(/\\\\/g, '\\').replace(/\\"/g, '"').replace(/\\n/g, '\n');
     match = matcher.exec(rawLabels);
   }
   return labels;
@@ -180,9 +177,7 @@ const aggregateHistogramBuckets = (samples: ParsedPrometheusSample[], metricName
     bucketsMap.set(le, (bucketsMap.get(le) ?? 0) + sample.value);
   });
 
-  const buckets = [...bucketsMap.entries()]
-    .map(([le, count]) => ({ le, count }))
-    .sort(sortBuckets);
+  const buckets = [...bucketsMap.entries()].map(([le, count]) => ({ le, count })).sort(sortBuckets);
 
   let runningCount = 0;
   return buckets.map((bucket) => {
@@ -331,7 +326,10 @@ export const createMetricsSnapshot = ({
   const parsedUptimeSeconds = readMetricFirstValue(samples, 'process_uptime_seconds');
   const parsedResidentMemoryBytes = readMetricFirstValue(samples, 'process_resident_memory_bytes');
   const parsedCpuUserSecondsTotal = readMetricFirstValue(samples, 'process_cpu_user_seconds_total');
-  const parsedCpuSystemSecondsTotal = readMetricFirstValue(samples, 'process_cpu_system_seconds_total');
+  const parsedCpuSystemSecondsTotal = readMetricFirstValue(
+    samples,
+    'process_cpu_system_seconds_total',
+  );
 
   return {
     capturedAt,
@@ -469,7 +467,8 @@ export const buildMonitoringSeries = (
           : null,
       cpuPercent: toSeriesCpuPercent(cpuDelta, elapsedSeconds),
       ramMb:
-        typeof snapshot.residentMemoryBytes === 'number' && Number.isFinite(snapshot.residentMemoryBytes)
+        typeof snapshot.residentMemoryBytes === 'number' &&
+        Number.isFinite(snapshot.residentMemoryBytes)
           ? snapshot.residentMemoryBytes / ONE_MB
           : null,
       uptimeSeconds: snapshot.uptimeSeconds,
