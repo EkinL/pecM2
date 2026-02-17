@@ -94,7 +94,8 @@ struct AiProfileDetailView: View {
   @ViewBuilder
   private var hero: some View {
     ZStack(alignment: .bottomLeading) {
-      if let urlString = profile.imageUrl, let url = URL(string: urlString) {
+      if let urlString = AppConfig.shared.resolvedRemoteURLString(profile.imageUrl),
+         let url = URL(string: urlString) {
         AsyncImage(url: url) { image in
           image.resizable().scaledToFill()
         } placeholder: {

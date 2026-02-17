@@ -22,7 +22,7 @@ struct AuthView: View {
       ScrollView {
         VStack(spacing: 18) {
           VStack(spacing: 8) {
-            Text("PECM2")
+            Text("MyTalk")
               .font(AppTypography.brandTitle)
               .foregroundColor(AppColors.textPrimary)
               .appGlow()
