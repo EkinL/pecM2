@@ -23,6 +23,7 @@ import {
   updateConversationCountry,
   updateConversationLocation,
 } from '../../indexFirebase';
+import { logActivity } from '../../utils/logActivity';
 import {
   countryLabelByCode,
   countryOptions,
@@ -105,10 +106,7 @@ type AiProfile = {
   [key: string]: unknown;
 };
 
-const messageTypes = [
-  { id: 'text', label: 'Texte', cost: 1 },
-  { id: 'image', label: 'Image', cost: 5 },
-];
+const messageTypes = [{ id: 'text', label: 'Texte', cost: 1 }];
 
 const LOCATION_FAILURE_THRESHOLD = 3;
 
@@ -716,11 +714,25 @@ export default function ConversationPage() {
     setTtsError(null);
 
     try {
+      let token: string | null = null;
+      try {
+        const user = auth.currentUser;
+        token = user ? await user.getIdToken() : null;
+      } catch (error) {
+        console.warn("Impossible d'obtenir le token Firebase pour le TTS", error);
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-pecm2-platform': 'web',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/ai/tts', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           text,
           aiId,
@@ -780,6 +792,16 @@ export default function ConversationPage() {
     }
     if (tokensRemaining < messageCost) {
       setSendError('Solde insuffisant pour ce message.');
+      void logActivity({
+        action: 'tokens_insufficient',
+        targetType: 'conversation',
+        targetId: conversationId,
+        details: {
+          kind: messageKind,
+          tokenCost: messageCost,
+          tokensRemaining,
+        },
+      });
       return;
     }
 
@@ -820,6 +842,15 @@ export default function ConversationPage() {
       setDraft('');
       setSendSuccess('Message envoye.');
       messageSent = true;
+      void logActivity({
+        action: 'message_send',
+        targetType: 'conversation',
+        targetId: conversationId,
+        details: {
+          kind: messageKind,
+          tokenCost: messageCost,
+        },
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Impossible d'envoyer le message.";
       setSendError(message);
@@ -835,11 +866,24 @@ export default function ConversationPage() {
     try {
       const isImageRequest = messageKind === 'image';
       const endpoint = isImageRequest ? '/api/ai/image' : '/api/ai/reply';
+      let token: string | null = null;
+      try {
+        const user = auth.currentUser;
+        token = user ? await user.getIdToken() : null;
+      } catch (error) {
+        console.warn("Impossible d'obtenir le token Firebase pour la requete IA", error);
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-pecm2-platform': 'web',
+      };
+      if (token) {
+        headers.Authorization = `Bearer ${token}`;
+      }
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           conversationId,
           userId,
@@ -884,12 +928,37 @@ export default function ConversationPage() {
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
             <span>{profile?.mail ?? authMail ?? 'Compte actif'}</span>
-            <Link
-              href="/historique/client"
-              className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
-            >
-              Retour a l historique
-            </Link>
+            {isAdmin ? (
+              <>
+                <Link
+                  href="/admin/conversations"
+                  className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
+                >
+                  Retour conversations
+                </Link>
+                <Link
+                  href="/admin/logs"
+                  className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
+                >
+                  Logs
+                </Link>
+                {conversation?.userId ? (
+                  <Link
+                    href={`/admin/users/${conversation.userId}/logs`}
+                    className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
+                  >
+                    Logs user
+                  </Link>
+                ) : null}
+              </>
+            ) : (
+              <Link
+                href="/historique/client"
+                className="rounded-full border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-xs font-semibold text-slate-200 transition hover:border-slate-700"
+              >
+                Retour a l historique
+              </Link>
+            )}
           </div>
         </header>
 

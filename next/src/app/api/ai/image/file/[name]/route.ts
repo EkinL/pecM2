@@ -1,10 +1,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
-const IMAGE_CACHE_DIR = path.join(process.cwd(), '.cache', 'ai-images');
+const IMAGE_CACHE_DIR = path.join(os.tmpdir(), 'pecm2-ai-images');
 
 const contentTypeFor = (fileName: string) => {
   const ext = path.extname(fileName).toLowerCase();

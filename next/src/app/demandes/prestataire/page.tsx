@@ -514,6 +514,14 @@ export default function AdminDemandesPage() {
                         )}
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
+                        {demande.clientId ? (
+                          <Link
+                            href={`/admin/users/${demande.clientId}/logs`}
+                            className="rounded-lg border border-slate-800/80 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600"
+                          >
+                            Logs client
+                          </Link>
+                        ) : null}
                         {canAccept && (
                           <button
                             type="button"

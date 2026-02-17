@@ -56,7 +56,19 @@ struct AiProfileService {
       payload["look"] = try Firestore.Encoder().encode(look)
     }
 
-    try await collection.addDocument(data: payload)
+    let docRef = try await collection.addDocument(data: payload)
+    Task {
+      await LogService.log(
+        action: "ai_profile_create",
+        targetType: "aiProfile",
+        targetId: docRef.documentID,
+        details: [
+          "visibility": visibility,
+          "accessType": accessType,
+          "status": "pending"
+        ]
+      )
+    }
   }
 
   static func updateStatus(profileId: String, status: String, note: String?, adminId: String?, adminMail: String?) async throws {
