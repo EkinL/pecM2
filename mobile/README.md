@@ -21,3 +21,51 @@ Elle utilise les routes API Next (`/api/...`) comme backend pour l’IA et la ta
 
 - `Pecm2Swift/` : code SwiftUI + services Firebase
 - `project.yml` : configuration XcodeGen
+- `fastlane/` : lanes de build/signature/deploiement TestFlight
+
+## CD TestFlight (Fastlane + GitHub Actions)
+
+Le workflow `.github/workflows/ios-cd.yml` publie automatiquement sur TestFlight a chaque push sur `main` (et en manuel via `workflow_dispatch`).
+
+### 1. Initialiser les certificats/profils avec `match`
+
+Depuis `mobile/`, lancez localement:
+
+```bash
+bundle install
+bundle exec fastlane match appstore --app_identifier com.pecm2.app --git_url <URL_DU_REPO_MATCH>
+```
+
+Cela cree le certificat et le provisioning profile App Store dans votre repo `match`.
+
+### 2. Ajouter les secrets GitHub du repo
+
+- `MATCH_GIT_URL`: URL du repo `match` (HTTPS ou SSH)
+- `MATCH_PASSWORD`: mot de passe de chiffrement `match`
+- `APP_STORE_CONNECT_API_KEY_ID`: Key ID de la cle API App Store Connect
+- `APP_STORE_CONNECT_ISSUER_ID`: Issuer ID de la cle API App Store Connect
+- `APP_STORE_CONNECT_API_KEY_BASE64`: contenu du fichier `.p8` encode en base64
+- `APPLE_TEAM_ID`: Team ID Apple Developer (optionnel mais recommande)
+
+Exemple pour generer `APP_STORE_CONNECT_API_KEY_BASE64`:
+
+```bash
+base64 -i AuthKey_XXXXXX.p8 | tr -d '\n'
+```
+
+Variable optionnelle:
+
+- `MATCH_GIT_BRANCH` (GitHub Variables): branche du repo `match` (defaut `main`)
+
+### 3. Lancer manuellement (optionnel)
+
+```bash
+bundle exec fastlane ios beta
+```
+
+La lane:
+
+- recupere la signature via `match`
+- incremente automatiquement le build number
+- build l'IPA App Store
+- envoie le build sur TestFlight
