@@ -220,6 +220,25 @@ export const mapSnapshot = (snapshot: {
 
 export const pickRandomItem = <T>(items: T[]): T => items[Math.floor(Math.random() * items.length)];
 
+const isPermissionDeniedError = (error: unknown) => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const asRecord = error as { code?: unknown; message?: unknown };
+  const code = typeof asRecord.code === 'string' ? asRecord.code.toLowerCase() : '';
+  if (code.includes('permission-denied')) {
+    return true;
+  }
+
+  const message = typeof asRecord.message === 'string' ? asRecord.message.toLowerCase() : '';
+  return (
+    message.includes('missing or insufficient permissions') ||
+    message.includes('insufficient permissions') ||
+    message.includes('permission denied')
+  );
+};
+
 export const createRealtimeListener = (
   reference: any,
   onData: any,
@@ -233,7 +252,9 @@ export const createRealtimeListener = (
         onData?.(mapSnapshot(snapshot));
       },
       (error: any) => {
-        console.error(`Erreur du flux temps réel ${label}`, error);
+        if (!isPermissionDeniedError(error)) {
+          console.error(`Erreur du flux temps réel ${label}`, error);
+        }
         onError?.(error);
       },
     );

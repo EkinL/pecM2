@@ -15,8 +15,13 @@ const isFirebaseAdminConfigurationError = (error: unknown) => {
     message.includes('unable to detect a project id') ||
     message.includes('project id') ||
     message.includes('projectid') ||
+    message.includes('project_id') ||
     message.includes('google_cloud_project') ||
-    message.includes('gcloud_project')
+    message.includes('gcloud_project') ||
+    message.includes('service account') ||
+    message.includes('private key') ||
+    message.includes('client_email') ||
+    message.includes('invalid grant')
   );
 };
 
