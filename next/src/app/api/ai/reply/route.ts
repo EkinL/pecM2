@@ -23,8 +23,13 @@ const isFirebaseAdminConfigurationError = (error: unknown) => {
     message.includes('unable to detect a project id') ||
     message.includes('project id') ||
     message.includes('projectid') ||
+    message.includes('project_id') ||
     message.includes('google_cloud_project') ||
-    message.includes('gcloud_project')
+    message.includes('gcloud_project') ||
+    message.includes('service account') ||
+    message.includes('private key') ||
+    message.includes('client_email') ||
+    message.includes('invalid grant')
   );
 };
 
@@ -461,13 +466,19 @@ export async function POST(request: Request) {
     }
 
     const memorySummary = updateMemorySummary(memory, userMessage, replyText);
-    await memoryRef.set(
-      {
-        summary: memorySummary,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+    let persistenceWarning: 'memory_update_failed' | 'message_persist_unavailable' | null = null;
+    try {
+      await memoryRef.set(
+        {
+          summary: memorySummary,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    } catch (error) {
+      console.warn('Impossible de mettre a jour la memoire IA', error);
+      persistenceWarning = 'memory_update_failed';
+    }
 
     const usedModel =
       replySource === 'openai' ? openAiModel : replySource === 'huggingface' ? model : 'fallback';
@@ -497,7 +508,14 @@ export async function POST(request: Request) {
       },
       { merge: true },
     );
-    await batch.commit();
+    let replyPersisted = true;
+    try {
+      await batch.commit();
+    } catch (error) {
+      replyPersisted = false;
+      persistenceWarning = 'message_persist_unavailable';
+      console.error('Impossible de persister la reponse IA', error);
+    }
 
     try {
       await writeActivityLog({
@@ -520,7 +538,12 @@ export async function POST(request: Request) {
       console.warn("Impossible d'ecrire le log ai_reply", error);
     }
 
-    return NextResponse.json({ reply: replyText });
+    const payload: Record<string, unknown> = { reply: replyText };
+    if (persistenceWarning && process.env.NODE_ENV !== 'production') {
+      payload.warning = persistenceWarning;
+    }
+
+    return NextResponse.json(payload, { status: replyPersisted ? 200 : 202 });
   } catch (error) {
     console.error('Erreur AI reply', error);
     const message = error instanceof Error ? error.message : 'Erreur generation IA.';

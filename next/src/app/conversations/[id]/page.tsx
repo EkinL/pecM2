@@ -25,6 +25,7 @@ import {
 } from '../../indexFirebase';
 import { apiFetch } from '../../utils/apiFetch';
 import { logActivity } from '../../utils/logActivity';
+import { normalizeMediaUrl } from '../../utils/mediaUrl';
 import {
   countryLabelByCode,
   countryOptions,
@@ -604,7 +605,9 @@ export default function ConversationPage() {
   const aiLabel = conversation?.aiId
     ? (aiLookup[conversation.aiId]?.name ?? `IA ${conversation.aiId.slice(0, 5)}`)
     : 'IA inconnue';
-  const aiAvatarUrl = conversation?.aiId ? (aiLookup[conversation.aiId]?.imageUrl ?? '') : '';
+  const aiAvatarUrl = conversation?.aiId
+    ? normalizeMediaUrl(aiLookup[conversation.aiId]?.imageUrl)
+    : '';
   const aiHasAvatar = Boolean(aiAvatarUrl);
   const hasAvatarImage = aiHasAvatar;
   const aiStatusKey = conversation?.aiId
@@ -1030,7 +1033,7 @@ export default function ConversationPage() {
                         : 'autre';
                     const imageUrl =
                       message.kind === 'image' && typeof message.metadata?.imageUrl === 'string'
-                        ? message.metadata.imageUrl
+                        ? normalizeMediaUrl(message.metadata.imageUrl)
                         : '';
                     return (
                       <div

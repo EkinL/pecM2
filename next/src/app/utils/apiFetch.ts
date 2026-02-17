@@ -1,5 +1,6 @@
 const DEFAULT_PRIMARY_API_ORIGIN = 'https://pec-m2.vercel.app';
-const DEFAULT_FALLBACK_API_ORIGIN = 'http://localhost:3000';
+const DEFAULT_LOCAL_API_ORIGIN = 'https://pec-m2.vercel.app';
+const isBrowser = typeof window !== 'undefined';
 
 const normalizeOrigin = (value?: string): string | null => {
   const trimmed = value?.trim();
@@ -16,9 +17,17 @@ const normalizeOrigin = (value?: string): string | null => {
 
 const resolveApiOrigins = () => {
   const envOrigin = normalizeOrigin(process.env.NEXT_PUBLIC_API_BASE_URL);
-  const origins = [envOrigin, DEFAULT_PRIMARY_API_ORIGIN, DEFAULT_FALLBACK_API_ORIGIN].filter(
-    (origin): origin is string => Boolean(origin),
+  const appOrigin = normalizeOrigin(
+    process.env.NEXT_PUBLIC_APP_URL ??
+      process.env.PUBLIC_APP_URL ??
+      process.env.NEXT_PUBLIC_SITE_URL,
   );
+  const origins = [
+    envOrigin,
+    appOrigin,
+    DEFAULT_PRIMARY_API_ORIGIN,
+    DEFAULT_LOCAL_API_ORIGIN,
+  ].filter((origin): origin is string => Boolean(origin));
   return [...new Set(origins)];
 };
 
@@ -33,6 +42,11 @@ const buildCandidateUrls = (input: string) => {
   }
 
   const normalizedPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+
+  if (isBrowser) {
+    return [normalizedPath];
+  }
+
   return resolveApiOrigins().map((origin) => `${origin}${normalizedPath}`);
 };
 

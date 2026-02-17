@@ -6,11 +6,7 @@ export const revalidate = 0;
 
 const METRICS_SOURCE_URL =
   process.env.ADMIN_METRICS_SOURCE_URL ?? 'https://pec-m2.vercel.app/api/metrics';
-const FALLBACK_METRICS_SOURCE_URLS = [
-  'http://localhost:3000/api/metrics',
-  'http://127.0.0.1:3000/api/metrics',
-  'http://host.docker.internal:3000/api/metrics',
-];
+const FALLBACK_METRICS_SOURCE_URLS = ['https://pec-m2.vercel.app/api/metrics'];
 
 const getProbeTargets = (request: Request) => {
   let sameOriginMetricsUrl: string | null = null;
