@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
-const { createLogger, format, transports } = require('winston')
+const { createLogger, format, transports } = require('winston');
 
 const logger = () =>
   createLogger({
@@ -9,6 +9,6 @@ const logger = () =>
         format: format.json(),
       }),
     ],
-  })
+  });
 
-module.exports = { logger }
+module.exports = { logger };

@@ -21,11 +21,7 @@ const getProbeTargets = (request: Request) => {
     sameOriginMetricsUrl = null;
   }
 
-  const sources = [
-    sameOriginMetricsUrl,
-    METRICS_SOURCE_URL,
-    ...FALLBACK_METRICS_SOURCE_URLS,
-  ];
+  const sources = [sameOriginMetricsUrl, METRICS_SOURCE_URL, ...FALLBACK_METRICS_SOURCE_URLS];
   const normalizedSources = sources.filter((value): value is string => Boolean(value));
   return [...new Set(normalizedSources)];
 };
@@ -51,11 +47,7 @@ const fetchMetricsSource = async (source: string) => {
 const readMetricValue = (metricsText: string, metricName: string) => {
   const line = metricsText
     .split('\n')
-    .find(
-      (entry) =>
-        entry.startsWith(`${metricName} `) ||
-        entry.startsWith(`${metricName}{`),
-    );
+    .find((entry) => entry.startsWith(`${metricName} `) || entry.startsWith(`${metricName}{`));
   if (!line) {
     return null;
   }

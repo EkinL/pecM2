@@ -400,8 +400,7 @@ export default function AdminDashboard() {
           cache: 'no-store',
         });
         const data = await response.json().catch(() => ({}));
-        const payload =
-          data && typeof data === 'object' ? (data as AdminMetricsProbeResult) : null;
+        const payload = data && typeof data === 'object' ? (data as AdminMetricsProbeResult) : null;
         setMetricsProbeUpdatedAt(
           new Date().toLocaleString('fr-FR', {
             dateStyle: 'short',

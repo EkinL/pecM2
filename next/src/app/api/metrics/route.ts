@@ -18,9 +18,7 @@ function renderLabels(labels?: Labels): string {
     return '';
   }
 
-  const parts = Object.entries(labels).map(
-    ([key, value]) => `${key}="${escapeLabelValue(value)}"`,
-  );
+  const parts = Object.entries(labels).map(([key, value]) => `${key}="${escapeLabelValue(value)}"`);
   return `{${parts.join(',')}}`;
 }
 
@@ -87,8 +85,7 @@ export async function GET(): Promise<Response> {
     renderSample('nodejs_version_info', 1, { version: process.version }),
   ];
 
-  metricsScrapeLastDurationSeconds =
-    Number(process.hrtime.bigint() - startedAt) / 1_000_000_000;
+  metricsScrapeLastDurationSeconds = Number(process.hrtime.bigint() - startedAt) / 1_000_000_000;
 
   lines.push(
     '# HELP metrics_endpoint_requests_total Total number of scrapes on /api/metrics.',
@@ -97,10 +94,7 @@ export async function GET(): Promise<Response> {
 
     '# HELP metrics_endpoint_last_duration_seconds Last scrape duration in seconds.',
     '# TYPE metrics_endpoint_last_duration_seconds gauge',
-    renderSample(
-      'metrics_endpoint_last_duration_seconds',
-      metricsScrapeLastDurationSeconds,
-    ),
+    renderSample('metrics_endpoint_last_duration_seconds', metricsScrapeLastDurationSeconds),
   );
 
   const customMetrics = collectCustomMetrics();

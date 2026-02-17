@@ -30,9 +30,7 @@ type MetricsStore = {
 
 const METRICS_STORE_KEY = '__pec_metrics_store__';
 
-const DEFAULT_DURATION_BUCKETS = [
-  0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10,
-] as const;
+const DEFAULT_DURATION_BUCKETS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10] as const;
 
 const counterDefinitions = {
   app_api_requests_total: {
@@ -121,7 +119,10 @@ const normalizeLabelValue = (value: unknown) => {
   return normalized || 'unknown';
 };
 
-const normalizeLabels = (labelNames: readonly string[], labels?: Record<string, unknown>): Labels => {
+const normalizeLabels = (
+  labelNames: readonly string[],
+  labels?: Record<string, unknown>,
+): Labels => {
   const normalized: Labels = {};
   labelNames.forEach((labelName) => {
     normalized[labelName] = normalizeLabelValue(labels?.[labelName]);
@@ -258,7 +259,11 @@ export const withApiMetrics = async (
     throw error;
   } finally {
     incrementCounter('app_api_requests_total', { route, method, status: String(status) });
-    observeHistogram('app_api_request_duration_seconds', { route, method }, durationSeconds(startedAt));
+    observeHistogram(
+      'app_api_request_duration_seconds',
+      { route, method },
+      durationSeconds(startedAt),
+    );
     if (status >= 400) {
       incrementCounter('app_api_errors_total', {
         route,
@@ -410,7 +415,9 @@ export const collectCustomMetrics = () => {
   const store = getStore();
   const lines: string[] = [];
 
-  const counterEntries = Object.entries(counterDefinitions) as Array<[CounterName, CounterDefinition]>;
+  const counterEntries = Object.entries(counterDefinitions) as Array<
+    [CounterName, CounterDefinition]
+  >;
   counterEntries.forEach(([name, definition]) => {
     lines.push(`# HELP ${name} ${definition.help}`);
     lines.push(`# TYPE ${name} counter`);

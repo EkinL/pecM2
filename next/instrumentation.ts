@@ -8,8 +8,7 @@ export async function register() {
     runtimeRequire.resolve('pino');
     runtimeRequire('next-logger');
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'missing optional logger dependencies';
+    const message = error instanceof Error ? error.message : 'missing optional logger dependencies';
     console.warn(`[instrumentation] next-logger disabled: ${message}`);
   }
 }
