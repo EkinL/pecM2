@@ -57,7 +57,7 @@ final class ConversationDetailViewModel: ObservableObject {
         conversationId: conversationId,
         userId: userId,
         authorRole: "client",
-        content: trimmed,
+        content: message,
         kind: "text"
       )
       do {
@@ -66,9 +66,32 @@ final class ConversationDetailViewModel: ObservableObject {
         errorMessage = "Message envoyé, mais réponse IA indisponible. \(error.localizedDescription)"
       }
     } catch {
-      errorMessage = error.localizedDescription
+      guard shouldFallbackToApiAfterFirestoreError(error) else {
+        throw error
+      }
     }
-    isSending = false
+
+    _ = try await NextApiService.sendConversationMessage(
+      conversationId: conversationId,
+      aiId: aiId,
+      message: message,
+      kind: "text"
+    )
+  }
+
+  private func shouldFallbackToApiAfterFirestoreError(_ error: Error) -> Bool {
+    let nsError = error as NSError
+    if nsError.code == FirestoreErrorCode.permissionDenied.rawValue {
+      return true
+    }
+    if nsError.domain == FirestoreErrorDomain &&
+        nsError.code == FirestoreErrorCode.permissionDenied.rawValue {
+      return true
+    }
+
+    let normalized = nsError.localizedDescription.lowercased()
+    return normalized.contains("missing or insufficient permissions") ||
+      normalized.contains("permission denied")
   }
 
   func playTTS(for message: ConversationMessage) async {

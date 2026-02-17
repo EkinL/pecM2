@@ -1,0 +1,68 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and upload the iOS app to TestFlight"
+  lane :beta do
+    setup_ci if is_ci
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_API_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key_content: ENV.fetch("APP_STORE_CONNECT_API_KEY_BASE64"),
+      is_key_content_base64: true,
+      duration: 1200
+    )
+
+    # Generate Xcode project from XcodeGen
+    sh("cd .. && xcodegen generate")
+
+    match_params = {
+      type: "appstore",
+      app_identifier: ["com.lilian.pecm2"],
+      readonly: is_ci,
+      api_key: api_key
+    }
+
+    if ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
+      match_params[:git_basic_authorization] = ENV["MATCH_GIT_BASIC_AUTHORIZATION"]
+    end
+
+    match(match_params)
+
+    version = get_version_number(
+      xcodeproj: "Pecm2Swift.xcodeproj",
+      target: "Pecm2Swift"
+    )
+
+    latest_build = latest_testflight_build_number(
+      api_key: api_key,
+      app_identifier: "com.lilian.pecm2",
+      version: version,
+      initial_build_number: 0
+    )
+
+    increment_build_number(
+      xcodeproj: "Pecm2Swift.xcodeproj",
+      build_number: latest_build + 1
+    )
+
+    # Resolve SPM dependencies first to avoid timeout
+    sh("cd .. && xcodebuild -resolvePackageDependencies -project Pecm2Swift.xcodeproj -scheme Pecm2Swift")
+
+    build_app(
+      project: "Pecm2Swift.xcodeproj",
+      scheme: "Pecm2Swift",
+      export_method: "app-store",
+      clean: true,
+      buildlog_path: "./fastlane/logs",
+      xcodebuild_formatter: "xcpretty",
+      build_timing_summary: false,
+      skip_package_dependencies_resolution: true
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true
+    )
+  end
+end
