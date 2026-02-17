@@ -47,7 +47,7 @@ platform :ios do
     )
 
     # Resolve SPM dependencies first to avoid timeout
-    sh("xcodebuild -resolvePackageDependencies -project Pecm2Swift.xcodeproj -scheme Pecm2Swift")
+    sh("cd .. && xcodebuild -resolvePackageDependencies -project Pecm2Swift.xcodeproj -scheme Pecm2Swift")
 
     build_app(
       project: "Pecm2Swift.xcodeproj",
