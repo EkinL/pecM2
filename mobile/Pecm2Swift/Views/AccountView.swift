@@ -64,7 +64,11 @@ struct AccountView: View {
       guard let uid = session.user?.uid else { return }
       viewModel.start(userId: uid, locationManager: locationManager)
       viewModel.applyProfile(session.profile)
-      viewModel.applyPricingMode(using: locationManager)
+      if isAdminRole(session.profile?.role) {
+        viewModel.applyPricingMode(using: locationManager)
+      } else {
+        viewModel.ensureLiveLocationForReadonlyUsers(using: locationManager)
+      }
     }
     .onDisappear {
       locationManager.stopUpdatingLocation()
@@ -79,6 +83,12 @@ struct AccountView: View {
     }
     .onReceive(session.$profile) { profile in
       viewModel.applyProfile(profile)
+      guard session.user != nil else { return }
+      if isAdminRole(profile?.role) {
+        viewModel.applyPricingMode(using: locationManager)
+      } else {
+        viewModel.ensureLiveLocationForReadonlyUsers(using: locationManager)
+      }
     }
   }
 
@@ -178,7 +188,7 @@ struct AccountView: View {
         dividerLine
         AccountInfoRow(label: "Tokens", value: String(profile.tokens ?? 0))
         dividerLine
-        AccountInfoRow(label: "Connexions", value: providerIdsText(profile: profile, authUser: session.user))
+        AccountConnectionsRow(providerIDs: resolvedProviderIDs(profile: profile, authUser: session.user))
       }
     }
   }
@@ -193,17 +203,20 @@ struct AccountView: View {
 
       CardContainer(padding: 16) {
         VStack(alignment: .leading, spacing: 14) {
-          Picker("Tarification", selection: Binding(get: {
-            viewModel.useLiveLocationPricing
-          }, set: { enabled in
-            viewModel.togglePricingMode(enabled, locationManager: locationManager)
-          })) {
-            Text("Localisation ON").tag(true)
-            Text("Tarif de base").tag(false)
+          if isAdminRole(session.profile?.role) {
+            Picker("Tarification", selection: Binding(get: {
+              viewModel.useLiveLocationPricing
+            }, set: { enabled in
+              viewModel.togglePricingMode(enabled, locationManager: locationManager)
+            })) {
+              Text("Localisation ON").tag(true)
+              Text("Tarif de base").tag(false)
+            }
+            .pickerStyle(.segmented)
           }
-          .pickerStyle(.segmented)
 
-          if viewModel.useLiveLocationPricing {
+          let showLiveLocationDetails = !isAdminRole(session.profile?.role) || viewModel.useLiveLocationPricing
+          if showLiveLocationDetails {
             HStack(spacing: 8) {
               Label(locationStatusText, systemImage: locationStatusIconName)
                 .font(AppTypography.caption.weight(.semibold))
@@ -220,7 +233,11 @@ struct AccountView: View {
               }
 
               smallActionButton(viewModel.isRefreshingLocation ? "Actualisation..." : "Actualiser", isDisabled: viewModel.isRefreshingLocation) {
-                viewModel.refreshPricing(using: locationManager)
+                if isAdminRole(session.profile?.role) {
+                  viewModel.refreshPricing(using: locationManager)
+                } else {
+                  viewModel.refreshLocationForReadonlyUser(using: locationManager)
+                }
               }
             }
             .padding(.horizontal, 10)
@@ -456,13 +473,12 @@ struct AccountView: View {
     }
   }
 
-  private func providerCount(profile: UserProfile, authUser: User?) -> Int {
-    let fromProfile = (profile.providerIds ?? [])
-      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-      .filter { !$0.isEmpty }
-    if !fromProfile.isEmpty { return fromProfile.count }
+  private func isAdminRole(_ role: String?) -> Bool {
+    (role ?? "client").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "admin"
+  }
 
-    return (authUser?.providerData ?? []).count
+  private func providerCount(profile: UserProfile, authUser: User?) -> Int {
+    resolvedProviderIDs(profile: profile, authUser: authUser).count
   }
 
   private func initials(for name: String) -> String {
@@ -490,16 +506,50 @@ private func displayName(profile: UserProfile) -> String {
   return "Utilisateur"
 }
 
-private func providerIdsText(profile: UserProfile, authUser: User?) -> String {
+private func resolvedProviderIDs(profile: UserProfile, authUser: User?) -> [String] {
   let fromProfile = (profile.providerIds ?? [])
     .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
     .filter { !$0.isEmpty }
-  if !fromProfile.isEmpty { return fromProfile.joined(separator: ", ") }
+  let source = !fromProfile.isEmpty ? fromProfile : (authUser?.providerData ?? []).map { $0.providerID }
 
-  let fromAuth = (authUser?.providerData ?? []).map { $0.providerID }
-  if !fromAuth.isEmpty { return fromAuth.joined(separator: ", ") }
+  var seen: Set<String> = []
+  var result: [String] = []
+  for provider in source {
+    let normalized = provider.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalized.isEmpty else { continue }
+    if seen.insert(normalized).inserted {
+      result.append(normalized)
+    }
+  }
+  return result
+}
 
-  return "—"
+private struct AccountConnectionsRow: View {
+  let providerIDs: [String]
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("CONNEXIONS")
+        .font(AppTypography.caption.weight(.semibold))
+        .foregroundColor(AppColors.textSecondary)
+
+      if providerIDs.isEmpty {
+        Text("—")
+          .font(AppTypography.body)
+          .foregroundColor(AppColors.textPrimary)
+      } else {
+        ScrollView(.horizontal, showsIndicators: false) {
+          HStack(spacing: 8) {
+            ForEach(providerIDs, id: \.self) { providerID in
+              ConnectionProviderBadge(providerID: providerID)
+            }
+          }
+          .padding(.vertical, 2)
+        }
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
 }
 
 private struct AccountInfoRow: View {
@@ -524,6 +574,88 @@ private struct AccountInfoRow: View {
   private var displayValue: String {
     let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     return trimmed.isEmpty ? "—" : trimmed
+  }
+}
+
+private struct ConnectionProviderBadge: View {
+  let providerID: String
+
+  private var normalizedProviderID: String {
+    providerID.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+  }
+
+  private var providerLabel: String {
+    switch normalizedProviderID {
+    case "google.com":
+      return "Google"
+    case "apple.com":
+      return "Apple"
+    case "password":
+      return "Email"
+    case "phone":
+      return "Telephone"
+    default:
+      return providerID
+    }
+  }
+
+  var body: some View {
+    HStack(spacing: 6) {
+      icon
+      Text(providerLabel)
+        .font(AppTypography.caption.weight(.semibold))
+        .foregroundColor(AppColors.textPrimary)
+        .lineLimit(1)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 7)
+    .background(AppColors.background.opacity(0.35))
+    .clipShape(Capsule())
+    .overlay(
+      Capsule()
+        .stroke(AppColors.inputBackground.opacity(0.75), lineWidth: 1)
+    )
+  }
+
+  @ViewBuilder
+  private var icon: some View {
+    switch normalizedProviderID {
+    case "google.com":
+      GoogleProviderIcon()
+    case "apple.com":
+      Image(systemName: "apple.logo")
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundColor(AppColors.textPrimary)
+    case "password":
+      Image(systemName: "envelope.fill")
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundColor(AppColors.textSecondary)
+    case "phone":
+      Image(systemName: "phone.fill")
+        .font(.system(size: 11, weight: .semibold))
+        .foregroundColor(AppColors.textSecondary)
+    default:
+      Image(systemName: "person.crop.circle.badge.checkmark")
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundColor(AppColors.textSecondary)
+    }
+  }
+}
+
+private struct GoogleProviderIcon: View {
+  var body: some View {
+    ZStack {
+      Circle()
+        .fill(Color.white)
+      Text("G")
+        .font(.system(size: 10, weight: .bold, design: .rounded))
+        .foregroundColor(Color(hex: "#4285F4"))
+    }
+    .frame(width: 16, height: 16)
+    .overlay(
+      Circle()
+        .stroke(Color(hex: "#DADCE0"), lineWidth: 0.9)
+    )
   }
 }
 
@@ -683,6 +815,25 @@ final class AccountViewModel: ObservableObject {
 	    refreshTokenPricing()
 	  }
 
+  func ensureLiveLocationForReadonlyUsers(using locationManager: LocationManager) {
+    useLiveLocationPricing = true
+    locationError = nil
+
+    let auth = locationManager.authorizationStatus
+    if auth == .authorizedWhenInUse || auth == .authorizedAlways {
+      locationManager.startUpdatingLocation()
+      if let location = locationManager.location {
+        performCountryLookupIfNeeded(location: location, force: false)
+      } else {
+        locationManager.requestLocation()
+      }
+    } else {
+      locationManager.stopUpdatingLocation()
+    }
+
+    refreshTokenPricing()
+  }
+
   func retryTokenPricing() {
     listenTokenPricing()
   }
@@ -761,8 +912,35 @@ final class AccountViewModel: ObservableObject {
 		          locationError = error.localizedDescription
 		        }
 	      }
-	    }
-	  }
+		    }
+		  }
+
+  func refreshLocationForReadonlyUser(using locationManager: LocationManager) {
+    let now = Date()
+    if let lastManualRefreshAt, now.timeIntervalSince(lastManualRefreshAt) < 2 {
+      return
+    }
+    lastManualRefreshAt = now
+
+    isRefreshingLocation = true
+    locationError = nil
+
+    Task {
+      defer { isRefreshingLocation = false }
+      do {
+        let location = try await locationManager.requestOneShotLocation()
+        locationManager.startUpdatingLocation()
+        performCountryLookupIfNeeded(location: location, force: true)
+      } catch is CancellationError {
+        // Ignore
+      } catch {
+        let appliedFallback = await applyFallbackCountry()
+        if !appliedFallback {
+          locationError = error.localizedDescription
+        }
+      }
+    }
+  }
 
 	  private struct IpWhoIsPayload: Decodable {
 	    var success: Bool?
