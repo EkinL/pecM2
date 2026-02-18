@@ -440,6 +440,8 @@ struct AccountView: View {
             .font(AppTypography.body)
             .foregroundColor(AppColors.textSecondary)
 
+          termsOfUseNavigationRow
+
           DestructiveActionButton(title: "Se deconnecter", systemImage: "rectangle.portrait.and.arrow.right") {
             showLogoutConfirm = true
           }
@@ -479,6 +481,46 @@ struct AccountView: View {
         }
       }
     }
+  }
+
+  private var termsOfUseNavigationRow: some View {
+    NavigationLink {
+      TermsOfUseView()
+    } label: {
+      HStack(spacing: 10) {
+        Image(systemName: "doc.text.fill")
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundColor(AppColors.accent)
+          .frame(width: 18)
+
+        VStack(alignment: .leading, spacing: 3) {
+          Text("Conditions Generales d'utilisation")
+            .font(AppTypography.body.weight(.semibold))
+            .foregroundColor(AppColors.textPrimary)
+            .lineLimit(2)
+
+          Text("Consultez les regles d'utilisation et vos droits RGPD.")
+            .font(AppTypography.footnote)
+            .foregroundColor(AppColors.textSecondary)
+            .lineLimit(2)
+        }
+
+        Spacer(minLength: 0)
+
+        Image(systemName: "chevron.right")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundColor(AppColors.textSecondary)
+      }
+      .padding(.horizontal, 12)
+      .padding(.vertical, 10)
+      .background(AppColors.background.opacity(0.35))
+      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+          .stroke(AppColors.inputBackground.opacity(0.70), lineWidth: 1)
+      )
+    }
+    .buttonStyle(.plain)
   }
 
   private func sectionTitle(title: String, subtitle: String, systemImage: String) -> some View {
@@ -773,6 +815,174 @@ private func resolvedProviderIDs(profile: UserProfile, authUser: User?) -> [Stri
     }
   }
   return result
+}
+
+private struct TermsOfUseView: View {
+  private let sections: [TermsOfUseSection] = [
+    TermsOfUseSection(
+      title: "1. Objet et acceptation",
+      paragraphs: [
+        "Les presentes Conditions Generales d'Utilisation (CGU) encadrent l'utilisation de l'application PECM2 (ci-apres le Service).",
+        "Le responsable de traitement des donnees personnelles traitees via le Service est PECM2.",
+        "En creant un compte ou en utilisant le Service, vous acceptez sans reserve les presentes CGU."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "2. Acces au service et compte utilisateur",
+      paragraphs: [
+        "L'acces au Service est reserve aux utilisateurs disposant d'un compte actif.",
+        "Vous etes responsable de la confidentialite de vos identifiants et des actions realisees depuis votre compte.",
+        "Vous vous engagez a fournir des informations exactes et a les maintenir a jour."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "3. Regles d'utilisation",
+      paragraphs: [
+        "Vous vous engagez a utiliser le Service de maniere loyale et conforme a la loi.",
+        "Sont notamment interdits: usurpation d'identite, tentative d'acces non autorise, extraction massive de donnees, diffusion de contenus illicites.",
+        "En cas de manquement grave, l'acces au Service peut etre suspendu ou limite."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "4. Disponibilite du service",
+      paragraphs: [
+        "Le Service est fourni en mode \"best effort\". L'editeur met en oeuvre des moyens raisonnables pour assurer sa disponibilite et sa securite.",
+        "Des interruptions temporaires peuvent survenir, notamment pour maintenance, evolution technique ou contraintes de securite."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "5. Donnees personnelles traitees",
+      paragraphs: [
+        "Dans le cadre du Service, peuvent etre traitees: donnees d'identite et de contact, donnees de compte, historiques de demandes et conversations, donnees techniques de securite et de journalisation.",
+        "Les donnees de localisation ne sont traitees que lorsque vous activez cette fonctionnalite."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "6. Finalites et bases legales (RGPD)",
+      paragraphs: [
+        "Les traitements sont realises pour: fournir le Service, gerer les comptes, assurer la securite, prevenir la fraude, gerer les droits RGPD et respecter les obligations legales.",
+        "Les bases legales sont: execution du contrat (utilisation du Service), interet legitime (securite/amelioration), consentement lorsque requis (ex: localisation), et obligation legale."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "7. Hebergement et localisation des donnees",
+      paragraphs: [
+        "Les donnees du Service sont hebergees aux Pays-Bas, au sein de l'Espace economique europeen (EEE).",
+        "En cas de transfert hors EEE impose par un sous-traitant technique, des garanties appropriees conformes au RGPD sont appliquees (ex: clauses contractuelles types)."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "8. Duree de conservation",
+      paragraphs: [
+        "Les donnees sont conservees pendant la duree strictement necessaire aux finalites ci-dessus, puis supprimees ou anonymisees.",
+        "Certaines donnees peuvent etre conservees plus longtemps en archivage pour repondre a une obligation legale, a une demande d'autorite competente ou a la defense de droits en justice."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "9. Vos droits RGPD",
+      paragraphs: [
+        "Vous disposez des droits d'acces, de rectification, d'effacement, de limitation, d'opposition, et de portabilite lorsque ce droit est applicable.",
+        "Vous pouvez egalement retirer votre consentement a tout moment pour les traitements fondes sur le consentement.",
+        "Vous pouvez introduire une reclamation aupres de la CNIL si vous estimez que vos droits ne sont pas respectes."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "10. Exercice de vos droits et suppression de compte",
+      paragraphs: [
+        "Une demande de suppression de compte est disponible dans l'application, depuis Profil > Securite et donnees.",
+        "Les demandes RGPD sont traitees dans les meilleurs delais et, sauf cas particulier prevu par la loi, au plus tard dans un delai d'un mois."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "11. Securite",
+      paragraphs: [
+        "L'editeur met en place des mesures techniques et organisationnelles appropriees pour proteger les donnees contre l'acces non autorise, l'alteration, la divulgation ou la destruction."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "12. Propriete intellectuelle",
+      paragraphs: [
+        "Le Service, son code, ses interfaces, ses elements graphiques et ses contenus sont proteges par le droit de la propriete intellectuelle.",
+        "Toute reproduction, extraction ou reutilisation non autorisee est interdite."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "13. Responsabilite",
+      paragraphs: [
+        "L'utilisateur reste responsable de l'usage qu'il fait du Service et des contenus qu'il publie.",
+        "L'editeur ne peut etre tenu responsable des dommages indirects, pertes de donnees ou indisponibilites temporaires du Service, sauf disposition legale contraire."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "14. Modification des CGU",
+      paragraphs: [
+        "Les presentes CGU peuvent etre modifiees a tout moment pour tenir compte d'evolutions legales, reglementaires ou techniques.",
+        "La version applicable est celle publiee dans l'application a la date d'utilisation du Service."
+      ]
+    ),
+    TermsOfUseSection(
+      title: "15. Droit applicable et contact",
+      paragraphs: [
+        "Les presentes CGU sont soumises au droit francais.",
+        "Pour toute question relative aux CGU ou au traitement des donnees, utilisez le canal de support communique dans l'application."
+      ]
+    )
+  ]
+
+  var body: some View {
+    ScrollView(showsIndicators: false) {
+      VStack(alignment: .leading, spacing: 12) {
+        CardContainer(padding: 16) {
+          VStack(alignment: .leading, spacing: 8) {
+            Text("Conditions Generales d'utilisation")
+              .font(AppTypography.title)
+              .foregroundColor(AppColors.textPrimary)
+
+            Text("Version applicable au 18/02/2026")
+              .font(AppTypography.caption.weight(.semibold))
+              .foregroundColor(AppColors.textSecondary)
+
+            Text("Ces CGU encadrent contractuellement l'utilisation du Service et les principales regles de traitement des donnees personnelles.")
+              .font(AppTypography.footnote)
+              .foregroundColor(AppColors.textSecondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+        }
+
+        ForEach(sections) { section in
+          CardContainer(padding: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+              Text(section.title)
+                .font(AppTypography.headline)
+                .foregroundColor(AppColors.textPrimary)
+
+              ForEach(Array(section.paragraphs.enumerated()), id: \.offset) { _, paragraph in
+                Text(paragraph)
+                  .font(AppTypography.body)
+                  .foregroundColor(AppColors.textSecondary)
+                  .fixedSize(horizontal: false, vertical: true)
+                  .textSelection(.enabled)
+              }
+            }
+          }
+        }
+      }
+      .padding(.horizontal, AppLayout.screenPadding)
+      .padding(.top, 12)
+      .padding(.bottom, 24)
+      .mobileDesktopParity(maxWidth: AppLayout.maxContentWidth)
+    }
+    .navigationTitle("CGU")
+    .navigationBarTitleDisplayMode(.inline)
+    .appScreenBackground()
+  }
+}
+
+private struct TermsOfUseSection: Identifiable {
+  let title: String
+  let paragraphs: [String]
+
+  var id: String { title }
 }
 
 private struct AccountConnectionsRow: View {
