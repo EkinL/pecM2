@@ -113,9 +113,11 @@ struct TokenPricingAdminView: View {
   }
 }
 
+#if DEBUG
 #Preview("Token pricing (admin)") {
   NavigationStack {
     TokenPricingAdminView(viewModel: .preview)
   }
   .environmentObject(SessionStore(startListening: false))
 }
+#endif
