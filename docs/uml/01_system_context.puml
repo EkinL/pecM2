@@ -1,0 +1,56 @@
+@startuml
+!theme plain
+
+left to right direction
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+
+actor "Client Web" as ClientWeb
+actor "Admin Web" as AdminWeb
+actor "Client iOS" as ClientIOS
+actor "Admin iOS" as AdminIOS
+
+rectangle "Next.js App (App Router)\nUI + API Routes" as NextApp
+
+cloud "Firebase Auth" as FirebaseAuth
+cloud "Cloud Firestore" as Firestore
+cloud "Firebase Storage" as Storage
+
+cloud "OpenAI API" as OpenAI
+cloud "HuggingFace Router" as HuggingFace
+cloud "Cloud Function\ngetTokenPrice" as TokenFunction
+cloud "OpenStreetMap\nNominatim" as Nominatim
+
+node "Prometheus" as Prometheus
+node "Grafana" as Grafana
+
+ClientWeb --> NextApp : pages + /api/*
+AdminWeb --> NextApp : admin pages + /api/*
+
+ClientWeb --> FirebaseAuth : Firebase JS SDK
+ClientWeb --> Firestore : realtime reads/writes
+AdminWeb --> FirebaseAuth : Firebase JS SDK
+AdminWeb --> Firestore : realtime reads/writes
+
+ClientIOS --> FirebaseAuth : Firebase iOS SDK
+ClientIOS --> Firestore : realtime reads/writes
+ClientIOS --> NextApp : /api/ai/* /api/conversation/send\n/api/token-price /api/location/*
+
+AdminIOS --> FirebaseAuth : Firebase iOS SDK
+AdminIOS --> Firestore : realtime reads/writes
+AdminIOS --> NextApp : admin API calls (same backend)
+
+NextApp --> FirebaseAuth : verify ID tokens (Admin SDK)
+NextApp --> Firestore : secure server writes + logs
+NextApp --> Storage : AI avatar upload
+
+NextApp --> OpenAI : chat/image/tts
+NextApp --> HuggingFace : AI text fallback
+NextApp --> TokenFunction : dynamic token pricing
+NextApp --> Nominatim : reverse geocoding
+
+Prometheus --> NextApp : scrape /api/metrics
+Grafana --> Prometheus : dashboards
+
+@enduml

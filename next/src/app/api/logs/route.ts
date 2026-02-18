@@ -21,8 +21,13 @@ const isFirebaseAdminConfigurationError = (error: unknown) => {
     message.includes('unable to detect a project id') ||
     message.includes('project id') ||
     message.includes('projectid') ||
+    message.includes('project_id') ||
     message.includes('google_cloud_project') ||
-    message.includes('gcloud_project')
+    message.includes('gcloud_project') ||
+    message.includes('service account') ||
+    message.includes('private key') ||
+    message.includes('client_email') ||
+    message.includes('invalid grant')
   );
 };
 
@@ -116,7 +121,13 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Impossible d'ecrire le log", error);
-    return NextResponse.json({ error: "Impossible d'ecrire le log." }, { status: 500 });
+    return NextResponse.json(
+      {
+        ok: false,
+        warning: 'log_write_unavailable',
+      },
+      { status: 202 },
+    );
   }
 
   return NextResponse.json({ ok: true });

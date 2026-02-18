@@ -7,26 +7,13 @@ import {
   verifyActorFromRequest,
   writeActivityLog,
 } from '../../_lib/activityLogs';
-import { getFirebaseAdminFirestore } from '../../_lib/firebaseAdmin';
+import {
+  getFirebaseAdminConfigurationErrorMessage,
+  getFirebaseAdminFirestore,
+  isFirebaseAdminConfigurationError,
+} from '../../_lib/firebaseAdmin';
 
 export const runtime = 'nodejs';
-
-const isFirebaseAdminConfigurationError = (error: unknown) => {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  const message = error.message.toLowerCase();
-  return (
-    message.includes('credential introuvable') ||
-    message.includes('default credentials') ||
-    message.includes('application default') ||
-    message.includes('unable to detect a project id') ||
-    message.includes('project id') ||
-    message.includes('projectid') ||
-    message.includes('google_cloud_project') ||
-    message.includes('gcloud_project')
-  );
-};
 
 type Message = {
   authorRole?: string;
@@ -210,10 +197,7 @@ export async function POST(request: Request) {
         console.error('Firebase Admin non configuré pour /api/ai/reply', error);
         return NextResponse.json(
           {
-            error:
-              process.env.NODE_ENV === 'production'
-                ? 'Service indisponible.'
-                : 'Firebase Admin non configuré (FIREBASE_SERVICE_ACCOUNT_KEY / FIREBASE_PROJECT_ID manquant).',
+            error: getFirebaseAdminConfigurationErrorMessage(error),
           },
           { status: 503 },
         );
@@ -244,10 +228,7 @@ export async function POST(request: Request) {
         console.error('Firebase Admin non configuré pour /api/ai/reply', error);
         return NextResponse.json(
           {
-            error:
-              process.env.NODE_ENV === 'production'
-                ? 'Service indisponible.'
-                : 'Firebase Admin non configuré (FIREBASE_SERVICE_ACCOUNT_KEY / FIREBASE_PROJECT_ID manquant).',
+            error: getFirebaseAdminConfigurationErrorMessage(error),
           },
           { status: 503 },
         );
@@ -461,13 +442,19 @@ export async function POST(request: Request) {
     }
 
     const memorySummary = updateMemorySummary(memory, userMessage, replyText);
-    await memoryRef.set(
-      {
-        summary: memorySummary,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+    let persistenceWarning: 'memory_update_failed' | 'message_persist_unavailable' | null = null;
+    try {
+      await memoryRef.set(
+        {
+          summary: memorySummary,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+    } catch (error) {
+      console.warn('Impossible de mettre a jour la memoire IA', error);
+      persistenceWarning = 'memory_update_failed';
+    }
 
     const usedModel =
       replySource === 'openai' ? openAiModel : replySource === 'huggingface' ? model : 'fallback';
@@ -497,7 +484,14 @@ export async function POST(request: Request) {
       },
       { merge: true },
     );
-    await batch.commit();
+    let replyPersisted = true;
+    try {
+      await batch.commit();
+    } catch (error) {
+      replyPersisted = false;
+      persistenceWarning = 'message_persist_unavailable';
+      console.error('Impossible de persister la reponse IA', error);
+    }
 
     try {
       await writeActivityLog({
@@ -520,8 +514,20 @@ export async function POST(request: Request) {
       console.warn("Impossible d'ecrire le log ai_reply", error);
     }
 
-    return NextResponse.json({ reply: replyText });
+    const payload: Record<string, unknown> = { reply: replyText };
+    if (persistenceWarning && process.env.NODE_ENV !== 'production') {
+      payload.warning = persistenceWarning;
+    }
+
+    return NextResponse.json(payload, { status: replyPersisted ? 200 : 202 });
   } catch (error) {
+    if (isFirebaseAdminConfigurationError(error)) {
+      console.error('Firebase Admin non configuré pour /api/ai/reply', error);
+      return NextResponse.json(
+        { error: getFirebaseAdminConfigurationErrorMessage(error) },
+        { status: 503 },
+      );
+    }
     console.error('Erreur AI reply', error);
     const message = error instanceof Error ? error.message : 'Erreur generation IA.';
     return NextResponse.json(

@@ -1,24 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getFirebaseAdminFirestore } from '../../../_lib/firebaseAdmin';
+import {
+  getFirebaseAdminConfigurationErrorMessage,
+  getFirebaseAdminFirestore,
+  isFirebaseAdminConfigurationError,
+} from '../../../_lib/firebaseAdmin';
 
 export const runtime = 'nodejs';
-
-const isFirebaseAdminConfigurationError = (error: unknown) => {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  const message = error.message.toLowerCase();
-  return (
-    message.includes('credential introuvable') ||
-    message.includes('default credentials') ||
-    message.includes('application default') ||
-    message.includes('unable to detect a project id') ||
-    message.includes('project id') ||
-    message.includes('projectid') ||
-    message.includes('google_cloud_project') ||
-    message.includes('gcloud_project')
-  );
-};
 
 const bufferFromFirestoreBytes = (value: unknown) => {
   if (!value) {
@@ -44,81 +31,90 @@ const bufferFromFirestoreBytes = (value: unknown) => {
 };
 
 export async function GET(request: Request, { params }: { params: Promise<{ aiId?: string }> }) {
-  const resolvedParams = await params;
-  const aiId = typeof resolvedParams?.aiId === 'string' ? resolvedParams.aiId.trim() : '';
-  if (!aiId) {
-    return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
-  }
-
-  let firestore;
   try {
-    firestore = getFirebaseAdminFirestore();
-  } catch (error) {
-    if (isFirebaseAdminConfigurationError(error)) {
-      return NextResponse.json({ error: 'Service indisponible.' }, { status: 503 });
+    const resolvedParams = await params;
+    const aiId = typeof resolvedParams?.aiId === 'string' ? resolvedParams.aiId.trim() : '';
+    if (!aiId) {
+      return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
     }
-    throw error;
-  }
 
-  const avatarRef = firestore.collection('iaProfiles').doc(aiId).collection('assets').doc('avatar');
-  const avatarSnap = await avatarRef.get();
-  if (!avatarSnap.exists) {
-    return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
-  }
+    const firestore = getFirebaseAdminFirestore();
+    const avatarRef = firestore.collection('iaProfiles').doc(aiId).collection('assets').doc('avatar');
+    const avatarSnap = await avatarRef.get();
+    if (!avatarSnap.exists) {
+      return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
+    }
 
-  const avatarData = avatarSnap.data() ?? {};
-  const contentType =
-    typeof avatarData.contentType === 'string' && avatarData.contentType.trim()
-      ? avatarData.contentType.trim()
-      : 'image/png';
-  const chunkCount = typeof avatarData.chunkCount === 'number' ? avatarData.chunkCount : 0;
-  const sha256 =
-    typeof avatarData.sha256 === 'string' && avatarData.sha256.trim()
-      ? avatarData.sha256.trim()
-      : null;
+    const avatarData = avatarSnap.data() ?? {};
+    const contentType =
+      typeof avatarData.contentType === 'string' && avatarData.contentType.trim()
+        ? avatarData.contentType.trim()
+        : 'image/png';
+    const chunkCount = typeof avatarData.chunkCount === 'number' ? avatarData.chunkCount : 0;
+    const sha256 =
+      typeof avatarData.sha256 === 'string' && avatarData.sha256.trim()
+        ? avatarData.sha256.trim()
+        : null;
 
-  if (chunkCount <= 0) {
-    return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
-  }
+    if (chunkCount <= 0) {
+      return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
+    }
 
-  const etag = sha256 ? `"${sha256}"` : null;
-  const ifNoneMatch = request.headers.get('if-none-match');
-  if (etag && ifNoneMatch && ifNoneMatch === etag) {
-    return new Response(null, {
-      status: 304,
+    const etag = sha256 ? `"${sha256}"` : null;
+    const ifNoneMatch = request.headers.get('if-none-match');
+    if (etag && ifNoneMatch && ifNoneMatch === etag) {
+      return new Response(null, {
+        status: 304,
+        headers: {
+          ETag: etag,
+          'Cache-Control': 'public, max-age=31536000, immutable',
+        },
+      });
+    }
+
+    const chunks = await Promise.all(
+      Array.from({ length: chunkCount }, (_unused, index) => {
+        const chunkId = `chunk_${String(index).padStart(4, '0')}`;
+        return avatarRef.collection('chunks').doc(chunkId).get();
+      }),
+    );
+    const buffers: Buffer[] = [];
+    for (const chunkSnap of chunks) {
+      if (!chunkSnap.exists) {
+        return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
+      }
+      const bytes = bufferFromFirestoreBytes(chunkSnap.data()?.data);
+      if (!bytes) {
+        return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
+      }
+      buffers.push(bytes);
+    }
+
+    const payload = Buffer.concat(buffers);
+
+    return new Response(payload, {
+      status: 200,
       headers: {
-        ETag: etag,
+        'Content-Type': contentType,
         'Cache-Control': 'public, max-age=31536000, immutable',
+        ...(etag ? { ETag: etag } : {}),
       },
     });
-  }
-
-  const chunks = await Promise.all(
-    Array.from({ length: chunkCount }, (_unused, index) => {
-      const chunkId = `chunk_${String(index).padStart(4, '0')}`;
-      return avatarRef.collection('chunks').doc(chunkId).get();
-    }),
-  );
-  const buffers: Buffer[] = [];
-  for (const chunkSnap of chunks) {
-    if (!chunkSnap.exists) {
-      return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
+  } catch (error) {
+    if (isFirebaseAdminConfigurationError(error)) {
+      console.error('Firebase Admin non configuré pour /api/ai/avatar/[aiId]', error);
+      return NextResponse.json(
+        { error: getFirebaseAdminConfigurationErrorMessage(error) },
+        { status: 503 },
+      );
     }
-    const bytes = bufferFromFirestoreBytes(chunkSnap.data()?.data);
-    if (!bytes) {
-      return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
-    }
-    buffers.push(bytes);
+    console.error('Erreur avatar IA', error);
+    const message = error instanceof Error ? error.message : 'Erreur avatar IA.';
+    return NextResponse.json(
+      {
+        error: process.env.NODE_ENV === 'production' ? 'Erreur avatar IA.' : message,
+      },
+      { status: 500 },
+    );
   }
-
-  const payload = Buffer.concat(buffers);
-
-  return new Response(payload, {
-    status: 200,
-    headers: {
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      ...(etag ? { ETag: etag } : {}),
-    },
-  });
 }
