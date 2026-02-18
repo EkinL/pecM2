@@ -2,6 +2,57 @@ import admin from 'firebase-admin';
 
 let cachedApp: admin.app.App | null = null;
 
+const FIREBASE_ADMIN_CONFIG_ERROR_PATTERNS = [
+  'credential introuvable',
+  'default credentials',
+  'application default credential',
+  'could not load the default credentials',
+  'credential implementation provided',
+  'unable to detect a project id',
+  'failed to determine project id',
+  'service account',
+  'private key',
+  'client_email',
+  'invalid grant',
+  'invalid_grant',
+];
+
+const FIREBASE_ADMIN_CONFIG_ERROR_CODES = new Set([
+  'app/invalid-credential',
+  'app/invalid-app-options',
+  'auth/invalid-credential',
+  'auth/project-not-found',
+]);
+
+type ErrorWithCode = {
+  code?: unknown;
+  message?: unknown;
+};
+
+export const isFirebaseAdminConfigurationError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const rawCode = (error as ErrorWithCode).code;
+  const code = typeof rawCode === 'string' ? rawCode.trim().toLowerCase() : '';
+  if (code && FIREBASE_ADMIN_CONFIG_ERROR_CODES.has(code)) {
+    return true;
+  }
+
+  const message = error.message.toLowerCase();
+  return FIREBASE_ADMIN_CONFIG_ERROR_PATTERNS.some((pattern) => message.includes(pattern));
+};
+
+export const getFirebaseAdminConfigurationErrorMessage = (error: unknown) => {
+  if (process.env.NODE_ENV === 'production') {
+    return 'Service indisponible.';
+  }
+  if (error instanceof Error && error.message.trim()) {
+    return `Firebase Admin non configure (${error.message.trim()}).`;
+  }
+  return 'Firebase Admin non configure.';
+};
+
 const pickString = (...candidates: unknown[]) => {
   const value = candidates.find((candidate) => typeof candidate === 'string' && candidate.trim());
   return typeof value === 'string' ? value.trim() : undefined;

@@ -1,33 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getFirebaseAdminFirestore } from '../../../_lib/firebaseAdmin';
+import {
+  getFirebaseAdminConfigurationErrorMessage,
+  getFirebaseAdminFirestore,
+  isFirebaseAdminConfigurationError,
+} from '../../../_lib/firebaseAdmin';
 
 export const runtime = 'nodejs';
-
-const isFirebaseAdminConfigurationError = (error: unknown) => {
-  if (!(error instanceof Error)) {
-    return false;
-  }
-  const message = error.message.toLowerCase();
-  return (
-    message.includes('credential introuvable') ||
-    message.includes('default credentials') ||
-    message.includes('application default') ||
-    message.includes('could not load the default credentials') ||
-    message.includes('credential implementation provided') ||
-    message.includes('unable to detect a project id') ||
-    message.includes('project id') ||
-    message.includes('projectid') ||
-    message.includes('project_id') ||
-    message.includes('google_cloud_project') ||
-    message.includes('gcloud_project') ||
-    message.includes('database (default) does not exist') ||
-    message.includes('permission denied') ||
-    message.includes('service account') ||
-    message.includes('private key') ||
-    message.includes('client_email') ||
-    message.includes('invalid grant')
-  );
-};
 
 const bufferFromFirestoreBytes = (value: unknown) => {
   if (!value) {
@@ -124,7 +102,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ aiId
     });
   } catch (error) {
     if (isFirebaseAdminConfigurationError(error)) {
-      return NextResponse.json({ error: 'Service indisponible.' }, { status: 503 });
+      console.error('Firebase Admin non configuré pour /api/ai/avatar/[aiId]', error);
+      return NextResponse.json(
+        { error: getFirebaseAdminConfigurationErrorMessage(error) },
+        { status: 503 },
+      );
     }
     console.error('Erreur avatar IA', error);
     const message = error instanceof Error ? error.message : 'Erreur avatar IA.';
