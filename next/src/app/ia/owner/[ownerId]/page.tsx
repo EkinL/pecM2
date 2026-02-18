@@ -89,12 +89,9 @@ export default function OwnerAiPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!ownerId) {
-      setOwner(null);
-      return;
-    }
+    if (!ownerId) return;
     let isActive = true;
-    setOwnerLoading(true);
+    setOwnerLoading(true); // eslint-disable-line react-hooks/set-state-in-effect -- loading before async fetch
     fetchUtilisateurById(ownerId)
       .then((data: unknown) => {
         if (isActive) {
@@ -121,13 +118,9 @@ export default function OwnerAiPage() {
   }, [ownerId]);
 
   useEffect(() => {
-    if (!ownerId) {
-      setAiProfiles([]);
-      setLoading(false);
-      return;
-    }
+    if (!ownerId) return;
 
-    setLoading(true);
+    setLoading(true); // eslint-disable-line react-hooks/set-state-in-effect -- loading before async fetch
     const unsubscribe = fetchAiProfilesByOwnerRealTime(
       ownerId,
       (data: unknown) => {
