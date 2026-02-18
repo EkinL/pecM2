@@ -130,7 +130,8 @@ struct AiProfileDetailView: View {
     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous))
     .overlay(
       RoundedRectangle(cornerRadius: AppTheme.cornerRadius, style: .continuous)
-        .stroke(AppColors.inputBackground.opacity(0.8), lineWidth: 1)
+        .stroke(AppColors.inputBackground, lineWidth: 1)
+        .opacity(0.8)
     )
   }
 

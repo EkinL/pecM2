@@ -134,13 +134,9 @@ export default function IaProfilePage() {
   }, []);
 
   useEffect(() => {
-    if (!userId) {
-      setProfile(null);
-      setProfileLoading(false);
-      return;
-    }
+    if (!userId) return;
 
-    setProfileLoading(true);
+    setProfileLoading(true); // eslint-disable-line react-hooks/set-state-in-effect -- loading before async fetch
     const unsubscribe = fetchUtilisateurByIdRealTime(
       userId,
       (data: unknown) => {
@@ -157,13 +153,9 @@ export default function IaProfilePage() {
   }, [userId]);
 
   useEffect(() => {
-    if (!profileId) {
-      setAiError('Profil IA introuvable.');
-      setAiLoading(false);
-      return;
-    }
+    if (!profileId) return;
 
-    setAiLoading(true);
+    setAiLoading(true); // eslint-disable-line react-hooks/set-state-in-effect -- loading before async fetch
     fetchAiProfileById(profileId)
       .then((data) => {
         setAiProfile(data as AiProfile | null);

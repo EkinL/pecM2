@@ -62,38 +62,8 @@ const persistBufferImage = async (buffer: Buffer, aiId: string, extension = 'png
   return fileName;
 };
 
-const resolvePublicApiOrigin = () => {
-  const fromEnvCandidates = [
-    process.env.PUBLIC_APP_URL,
-    process.env.NEXT_PUBLIC_APP_URL,
-    process.env.NEXT_PUBLIC_SITE_URL,
-  ];
-
-  for (const candidate of fromEnvCandidates) {
-    if (!candidate || !candidate.trim()) {
-      continue;
-    }
-    try {
-      const url = new URL(candidate);
-      if (url.protocol === 'https:' || url.protocol === 'http:') {
-        return url.origin;
-      }
-    } catch {
-      // Ignore invalid env values and continue fallback resolution.
-    }
-  }
-
-  return 'https://pec-m2.vercel.app';
-};
-
-const buildCachedImageUrl = (fileName: string) => {
-  try {
-    const origin = resolvePublicApiOrigin();
-    return `${origin}/api/ai/image/file/${fileName}`;
-  } catch {
-    return `/api/ai/image/file/${fileName}`;
-  }
-};
+const buildCachedImageUrl = (fileName: string) =>
+  `/api/ai/image/file/${encodeURIComponent(fileName)}`;
 
 const resolveStorageBucketName = () => {
   const candidates = [
@@ -379,14 +349,7 @@ const AVATAR_CHUNK_SIZE = 450_000;
 
 const buildAvatarProxyUrl = ({ aiId, version }: { aiId: string; version?: string }) => {
   const encoded = encodeURIComponent(aiId);
-  const base = (() => {
-    try {
-      const origin = resolvePublicApiOrigin();
-      return `${origin}/api/ai/avatar/${encoded}`;
-    } catch {
-      return `/api/ai/avatar/${encoded}`;
-    }
-  })();
+  const base = `/api/ai/avatar/${encoded}`;
 
   if (!version) {
     return base;
@@ -544,11 +507,20 @@ const isFirebaseAdminConfigurationError = (error: unknown) => {
     message.includes('credential introuvable') ||
     message.includes('default credentials') ||
     message.includes('application default') ||
+    message.includes('could not load the default credentials') ||
+    message.includes('credential implementation provided') ||
     message.includes('unable to detect a project id') ||
     message.includes('project id') ||
     message.includes('projectid') ||
+    message.includes('project_id') ||
     message.includes('google_cloud_project') ||
-    message.includes('gcloud_project')
+    message.includes('gcloud_project') ||
+    message.includes('database (default) does not exist') ||
+    message.includes('permission denied') ||
+    message.includes('service account') ||
+    message.includes('private key') ||
+    message.includes('client_email') ||
+    message.includes('invalid grant')
   );
 };
 
@@ -959,6 +931,10 @@ export async function POST(request: Request) {
       updateError: updateError || undefined,
     });
   } catch (error) {
+    if (isFirebaseAdminConfigurationError(error)) {
+      console.error('Firebase Admin non configuré pour /api/ai/image', error);
+      return NextResponse.json({ error: 'Service indisponible.' }, { status: 503 });
+    }
     console.error('Erreur image IA', error);
     const message = error instanceof Error ? error.message : 'Erreur generation image.';
     return NextResponse.json(

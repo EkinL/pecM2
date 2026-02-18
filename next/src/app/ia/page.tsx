@@ -47,6 +47,7 @@ type Utilisateur = {
 type AiProfile = {
   id: string;
   ownerId?: string;
+  ownerMail?: string;
   name?: string;
   mentality?: string;
   voice?: string;
@@ -376,6 +377,13 @@ export default function IaCataloguePage() {
   }, []);
 
   useEffect(() => {
+    if (!isAdminUser) {
+      setUsers([]);
+      setUsersLoading(false);
+      setUsersError(null);
+      return;
+    }
+
     setUsersLoading(true);
     const unsubscribe = fetchUtilisateursRealTime(
       (data: unknown) => {
@@ -391,7 +399,7 @@ export default function IaCataloguePage() {
     );
 
     return () => unsubscribe?.();
-  }, []);
+  }, [isAdminUser]);
 
   useEffect(() => {
     setEvaluationsLoading(true);
@@ -1038,12 +1046,16 @@ export default function IaCataloguePage() {
                     profileItem.ownerId && usersById[profileItem.ownerId]
                       ? usersById[profileItem.ownerId]
                       : undefined;
+                  const ownerMail =
+                    typeof profileItem.ownerMail === 'string' ? profileItem.ownerMail.trim() : '';
                   const ownerLabel =
                     owner && owner.id
                       ? formatOwnerLabel(owner)
-                      : profileItem.ownerId
-                        ? `Créateur ${profileItem.ownerId.slice(0, 5)}`
-                        : 'Créateur inconnu';
+                      : ownerMail
+                        ? ownerMail
+                        : profileItem.ownerId
+                          ? `Créateur ${profileItem.ownerId.slice(0, 5)}`
+                          : 'Créateur inconnu';
                   const ownerLink = profileItem.ownerId
                     ? `/ia/owner/${profileItem.ownerId}`
                     : undefined;

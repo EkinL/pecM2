@@ -1,0 +1,37 @@
+@startuml
+!theme plain
+
+autonumber
+
+actor "User (iOS)" as User
+participant "AccountView" as AccountView
+participant "UserService" as UserService
+participant "Cloud Firestore\nutilisateurs/{uid}" as UsersDoc
+participant "SessionStore" as SessionStore
+participant "Admin page\n/demandes/prestataire" as AdminPage
+participant "users service\nupdateUtilisateurDeletionRequestStatus" as UsersService
+
+User -> AccountView : "Demander suppression compte"
+AccountView -> UserService : requestAccountDeletion(userId,email,pseudo)
+UserService -> UsersDoc : set\naccountDeletionRequestedAt=serverTimestamp\naccountDeletionRequestStatus=pending\naccountDeletionRequestSource=ios
+
+UsersDoc --> AdminPage : realtime update (fetchUtilisateursRealTime)
+AdminPage --> AdminPage : show request row + status
+
+actor "Admin" as Admin
+Admin -> AdminPage : click "Prendre en charge"
+AdminPage -> UsersService : updateUtilisateurDeletionRequestStatus(userId,in_review,adminId,adminMail)
+UsersService -> UsersDoc : update\nstatus=in_review\naccountDeletionReviewedAt=serverTimestamp\naccountDeletionReviewedBy*
+
+UsersDoc --> SessionStore : listenUser update
+SessionStore --> AccountView : updated profile
+AccountView --> User : "Demande prise en compte le <date>"
+
+opt Final decision
+  Admin -> AdminPage : "Marquer traitee" or "Refuser"
+  AdminPage -> UsersService : status=completed or rejected
+  UsersService -> UsersDoc : reviewedAt + reviewer + status
+  UsersDoc --> AccountView : realtime status update
+end
+
+@enduml

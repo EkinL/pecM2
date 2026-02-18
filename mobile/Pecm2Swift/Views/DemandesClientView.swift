@@ -70,7 +70,6 @@ struct DemandesClientView: View {
         .onAppear {
           locationManager.requestLocation()
         }
-        .preferredColorScheme(.dark)
       }
       .onAppear {
         if let userId = session.user?.uid {

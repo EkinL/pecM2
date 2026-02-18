@@ -114,7 +114,6 @@ struct DemandeFormView: View {
       }
     }
     .tint(AppColors.accent)
-    .preferredColorScheme(.dark)
     .appScreenBackground()
   }
 }

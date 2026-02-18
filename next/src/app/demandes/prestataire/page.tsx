@@ -24,7 +24,25 @@ type Profil = {
   role?: string;
 };
 
-const statusLabels: Record<string, string> = {
+type Utilisateur = {
+  id: string;
+  mail?: string;
+  pseudo?: string;
+  accountDeletionRequestedAt?: unknown;
+  accountDeletionRequestStatus?: string;
+  accountDeletionRequestSource?: string;
+  accountDeletionRequestContactEmail?: string;
+  accountDeletionRequestPseudo?: string;
+  accountDeletionReviewedAt?: unknown;
+  accountDeletionReviewedBy?: string;
+  accountDeletionReviewedByMail?: string;
+  updatedAt?: unknown;
+  [key: string]: unknown;
+};
+
+type DeletionStatus = 'all' | 'pending' | 'in_review' | 'completed' | 'rejected';
+
+const demandeStatusLabels: Record<string, string> = {
   pending: 'En attente',
   matched: 'A confirmer',
   accepted: 'En cours',
@@ -32,7 +50,7 @@ const statusLabels: Record<string, string> = {
   other: 'A verifier',
 };
 
-const statusStyles: Record<string, string> = {
+const demandeStatusStyles: Record<string, string> = {
   pending: 'bg-amber-100/80 text-amber-700 border border-amber-400/70',
   matched: 'bg-sky-100/80 text-sky-700 border border-sky-400/70',
   accepted: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
@@ -224,6 +242,30 @@ export default function AdminDemandesPage() {
   }, [userId, roleMismatch]);
 
   useEffect(() => {
+    if (!userId || roleMismatch) {
+      setDeletionUsers([]);
+      setDeletionUsersLoading(false);
+      return;
+    }
+
+    setDeletionUsersLoading(true);
+
+    const unsubscribe = fetchUtilisateursRealTime(
+      (data: unknown) => {
+        setDeletionUsers((Array.isArray(data) ? data : []) as Utilisateur[]);
+        setDeletionUsersLoading(false);
+        setDeletionUsersError(null);
+      },
+      () => {
+        setDeletionUsersError('Impossible de recuperer les demandes RGPD.');
+        setDeletionUsersLoading(false);
+      },
+    );
+
+    return () => unsubscribe?.();
+  }, [userId, roleMismatch]);
+
+  useEffect(() => {
     setDemandePage(1);
   }, [demandeSearch, demandeStatusFilter]);
 
@@ -298,9 +340,9 @@ export default function AdminDemandesPage() {
       setActionSuccess('Demande acceptee.');
     } catch (error) {
       console.error("Erreur lors de l'acceptation", error);
-      setActionError("Impossible d'accepter la demande.");
+      setDemandeActionError("Impossible d'accepter la demande.");
     } finally {
-      setActionState(null);
+      setDemandeActionState(null);
     }
   };
 
@@ -323,9 +365,50 @@ export default function AdminDemandesPage() {
       setActionSuccess('Demande annulee.');
     } catch (error) {
       console.error("Erreur lors de l'annulation", error);
-      setActionError("Impossible d'annuler la demande.");
+      setDemandeActionError("Impossible d'annuler la demande.");
     } finally {
-      setActionState(null);
+      setDemandeActionState(null);
+    }
+  };
+
+  const handleUpdateDeletionStatus = async (
+    user: Utilisateur,
+    nextStatus: Exclude<DeletionStatus, 'all'>,
+  ) => {
+    const currentStatus = normalizeDeletionStatus(user.accountDeletionRequestStatus);
+    if (currentStatus === nextStatus || !userId) {
+      return;
+    }
+
+    if (nextStatus === 'completed' || nextStatus === 'rejected') {
+      const actionLabel = nextStatus === 'completed' ? 'traitee' : 'refusee';
+      const confirmed = window.confirm(
+        `Confirmer: marquer la demande de ${formatDeletionUserLabel(user)} comme ${actionLabel} ?`,
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    setDeletionActionError(null);
+    setDeletionActionSuccess(null);
+    setDeletionActionState({ userId: user.id, status: nextStatus });
+
+    try {
+      await updateUtilisateurDeletionRequestStatus({
+        userId: user.id,
+        status: nextStatus,
+        adminId: userId,
+        adminMail: profile?.mail,
+      });
+      setDeletionActionSuccess(
+        `Demande de ${formatDeletionUserLabel(user)} mise a jour: ${deletionStatusLabels[nextStatus]}.`,
+      );
+    } catch (error) {
+      console.error('Erreur lors de la mise a jour de la demande RGPD', error);
+      setDeletionActionError('Impossible de mettre a jour le statut de la demande.');
+    } finally {
+      setDeletionActionState(null);
     }
   };
 
@@ -674,19 +757,19 @@ export default function AdminDemandesPage() {
                       <div className="mt-4 flex flex-wrap gap-2">
                         {demande.clientId ? (
                           <Link
-                            href={`/admin/users/${demande.clientId}/logs`}
-                            className="rounded-lg border border-slate-800/80 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-600"
+                            href={`/admin/users/${user.id}/logs`}
+                            className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
                           >
-                            Logs client
+                            Logs user
                           </Link>
                         ) : null}
 
                         {canAccept && (
                           <button
                             type="button"
-                            onClick={() => handleAccept(demande.id)}
-                            disabled={isBusy}
-                            className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
+                            onClick={() => void handleUpdateDeletionStatus(user, 'in_review')}
+                            disabled={isBusy || status === 'in_review'}
+                            className="rounded-lg border border-sky-400/60 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-200 transition hover:border-sky-300 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {isBusy && actionState?.type === 'accept' ? 'Validation...' : 'Accepter'}
                           </button>
@@ -695,11 +778,13 @@ export default function AdminDemandesPage() {
                         {canCancel && (
                           <button
                             type="button"
-                            onClick={() => handleCancel(demande.id)}
-                            disabled={isBusy}
-                            className="rounded-lg border border-rose-400/60 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-200 transition hover:border-rose-300 disabled:cursor-not-allowed"
+                            onClick={() => void handleUpdateDeletionStatus(user, 'completed')}
+                            disabled={isBusy || status === 'completed'}
+                            className="rounded-lg border border-emerald-400/60 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {isBusy && actionState?.type === 'cancel' ? 'Annulation...' : 'Annuler'}
+                            {isBusy && deletionActionState?.status === 'completed'
+                              ? 'Mise a jour...'
+                              : 'Marquer traitee'}
                           </button>
                         )}
 
@@ -754,8 +839,8 @@ export default function AdminDemandesPage() {
                   Page suivante
                 </button>
               </div>
-            )}
-          </section>
+            </section>
+          </>
         )}
       </div>
     </div>

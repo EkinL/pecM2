@@ -16,6 +16,9 @@ struct UserProfile: Codable, Identifiable {
   var countryCode: String?
   var countryLabel: String?
   var countryUpdatedAt: Date?
+  var accountDeletionRequestedAt: Date?
+  var accountDeletionRequestStatus: String?
+  var accountDeletionReviewedAt: Date?
   var providerIds: [String]?
   var createdAt: Date?
   var updatedAt: Date?
