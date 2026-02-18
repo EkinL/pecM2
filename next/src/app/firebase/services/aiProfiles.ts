@@ -27,6 +27,7 @@ import {
   omitUndefinedFields,
   sanitizeOptionalString,
 } from '../helpers';
+import type { DemandeAiPayload } from '../../demandes/types';
 
 export const fetchAiProfilesRealTime = (onData: any, onError: any) =>
   createRealtimeListener(iaProfiles, onData, onError, 'profils IA');
@@ -107,6 +108,37 @@ export const addAiProfile = async ({
   };
 
   return addDoc(iaProfiles, omitUndefinedFields(payload));
+};
+
+export const createAiDraftFromDemande = async ({
+  demandeId,
+  ownerId,
+  ownerMail,
+  aiName,
+  requestType,
+  payload,
+}: any = {}) => {
+  const normalizedOwnerId = normalizeRequiredString(ownerId, 'Owner ID');
+  const normalizedDemandeId = normalizeRequiredString(demandeId, 'Demande ID');
+  const brief = (payload ?? {}) as DemandeAiPayload;
+  const lookSource = brief?.look && typeof brief.look === 'object' ? brief.look : undefined;
+
+  const draftPayload = {
+    ownerId: normalizedOwnerId,
+    ownerMail: sanitizeOptionalString(ownerMail),
+    name: sanitizeOptionalString(aiName),
+    mentality: sanitizeOptionalString(brief?.mentality),
+    voice: sanitizeOptionalString(brief?.voice),
+    look: normalizeOptionalLook(lookSource),
+    status: 'pending',
+    sourceDemandeId: normalizedDemandeId,
+    sourceRequestType: sanitizeOptionalString(requestType),
+    sourceDemandePayload: payload && typeof payload === 'object' ? payload : undefined,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  return addDoc(iaProfiles, omitUndefinedFields(draftPayload));
 };
 
 const allowedStatuses = ['pending', 'active', 'rejected', 'suspended', 'disabled'];

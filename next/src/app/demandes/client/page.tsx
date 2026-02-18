@@ -6,45 +6,17 @@ import { onAuthStateChanged } from 'firebase/auth';
 import {
   addDemande,
   auth,
+  fetchAiProfilesByOwnerRealTime,
   fetchDemandesForClientRealTime,
   fetchUtilisateurById,
-  getTokenPrice,
-  updateDemandeLocation,
 } from '../../indexFirebase';
-
-type Timestamp = {
-  seconds?: number;
-  nanoseconds?: number;
-};
-
-type Demande = {
-  id: string;
-  title?: string;
-  description?: string;
-  category?: string;
-  budget?: number;
-  city?: string;
-  availability?: string;
-  status?: string;
-  prestataireId?: string;
-  prestatairePseudo?: string;
-  prestataireMail?: string;
-  location?: {
-    lat?: number;
-    lng?: number;
-    accuracy?: number;
-  };
-  locationUpdatedAt?: Timestamp;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
-  [key: string]: unknown;
-};
-
-type GeoLocation = {
-  lat: number;
-  lng: number;
-  accuracy?: number;
-};
+import type { AiProfile } from '../../ia/types';
+import {
+  normalizeDemandeRequestType,
+  type Demande,
+  type DemandeRequestType,
+  type Timestamp,
+} from '../types';
 
 type Profil = {
   id: string;
@@ -52,6 +24,45 @@ type Profil = {
   pseudo?: string;
   role?: string;
 };
+
+type RequestTypeOption = {
+  id: DemandeRequestType;
+  label: string;
+  description: string;
+};
+
+const requestTypeOptions: RequestTypeOption[] = [
+  {
+    id: 'create_ai',
+    label: 'Creer une IA',
+    description: 'Brief complet pour une IA personnalisee.',
+  },
+  {
+    id: 'update_ai',
+    label: 'Modifier une IA',
+    description: 'Demande de changement apparence, voix ou style.',
+  },
+  {
+    id: 'moderation',
+    label: 'Validation / moderation',
+    description: 'Validation statut IA et note admin.',
+  },
+  {
+    id: 'incident',
+    label: 'Incident / signalement',
+    description: 'Signalement contenu, safety ou comportement.',
+  },
+  {
+    id: 'usage_ai',
+    label: 'IA pour un usage',
+    description: 'Objectif, ton et contraintes d usage.',
+  },
+  {
+    id: 'other',
+    label: 'Autre',
+    description: 'Demande libre compatible historique.',
+  },
+];
 
 const statusLabels: Record<string, string> = {
   pending: 'En attente',
@@ -67,6 +78,15 @@ const statusStyles: Record<string, string> = {
   accepted: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
   cancelled: 'bg-rose-100/80 text-rose-700 border border-rose-400/70',
   other: 'bg-slate-100/80 text-slate-700 border border-slate-300/80',
+};
+
+const requestTypeLabels: Record<DemandeRequestType, string> = {
+  create_ai: 'Creation IA',
+  update_ai: 'Modification IA',
+  moderation: 'Moderation IA',
+  incident: 'Incident IA',
+  usage_ai: 'Usage IA',
+  other: 'Autre',
 };
 
 const normalizeStatus = (status?: string) => {
@@ -96,7 +116,7 @@ const formatDate = (value?: Timestamp | string) => {
       timeStyle: 'short',
     });
   }
-  if (typeof value === 'object' && value?.seconds) {
+  if (typeof value === 'object' && typeof value?.seconds === 'number') {
     return new Date(value.seconds * 1000).toLocaleString('fr-FR', {
       dateStyle: 'short',
       timeStyle: 'short',
@@ -105,57 +125,42 @@ const formatDate = (value?: Timestamp | string) => {
   return '-';
 };
 
-const formatCoordinates = (location?: GeoLocation | null) => {
-  if (!location) {
-    return 'Position inconnue';
-  }
-  return `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
+const timelineSteps = (demande: Demande) => {
+  const normalizedStatus = normalizeStatus(demande.status);
+  const isMatched =
+    normalizedStatus === 'matched' || normalizedStatus === 'accepted' || normalizedStatus === 'cancelled';
+  return [
+    {
+      key: 'created',
+      label: 'Demande creee',
+      done: true,
+      at: demande.createdAt,
+    },
+    {
+      key: 'matched',
+      label: 'Admin assigne',
+      done: isMatched || Boolean(demande.matchedAt),
+      at: demande.matchedAt ?? demande.updatedAt,
+    },
+    {
+      key: 'accepted',
+      label: 'Traitement accepte',
+      done: normalizedStatus === 'accepted',
+      at: demande.acceptedAt,
+    },
+    {
+      key: 'cancelled',
+      label: 'Demande annulee',
+      done: normalizedStatus === 'cancelled',
+      at: demande.cancelledAt,
+    },
+  ];
 };
 
-const formatAccuracy = (accuracy?: number) => {
-  if (typeof accuracy !== 'number') {
-    return 'Precision inconnue';
-  }
-  return `±${Math.round(accuracy)} m`;
-};
+const isAiRequired = (requestType: DemandeRequestType) =>
+  ['update_ai', 'moderation', 'incident'].includes(requestType);
 
-const buildMapEmbedUrl = (location: GeoLocation) => {
-  const delta = 0.02;
-  const left = location.lng - delta;
-  const right = location.lng + delta;
-  const top = location.lat + delta;
-  const bottom = location.lat - delta;
-  const bbox = `${left},${bottom},${right},${top}`;
-
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
-    bbox,
-  )}&layer=mapnik&marker=${location.lat}%2C${location.lng}`;
-};
-
-const buildMapLink = (location: GeoLocation) =>
-  `https://www.openstreetmap.org/?mlat=${location.lat}&mlon=${location.lng}#map=16/${location.lat}/${location.lng}`;
-
-const requestBrowserLocation = () =>
-  new Promise<GeoLocation>((resolve, reject) => {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      reject(new Error('Geolocalisation indisponible.'));
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        });
-      },
-      (error) => reject(error),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 10000 },
-    );
-  });
-
-const formatClientLabel = (demande: Demande) => {
+const formatAssignedAdmin = (demande: Demande) => {
   if (demande.prestatairePseudo) {
     return demande.prestatairePseudo;
   }
@@ -163,9 +168,17 @@ const formatClientLabel = (demande: Demande) => {
     return demande.prestataireMail;
   }
   if (demande.prestataireId) {
-    return `Client ${demande.prestataireId.slice(0, 5)}`;
+    return `Admin ${demande.prestataireId.slice(0, 5)}`;
   }
   return 'Non assigne';
+};
+
+const toOptional = (value: FormDataEntryValue | null) => {
+  if (!value) {
+    return undefined;
+  }
+  const text = value.toString().trim();
+  return text.length ? text : undefined;
 };
 
 export default function ClientDemandesPage() {
@@ -173,29 +186,25 @@ export default function ClientDemandesPage() {
   const [profile, setProfile] = useState<Profil | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [demandesLoading, setDemandesLoading] = useState(true);
   const [demandesError, setDemandesError] = useState<string | null>(null);
+
+  const [myAiProfiles, setMyAiProfiles] = useState<AiProfile[]>([]);
+  const [aiProfilesLoading, setAiProfilesLoading] = useState(false);
+
+  const [selectedRequestType, setSelectedRequestType] = useState<DemandeRequestType>('create_ai');
+  const [selectedAiId, setSelectedAiId] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+
   const [demandeSearch, setDemandeSearch] = useState('');
   const [demandeStatusFilter, setDemandeStatusFilter] = useState('all');
   const [demandePage, setDemandePage] = useState(1);
-  const [location, setLocation] = useState<GeoLocation | null>(null);
-  const [locationCapturedAt, setLocationCapturedAt] = useState<Date | null>(null);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [locationUpdateState, setLocationUpdateState] = useState<{
-    id: string;
-    status: 'loading' | 'success' | 'error';
-    message?: string;
-  } | null>(null);
-  const [tokenPrice, setTokenPrice] = useState<number | null>(null);
-  const [tokenCurrency, setTokenCurrency] = useState<string | null>(null);
-  const [tokenZone, setTokenZone] = useState<string | null>(null);
-  const [tokenPriceLoading, setTokenPriceLoading] = useState(false);
-  const [tokenPriceError, setTokenPriceError] = useState<string | null>(null);
+
   const roleMismatch = Boolean(userId && profile?.role && profile.role !== 'client');
 
   useEffect(() => {
@@ -250,72 +259,45 @@ export default function ClientDemandesPage() {
   }, [userId, roleMismatch]);
 
   useEffect(() => {
+    if (!userId || roleMismatch) {
+      setMyAiProfiles([]);
+      setAiProfilesLoading(false);
+      return;
+    }
+
+    setAiProfilesLoading(true);
+    const unsubscribe = fetchAiProfilesByOwnerRealTime(
+      userId,
+      (data: unknown) => {
+        setMyAiProfiles(data as AiProfile[]);
+        setAiProfilesLoading(false);
+      },
+      () => {
+        setMyAiProfiles([]);
+        setAiProfilesLoading(false);
+      },
+    );
+
+    return () => unsubscribe?.();
+  }, [userId, roleMismatch]);
+
+  useEffect(() => {
     setDemandePage(1);
   }, [demandeSearch, demandeStatusFilter]);
 
   useEffect(() => {
-    if (!location) {
-      setTokenPrice(null);
-      setTokenCurrency(null);
-      setTokenZone(null);
-      setTokenPriceError(null);
-      setTokenPriceLoading(false);
-      return;
+    if (!isAiRequired(selectedRequestType)) {
+      setSelectedAiId('');
     }
+  }, [selectedRequestType]);
 
-    let isActive = true;
-    setTokenPriceLoading(true);
-    setTokenPriceError(null);
-
-    getTokenPrice({ lat: location.lat, lng: location.lng })
-      .then((data) => {
-        if (!isActive) {
-          return;
-        }
-        if (!data || typeof data !== 'object') {
-          setTokenPrice(null);
-          setTokenCurrency(null);
-          setTokenZone(null);
-          return;
-        }
-        const rawPrice = data.price ?? data.amount ?? data.value;
-        let priceValue: number | null = null;
-        if (typeof rawPrice === 'number' && Number.isFinite(rawPrice)) {
-          priceValue = rawPrice;
-        }
-        if (typeof rawPrice === 'string') {
-          const parsed = Number(rawPrice);
-          priceValue = Number.isFinite(parsed) ? parsed : null;
-        }
-        const currencyValue = typeof data.currency === 'string' ? data.currency : null;
-        const zoneValue =
-          typeof data.zone === 'string'
-            ? data.zone
-            : typeof data.zoneLabel === 'string'
-              ? data.zoneLabel
-              : null;
-
-        setTokenPrice(priceValue);
-        setTokenCurrency(currencyValue);
-        setTokenZone(zoneValue);
-      })
-      .catch((error) => {
-        if (!isActive) {
-          return;
-        }
-        console.error('Erreur lors de la recuperation du prix dynamique', error);
-        setTokenPriceError('Impossible de recuperer le tarif dynamique.');
-      })
-      .finally(() => {
-        if (isActive) {
-          setTokenPriceLoading(false);
-        }
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [location]);
+  const aiProfilesById = useMemo(() => {
+    const map = new Map<string, AiProfile>();
+    myAiProfiles.forEach((profile) => {
+      map.set(profile.id, profile);
+    });
+    return map;
+  }, [myAiProfiles]);
 
   const sortedDemandes = useMemo(
     () => [...demandes].sort((a, b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)),
@@ -333,29 +315,23 @@ export default function ClientDemandesPage() {
       if (!search) {
         return true;
       }
+      const requestType = normalizeDemandeRequestType(demande.requestType);
       const haystack = [
         demande.title,
         demande.description,
         demande.category,
-        demande.city,
-        demande.prestatairePseudo,
-        demande.prestataireMail,
+        demande.aiName,
+        demande.adminNote,
+        requestTypeLabels[requestType],
         demande.id,
       ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
+
       return haystack.includes(search);
     });
   }, [sortedDemandes, demandeSearch, demandeStatusFilter]);
-
-  const demandesPageSize = 5;
-  const totalDemandesPages = Math.max(1, Math.ceil(filteredDemandes.length / demandesPageSize));
-  const currentDemandesPage = Math.min(demandePage, totalDemandesPages);
-  const paginatedDemandes = useMemo(() => {
-    const start = (currentDemandesPage - 1) * demandesPageSize;
-    return filteredDemandes.slice(start, start + demandesPageSize);
-  }, [filteredDemandes, currentDemandesPage]);
 
   const statusSummary = useMemo(() => {
     return sortedDemandes.reduce(
@@ -368,42 +344,14 @@ export default function ClientDemandesPage() {
     );
   }, [sortedDemandes]);
 
-  const handleRequestLocation = async () => {
-    setLocationError(null);
-    setLocationLoading(true);
+  const demandesPageSize = 5;
+  const totalDemandesPages = Math.max(1, Math.ceil(filteredDemandes.length / demandesPageSize));
+  const currentDemandesPage = Math.min(demandePage, totalDemandesPages);
 
-    try {
-      const nextLocation = await requestBrowserLocation();
-      setLocation(nextLocation);
-      setLocationCapturedAt(new Date());
-    } catch (error) {
-      console.error('Erreur lors de la geolocalisation', error);
-      setLocationError("Impossible d'obtenir votre position.");
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
-  const handleUpdateLocation = async (demandeId: string) => {
-    setLocationUpdateState({ id: demandeId, status: 'loading' });
-
-    try {
-      const nextLocation = await requestBrowserLocation();
-      await updateDemandeLocation({ demandeId, location: nextLocation });
-      setLocationUpdateState({
-        id: demandeId,
-        status: 'success',
-        message: 'Position mise a jour.',
-      });
-    } catch (error) {
-      console.error('Erreur lors de la mise a jour de la position', error);
-      setLocationUpdateState({
-        id: demandeId,
-        status: 'error',
-        message: 'Impossible de partager la position.',
-      });
-    }
-  };
+  const paginatedDemandes = useMemo(() => {
+    const start = (currentDemandesPage - 1) * demandesPageSize;
+    return filteredDemandes.slice(start, start + demandesPageSize);
+  }, [filteredDemandes, currentDemandesPage]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -420,22 +368,71 @@ export default function ClientDemandesPage() {
       return;
     }
 
+    if (isAiRequired(selectedRequestType) && !selectedAiId) {
+      setSubmitError('Selectionnez une IA pour ce type de demande.');
+      return;
+    }
+
     const form = event.currentTarget;
     const formData = new FormData(form);
-    const title = formData.get('title')?.toString().trim();
-    const description = formData.get('description')?.toString().trim();
-    const category = formData.get('category')?.toString().trim();
-    const budget = formData.get('budget')?.toString().trim();
-    const city = formData.get('city')?.toString().trim();
-    const availability = formData.get('availability')?.toString().trim();
+    const title = toOptional(formData.get('title'));
+    const description = toOptional(formData.get('description'));
+    const category = toOptional(formData.get('category'));
+    const budget = toOptional(formData.get('budget'));
+    const city = toOptional(formData.get('city'));
+    const availability = toOptional(formData.get('availability'));
 
     if (!title || !description) {
       setSubmitError('Le titre et la description sont obligatoires.');
       return;
     }
 
-    setIsSubmitting(true);
+    const payload: Record<string, unknown> = {};
 
+    if (selectedRequestType === 'create_ai') {
+      payload.objective = toOptional(formData.get('objective'));
+      payload.tone = toOptional(formData.get('tone'));
+      payload.constraints = toOptional(formData.get('constraints'));
+      payload.mentality = toOptional(formData.get('mentality'));
+      payload.voice = toOptional(formData.get('voice'));
+      const lookDetails = toOptional(formData.get('lookDetails'));
+      if (lookDetails) {
+        payload.look = { details: lookDetails };
+      }
+    }
+
+    if (selectedRequestType === 'update_ai') {
+      payload.requestedChanges = toOptional(formData.get('requestedChanges'));
+      payload.constraints = toOptional(formData.get('constraints'));
+      payload.mentality = toOptional(formData.get('mentality'));
+      payload.voice = toOptional(formData.get('voice'));
+      const lookDetails = toOptional(formData.get('lookDetails'));
+      if (lookDetails) {
+        payload.look = { details: lookDetails };
+      }
+    }
+
+    if (selectedRequestType === 'moderation') {
+      payload.currentStatus = toOptional(formData.get('currentStatus'));
+      payload.requestedStatus = toOptional(formData.get('requestedStatus'));
+      payload.constraints = toOptional(formData.get('moderationNote'));
+    }
+
+    if (selectedRequestType === 'incident') {
+      payload.incidentType = toOptional(formData.get('incidentType'));
+      payload.incidentSeverity = toOptional(formData.get('incidentSeverity'));
+      payload.incidentContext = toOptional(formData.get('incidentContext'));
+    }
+
+    if (selectedRequestType === 'usage_ai') {
+      payload.objective = toOptional(formData.get('objective'));
+      payload.tone = toOptional(formData.get('tone'));
+      payload.constraints = toOptional(formData.get('constraints'));
+    }
+
+    const targetAi = selectedAiId ? aiProfilesById.get(selectedAiId) : undefined;
+
+    setIsSubmitting(true);
     try {
       await addDemande({
         clientId: userId,
@@ -447,10 +444,15 @@ export default function ClientDemandesPage() {
         budget,
         city,
         availability,
-        location: location ?? undefined,
+        aiId: targetAi?.id,
+        aiName: targetAi?.name ?? undefined,
+        requestType: selectedRequestType,
+        payload,
       });
       form.reset();
-      setSubmitSuccess('Demande envoyee. Nous vous notifions du matching.');
+      setSelectedAiId('');
+      setSelectedRequestType('create_ai');
+      setSubmitSuccess('Demande IA envoyee. Un admin va prendre en charge le suivi.');
     } catch (error) {
       console.error('Erreur lors de la creation de la demande', error);
       setSubmitError("Impossible d'envoyer la demande. Reessayez.");
@@ -459,14 +461,202 @@ export default function ClientDemandesPage() {
     }
   };
 
+  const renderRequestTypeFields = () => {
+    switch (selectedRequestType) {
+      case 'create_ai':
+        return (
+          <div className="space-y-3 rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Brief IA</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                name="objective"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Objectif de l IA"
+              />
+              <input
+                name="tone"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Ton attendu"
+              />
+            </div>
+            <input
+              name="constraints"
+              className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+              placeholder="Contraintes (sujet interdit, style, langue...)"
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                name="mentality"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Mentalite"
+              />
+              <input
+                name="voice"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Voix"
+              />
+            </div>
+            <textarea
+              name="lookDetails"
+              rows={2}
+              className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+              placeholder="Look (details visuels attendus)"
+            />
+          </div>
+        );
+      case 'update_ai':
+        return (
+          <div className="space-y-3 rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Changements demandes</p>
+            <textarea
+              name="requestedChanges"
+              rows={3}
+              className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+              placeholder="Qu est-ce qui doit changer ?"
+            />
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                name="mentality"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Nouvelle mentalite"
+              />
+              <input
+                name="voice"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Nouvelle voix"
+              />
+            </div>
+            <textarea
+              name="lookDetails"
+              rows={2}
+              className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+              placeholder="Nouveau look (details)"
+            />
+            <input
+              name="constraints"
+              className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+              placeholder="Contraintes de changement"
+            />
+          </div>
+        );
+      case 'moderation':
+        return (
+          <div className="space-y-3 rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Moderation</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                name="currentStatus"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Statut actuel"
+              />
+              <input
+                name="requestedStatus"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Statut souhaite"
+              />
+            </div>
+            <textarea
+              name="moderationNote"
+              rows={3}
+              className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+              placeholder="Contexte de moderation / note"
+            />
+          </div>
+        );
+      case 'incident':
+        return (
+          <div className="space-y-3 rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Signalement</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                name="incidentType"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Type d incident"
+              />
+              <select
+                name="incidentSeverity"
+                defaultValue="medium"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+              >
+                <option value="low">Faible</option>
+                <option value="medium">Moyen</option>
+                <option value="high">Eleve</option>
+              </select>
+            </div>
+            <textarea
+              name="incidentContext"
+              rows={3}
+              className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+              placeholder="Description de l incident"
+            />
+          </div>
+        );
+      case 'usage_ai':
+        return (
+          <div className="space-y-3 rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+            <p className="text-xs uppercase tracking-wide text-slate-400">Objectif d usage</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                name="objective"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Usage cible"
+              />
+              <input
+                name="tone"
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+                placeholder="Ton souhaite"
+              />
+            </div>
+            <textarea
+              name="constraints"
+              rows={3}
+              className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-sm"
+              placeholder="Contraintes fonctionnelles"
+            />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const renderPayloadSummary = (demande: Demande) => {
+    const entries = Object.entries((demande.payload ?? {}) as Record<string, unknown>).filter(
+      ([, value]) => {
+        if (typeof value === 'string') {
+          return value.trim().length > 0;
+        }
+        if (Array.isArray(value)) {
+          return value.length > 0;
+        }
+        return Boolean(value);
+      },
+    );
+
+    if (!entries.length) {
+      return <p className="mt-1 text-[11px] text-slate-500">Aucun detail structuré.</p>;
+    }
+
+    return (
+      <ul className="mt-2 grid gap-1 text-[11px] text-slate-400">
+        {entries.slice(0, 5).map(([key, value]) => (
+          <li key={key}>
+            {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 md:px-6 lg:px-8">
         <header className="space-y-3 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-900 to-slate-950/80 p-6 shadow-2xl shadow-slate-900/40 backdrop-blur">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Espace client</p>
-          <h1 className="text-3xl font-semibold md:text-4xl">Nouvelle demande & suivi</h1>
+          <h1 className="text-3xl font-semibold md:text-4xl">Demandes IA: nouvelle demande & suivi</h1>
           <p className="text-sm text-slate-400 md:text-base">
-            Formulaire simple, appariement automatique avec un client, suivi en temps reel.
+            Creez une demande IA (creation, moderation, incident, modification) et suivez son traitement
+            par un admin assigne.
           </p>
           <div className="flex flex-wrap gap-2 text-xs">
             <Link
@@ -497,21 +687,15 @@ export default function ClientDemandesPage() {
             <p className="mt-2 text-sm text-slate-400">
               Connectez-vous avec un compte client pour acceder a cet espace.
             </p>
-            <Link
-              href="/demandes/client"
-              className="mt-4 inline-flex items-center rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
-            >
-              Aller aux demandes client
-            </Link>
           </section>
         ) : (
           <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
             <article className="rounded-3xl border border-white/5 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-xl font-semibold">Formulaire de demande</h2>
+                  <h2 className="text-xl font-semibold">Nouvelle demande IA</h2>
                   <p className="text-sm text-slate-400">
-                    Donnez un maximum de contexte pour ameliorer le matching.
+                    Selectionnez un type puis remplissez le formulaire adapte.
                   </p>
                 </div>
                 {profileLoading ? (
@@ -519,31 +703,77 @@ export default function ClientDemandesPage() {
                 ) : profileError ? (
                   <span className="text-xs text-rose-300">{profileError}</span>
                 ) : (
-                  <span className="text-xs text-slate-500">
-                    Role: {profile?.role ?? 'non defini'}
-                  </span>
+                  <span className="text-xs text-slate-500">Role: {profile?.role ?? 'non defini'}</span>
                 )}
               </div>
 
               <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">
-                  <label htmlFor="title" className="text-xs uppercase tracking-wide text-slate-400">
-                    Titre
-                  </label>
-                  <input
-                    id="title"
-                    name="title"
-                    type="text"
-                    className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-600"
-                    placeholder="Ex: Coaching, support administratif..."
-                    required
-                  />
+                  <label className="text-xs uppercase tracking-wide text-slate-400">Type de demande IA</label>
+                  <div className="flex flex-wrap gap-2">
+                    {requestTypeOptions.map((option) => {
+                      const isActive = selectedRequestType === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => setSelectedRequestType(option.id)}
+                          className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                            isActive
+                              ? 'border-emerald-400 bg-emerald-500/20 text-emerald-200'
+                              : 'border-slate-700 bg-slate-950/60 text-slate-300 hover:border-slate-500'
+                          }`}
+                          title={option.description}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    {
+                      requestTypeOptions.find((option) => option.id === selectedRequestType)
+                        ?.description
+                    }
+                  </p>
                 </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <label htmlFor="title" className="text-xs uppercase tracking-wide text-slate-400">
+                      Titre
+                    </label>
+                    <input
+                      id="title"
+                      name="title"
+                      type="text"
+                      className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-600"
+                      placeholder="Ex: IA coach lifestyle"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="category" className="text-xs uppercase tracking-wide text-slate-400">
+                      Categorie
+                    </label>
+                    <select
+                      id="category"
+                      name="category"
+                      defaultValue=""
+                      className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100"
+                    >
+                      <option value="">Selectionner</option>
+                      <option value="ia_creation">Creation IA</option>
+                      <option value="ia_update">Modification IA</option>
+                      <option value="ia_moderation">Moderation IA</option>
+                      <option value="ia_incident">Incident IA</option>
+                      <option value="autre">Autre</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
-                  <label
-                    htmlFor="description"
-                    className="text-xs uppercase tracking-wide text-slate-400"
-                  >
+                  <label htmlFor="description" className="text-xs uppercase tracking-wide text-slate-400">
                     Description
                   </label>
                   <textarea
@@ -551,35 +781,14 @@ export default function ClientDemandesPage() {
                     name="description"
                     rows={4}
                     className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-600"
-                    placeholder="Contexte, objectifs, attentes..."
+                    placeholder="Contexte, attente, resultat attendu..."
                     required
                   />
                 </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label
-                      htmlFor="category"
-                      className="text-xs uppercase tracking-wide text-slate-400"
-                    >
-                      Categorie
-                    </label>
-                    <select
-                      id="category"
-                      name="category"
-                      className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100"
-                    >
-                      <option value="">Selectionner</option>
-                      <option value="coaching">Coaching</option>
-                      <option value="support">Support</option>
-                      <option value="conseil">Conseil</option>
-                      <option value="autre">Autre</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="budget"
-                      className="text-xs uppercase tracking-wide text-slate-400"
-                    >
+                    <label htmlFor="budget" className="text-xs uppercase tracking-wide text-slate-400">
                       Budget (optionnel)
                     </label>
                     <input
@@ -592,28 +801,8 @@ export default function ClientDemandesPage() {
                       placeholder="Montant estime"
                     />
                   </div>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label
-                      htmlFor="city"
-                      className="text-xs uppercase tracking-wide text-slate-400"
-                    >
-                      Ville
-                    </label>
-                    <input
-                      id="city"
-                      name="city"
-                      type="text"
-                      className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-600"
-                      placeholder="Paris, Lyon..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="availability"
-                      className="text-xs uppercase tracking-wide text-slate-400"
-                    >
+                    <label htmlFor="availability" className="text-xs uppercase tracking-wide text-slate-400">
                       Disponibilite
                     </label>
                     <input
@@ -621,101 +810,52 @@ export default function ClientDemandesPage() {
                       name="availability"
                       type="text"
                       className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-600"
-                      placeholder="Ex: Cette semaine, lundi..."
+                      placeholder="Ex: cette semaine"
                     />
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-400">
-                        Geolocalisation
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Partagez votre position pour aider le client a vous suivre.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRequestLocation}
-                      disabled={locationLoading}
-                      className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/60"
-                    >
-                      {locationLoading ? 'Localisation...' : 'Detecter ma position'}
-                    </button>
-                  </div>
-                  {locationError && <p className="mt-2 text-xs text-rose-300">{locationError}</p>}
-                  {location ? (
-                    <div className="mt-3 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                        <span>Position: {formatCoordinates(location)}</span>
-                        <span>{formatAccuracy(location.accuracy)}</span>
-                      </div>
-                      {locationCapturedAt && (
-                        <p className="text-[11px] text-slate-500">
-                          Capture le{' '}
-                          {locationCapturedAt.toLocaleString('fr-FR', {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })}
-                        </p>
-                      )}
-                      <div className="aspect-[4/3] w-full overflow-hidden rounded-xl border border-slate-800/80 bg-slate-900/60">
-                        <iframe
-                          title="Position client"
-                          src={buildMapEmbedUrl(location)}
-                          className="h-full w-full"
-                          loading="lazy"
-                          referrerPolicy="no-referrer-when-downgrade"
-                        />
-                      </div>
-                      <a
-                        href={buildMapLink(location)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[11px] font-semibold text-emerald-300 transition hover:text-emerald-200"
-                      >
-                        Ouvrir dans OpenStreetMap
-                      </a>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Aucune position partagee pour l&apos;instant.
-                    </p>
-                  )}
+                <div className="space-y-2">
+                  <label htmlFor="city" className="text-xs uppercase tracking-wide text-slate-400">
+                    Ville
+                  </label>
+                  <input
+                    id="city"
+                    name="city"
+                    type="text"
+                    className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-600"
+                    placeholder="Paris, Lyon..."
+                  />
                 </div>
 
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-wide text-slate-400">
-                        Prix dynamique
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Calcule via <code>getTokenPrice</code> selon votre zone.
-                      </p>
-                    </div>
-                    <span className="text-sm font-semibold text-white">
-                      {tokenPriceLoading
-                        ? 'Calcul...'
-                        : tokenPrice !== null
-                          ? `${tokenPrice.toLocaleString('fr-FR')} ${tokenCurrency ?? ''}`.trim()
-                          : 'Non disponible'}
-                    </span>
-                  </div>
-                  {tokenZone && (
-                    <p className="mt-2 text-xs text-slate-400">Zone detectee: {tokenZone}</p>
-                  )}
-                  {tokenPriceError && (
-                    <p className="mt-2 text-xs text-rose-300">{tokenPriceError}</p>
-                  )}
-                  {!location && (
-                    <p className="mt-2 text-xs text-slate-500">
-                      Activez la geolocalisation pour obtenir un tarif adapte.
-                    </p>
-                  )}
+                <div className="space-y-2 rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+                  <label htmlFor="aiId" className="text-xs uppercase tracking-wide text-slate-400">
+                    IA associee {isAiRequired(selectedRequestType) ? '(obligatoire)' : '(optionnel)'}
+                  </label>
+                  <select
+                    id="aiId"
+                    value={selectedAiId}
+                    onChange={(event) => setSelectedAiId(event.target.value)}
+                    disabled={aiProfilesLoading || myAiProfiles.length === 0}
+                    className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="">Aucune IA</option>
+                    {myAiProfiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name ?? `IA ${profile.id.slice(0, 5)}`}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500">
+                    {aiProfilesLoading
+                      ? 'Chargement des IA...'
+                      : myAiProfiles.length
+                        ? 'Selectionnez une IA existante si votre demande la concerne.'
+                        : 'Vous n avez pas encore d IA dans votre compte.'}
+                  </p>
                 </div>
+
+                {renderRequestTypeFields()}
 
                 {submitError && <p className="text-sm text-rose-300">{submitError}</p>}
                 {submitSuccess && <p className="text-sm text-emerald-300">{submitSuccess}</p>}
@@ -733,10 +873,8 @@ export default function ClientDemandesPage() {
             <article className="rounded-3xl border border-white/5 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold">Suivi des demandes</h2>
-                  <p className="text-sm text-slate-400">
-                    Appariement automatique et controle accept/annuler.
-                  </p>
+                  <h2 className="text-xl font-semibold">Suivi des demandes IA</h2>
+                  <p className="text-sm text-slate-400">Timeline statuts + infos IA + note admin.</p>
                 </div>
                 <span className="text-xs text-slate-500">
                   {demandesLoading ? 'Chargement...' : `${sortedDemandes.length} demandes`}
@@ -752,20 +890,16 @@ export default function ClientDemandesPage() {
 
               <div className="mt-4 grid gap-3 md:grid-cols-[1.3fr_0.7fr]">
                 <div className="space-y-1">
-                  <label className="text-[11px] uppercase tracking-wide text-slate-400">
-                    Recherche
-                  </label>
+                  <label className="text-[11px] uppercase tracking-wide text-slate-400">Recherche</label>
                   <input
                     value={demandeSearch}
                     onChange={(event) => setDemandeSearch(event.target.value)}
                     className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-600"
-                    placeholder="Titre, ville, client..."
+                    placeholder="Titre, IA, note admin..."
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] uppercase tracking-wide text-slate-400">
-                    Filtre statut
-                  </label>
+                  <label className="text-[11px] uppercase tracking-wide text-slate-400">Filtre statut</label>
                   <select
                     value={demandeStatusFilter}
                     onChange={(event) => setDemandeStatusFilter(event.target.value)}
@@ -780,6 +914,7 @@ export default function ClientDemandesPage() {
                   </select>
                 </div>
               </div>
+
               <div className="mt-3 flex flex-wrap items-center justify-between text-[11px] text-slate-500">
                 <span>
                   Resultats: {filteredDemandes.length} / {sortedDemandes.length}
@@ -799,27 +934,15 @@ export default function ClientDemandesPage() {
                 ) : (
                   paginatedDemandes.map((demande) => {
                     const statusKey = normalizeStatus(demande.status);
-                    const hasLocation =
-                      typeof demande.location?.lat === 'number' &&
-                      typeof demande.location?.lng === 'number';
-                    const locationData = hasLocation
-                      ? {
-                          lat: demande.location?.lat as number,
-                          lng: demande.location?.lng as number,
-                          accuracy: demande.location?.accuracy,
-                        }
-                      : null;
-                    const isUpdatingLocation =
-                      locationUpdateState?.id === demande.id &&
-                      locationUpdateState.status === 'loading';
-                    const locationMessage =
-                      locationUpdateState?.id === demande.id ? locationUpdateState.message : null;
+                    const requestType = normalizeDemandeRequestType(demande.requestType);
+                    const steps = timelineSteps(demande);
+
                     return (
                       <div
                         key={demande.id}
                         className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between gap-3">
                           <p className="text-sm font-semibold">
                             {demande.title ?? `Demande ${demande.id.slice(0, 5)}`}
                           </p>
@@ -829,63 +952,46 @@ export default function ClientDemandesPage() {
                             {statusLabels[statusKey]}
                           </span>
                         </div>
+
                         <p className="mt-1 text-xs text-slate-400">
-                          {demande.category ?? 'Categorie libre'} -{' '}
-                          {demande.city ?? 'Ville inconnue'}
+                          Type: {requestTypeLabels[requestType]} - Admin: {formatAssignedAdmin(demande)}
                         </p>
                         <p className="mt-1 text-xs text-slate-400">
-                          Client: {formatClientLabel(demande)}
+                          IA: {demande.aiName ?? 'Aucune'} {demande.aiId ? `(${demande.aiId.slice(0, 6)})` : ''}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          Creee le {formatDate(demande.createdAt)}
-                        </p>
+                        {demande.description ? (
+                          <p className="mt-2 text-xs text-slate-500">{demande.description}</p>
+                        ) : null}
+
                         <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                            <span>Position: {formatCoordinates(locationData)}</span>
-                            {demande.locationUpdatedAt && (
-                              <span>Maj {formatDate(demande.locationUpdatedAt)}</span>
-                            )}
+                          <p className="text-[11px] uppercase tracking-wide text-slate-400">Timeline</p>
+                          <div className="mt-2 grid gap-2">
+                            {steps.map((step) => (
+                              <div key={step.key} className="flex items-center justify-between gap-3 text-xs">
+                                <span className={step.done ? 'text-emerald-300' : 'text-slate-500'}>
+                                  {step.done ? '●' : '○'} {step.label}
+                                </span>
+                                <span className="text-slate-500">{step.done ? formatDate(step.at) : '-'}</span>
+                              </div>
+                            ))}
                           </div>
-                          {locationData ? (
-                            <div className="mt-2 aspect-[4/3] w-full overflow-hidden rounded-lg border border-slate-800/80">
-                              <iframe
-                                title={`Position demande ${demande.id}`}
-                                src={buildMapEmbedUrl(locationData)}
-                                className="h-full w-full"
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                              />
-                            </div>
-                          ) : (
-                            <p className="mt-2 text-[11px] text-slate-500">
-                              Aucune position partagee pour cette demande.
-                            </p>
-                          )}
-                          {locationMessage && (
-                            <p
-                              className={`mt-2 text-[11px] ${
-                                locationUpdateState?.status === 'error'
-                                  ? 'text-rose-300'
-                                  : 'text-emerald-300'
-                              }`}
-                            >
-                              {locationMessage}
-                            </p>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateLocation(demande.id)}
-                            disabled={isUpdatingLocation}
-                            className="mt-3 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/60"
-                          >
-                            {isUpdatingLocation ? 'Mise a jour...' : 'Mettre a jour ma position'}
-                          </button>
+                        </div>
+
+                        <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
+                          <p className="text-[11px] uppercase tracking-wide text-slate-400">Brief IA</p>
+                          {renderPayloadSummary(demande)}
+                        </div>
+
+                        <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
+                          <p className="text-[11px] uppercase tracking-wide text-slate-400">Note admin</p>
+                          <p className="mt-1 text-xs text-slate-300">{demande.adminNote ?? 'Aucune note pour le moment.'}</p>
                         </div>
                       </div>
                     );
                   })
                 )}
               </div>
+
               {!demandesLoading && !demandesError && filteredDemandes.length > 0 && (
                 <div className="mt-4 flex items-center justify-between">
                   <button

@@ -55,7 +55,11 @@ final class DemandesViewModel: ObservableObject {
                   budget: Double?,
                   city: String?,
                   availability: String?,
-                  location: GeoLocation?) async {
+                  location: GeoLocation?,
+                  aiId: String? = nil,
+                  aiName: String? = nil,
+                  requestType: String? = nil,
+                  payload: DemandeAiPayload? = nil) async {
     do {
       try await DemandeService.addDemande(
         clientId: clientId,
@@ -67,7 +71,11 @@ final class DemandesViewModel: ObservableObject {
         budget: budget,
         city: city,
         availability: availability,
-        location: location
+        location: location,
+        aiId: aiId,
+        aiName: aiName,
+        requestType: requestType,
+        payload: payload
       )
     } catch {
       errorMessage = error.localizedDescription

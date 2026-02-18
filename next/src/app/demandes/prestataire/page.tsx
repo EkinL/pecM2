@@ -5,45 +5,17 @@ import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
   acceptDemande,
+  attachDemandeAiProfile,
   auth,
   cancelDemande,
+  createAiDraftFromDemande,
   fetchDemandesForPrestataireRealTime,
   fetchUtilisateurById,
+  updateAiProfileDetails,
+  updateAiProfileStatus,
+  updateDemandeAdminNote,
 } from '../../indexFirebase';
-
-type Timestamp = {
-  seconds?: number;
-  nanoseconds?: number;
-};
-
-type Demande = {
-  id: string;
-  title?: string;
-  description?: string;
-  category?: string;
-  budget?: number;
-  city?: string;
-  availability?: string;
-  status?: string;
-  clientPseudo?: string;
-  clientMail?: string;
-  clientId?: string;
-  location?: {
-    lat?: number;
-    lng?: number;
-    accuracy?: number;
-  };
-  locationUpdatedAt?: Timestamp;
-  createdAt?: Timestamp;
-  updatedAt?: Timestamp;
-  [key: string]: unknown;
-};
-
-type GeoLocation = {
-  lat: number;
-  lng: number;
-  accuracy?: number;
-};
+import { normalizeDemandeRequestType, type Demande, type DemandeRequestType, type Timestamp } from '../types';
 
 type Profil = {
   id: string;
@@ -66,6 +38,15 @@ const statusStyles: Record<string, string> = {
   accepted: 'bg-emerald-100/80 text-emerald-700 border border-emerald-400/70',
   cancelled: 'bg-rose-100/80 text-rose-700 border border-rose-400/70',
   other: 'bg-slate-100/80 text-slate-700 border border-slate-300/80',
+};
+
+const requestTypeLabels: Record<DemandeRequestType, string> = {
+  create_ai: 'Creation IA',
+  update_ai: 'Modification IA',
+  moderation: 'Moderation IA',
+  incident: 'Incident IA',
+  usage_ai: 'Usage IA',
+  other: 'Classique',
 };
 
 const normalizeStatus = (status?: string) => {
@@ -95,7 +76,7 @@ const formatDate = (value?: Timestamp | string) => {
       timeStyle: 'short',
     });
   }
-  if (typeof value === 'object' && value?.seconds) {
+  if (typeof value === 'object' && typeof value?.seconds === 'number') {
     return new Date(value.seconds * 1000).toLocaleString('fr-FR', {
       dateStyle: 'short',
       timeStyle: 'short',
@@ -103,36 +84,6 @@ const formatDate = (value?: Timestamp | string) => {
   }
   return '-';
 };
-
-const formatCoordinates = (location?: GeoLocation | null) => {
-  if (!location) {
-    return 'Position inconnue';
-  }
-  return `${location.lat.toFixed(5)}, ${location.lng.toFixed(5)}`;
-};
-
-const formatAccuracy = (accuracy?: number) => {
-  if (typeof accuracy !== 'number') {
-    return 'Precision inconnue';
-  }
-  return `±${Math.round(accuracy)} m`;
-};
-
-const buildMapEmbedUrl = (location: GeoLocation) => {
-  const delta = 0.02;
-  const left = location.lng - delta;
-  const right = location.lng + delta;
-  const top = location.lat + delta;
-  const bottom = location.lat - delta;
-  const bbox = `${left},${bottom},${right},${top}`;
-
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
-    bbox,
-  )}&layer=mapnik&marker=${location.lat}%2C${location.lng}`;
-};
-
-const buildMapLink = (location: GeoLocation) =>
-  `https://www.openstreetmap.org/?mlat=${location.lat}&mlon=${location.lng}#map=16/${location.lat}/${location.lng}`;
 
 const formatClientLabel = (demande: Demande) => {
   if (demande.clientPseudo) {
@@ -147,23 +98,67 @@ const formatClientLabel = (demande: Demande) => {
   return 'Client inconnu';
 };
 
+const timelineSteps = (demande: Demande) => {
+  const normalizedStatus = normalizeStatus(demande.status);
+  const isMatched =
+    normalizedStatus === 'matched' || normalizedStatus === 'accepted' || normalizedStatus === 'cancelled';
+  return [
+    {
+      key: 'created',
+      label: 'Demande creee',
+      done: true,
+      at: demande.createdAt,
+    },
+    {
+      key: 'matched',
+      label: 'Admin assigne',
+      done: isMatched || Boolean(demande.matchedAt),
+      at: demande.matchedAt ?? demande.updatedAt,
+    },
+    {
+      key: 'accepted',
+      label: 'Traitement accepte',
+      done: normalizedStatus === 'accepted',
+      at: demande.acceptedAt,
+    },
+    {
+      key: 'cancelled',
+      label: 'Demande annulee',
+      done: normalizedStatus === 'cancelled',
+      at: demande.cancelledAt,
+    },
+  ];
+};
+
+const toRequestPayload = (value: unknown): Record<string, unknown> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  return value as Record<string, unknown>;
+};
+
 export default function AdminDemandesPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<Profil | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [demandesLoading, setDemandesLoading] = useState(true);
   const [demandesError, setDemandesError] = useState<string | null>(null);
+
   const [actionState, setActionState] = useState<{
     id: string;
-    type: 'accept' | 'cancel';
+    type: 'accept' | 'cancel' | 'save_note' | 'create_ai' | 'sync_ai';
   } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
   const [demandeSearch, setDemandeSearch] = useState('');
   const [demandeStatusFilter, setDemandeStatusFilter] = useState('all');
   const [demandePage, setDemandePage] = useState(1);
+  const [adminNotes, setAdminNotes] = useState<Record<string, string>>({});
+
   const roleMismatch = Boolean(userId && profile?.role && profile.role !== 'admin');
 
   useEffect(() => {
@@ -204,9 +199,20 @@ export default function AdminDemandesPage() {
     const unsubscribe = fetchDemandesForPrestataireRealTime(
       userId,
       (data: unknown) => {
-        setDemandes(data as Demande[]);
+        const nextDemandes = data as Demande[];
+        setDemandes(nextDemandes);
         setDemandesLoading(false);
         setDemandesError(null);
+
+        setAdminNotes((prev) => {
+          const next = { ...prev };
+          nextDemandes.forEach((demande) => {
+            if (next[demande.id] === undefined) {
+              next[demande.id] = demande.adminNote ?? '';
+            }
+          });
+          return next;
+        });
       },
       () => {
         setDemandesError('Impossible de recuperer vos demandes.');
@@ -237,11 +243,14 @@ export default function AdminDemandesPage() {
       if (!search) {
         return true;
       }
+      const requestType = normalizeDemandeRequestType(demande.requestType);
       const haystack = [
         demande.title,
         demande.description,
         demande.category,
-        demande.city,
+        demande.aiName,
+        requestTypeLabels[requestType],
+        adminNotes[demande.id],
         demande.clientPseudo,
         demande.clientMail,
         demande.id,
@@ -251,15 +260,7 @@ export default function AdminDemandesPage() {
         .toLowerCase();
       return haystack.includes(search);
     });
-  }, [sortedDemandes, demandeSearch, demandeStatusFilter]);
-
-  const demandesPageSize = 5;
-  const totalDemandesPages = Math.max(1, Math.ceil(filteredDemandes.length / demandesPageSize));
-  const currentDemandesPage = Math.min(demandePage, totalDemandesPages);
-  const paginatedDemandes = useMemo(() => {
-    const start = (currentDemandesPage - 1) * demandesPageSize;
-    return filteredDemandes.slice(start, start + demandesPageSize);
-  }, [filteredDemandes, currentDemandesPage]);
+  }, [sortedDemandes, demandeSearch, demandeStatusFilter, adminNotes]);
 
   const statusSummary = useMemo(() => {
     return sortedDemandes.reduce(
@@ -272,17 +273,29 @@ export default function AdminDemandesPage() {
     );
   }, [sortedDemandes]);
 
+  const demandesPageSize = 5;
+  const totalDemandesPages = Math.max(1, Math.ceil(filteredDemandes.length / demandesPageSize));
+  const currentDemandesPage = Math.min(demandePage, totalDemandesPages);
+  const paginatedDemandes = useMemo(() => {
+    const start = (currentDemandesPage - 1) * demandesPageSize;
+    return filteredDemandes.slice(start, start + demandesPageSize);
+  }, [filteredDemandes, currentDemandesPage]);
+
+  const setBusy = (id: string, type: 'accept' | 'cancel' | 'save_note' | 'create_ai' | 'sync_ai') =>
+    setActionState({ id, type });
+
   const handleAccept = async (demandeId: string) => {
     if (!userId) {
       return;
     }
+
     setActionError(null);
     setActionSuccess(null);
-    setActionState({ id: demandeId, type: 'accept' });
+    setBusy(demandeId, 'accept');
 
     try {
       await acceptDemande({ demandeId, prestataireId: userId });
-      setActionSuccess('Demande acceptee. Le client est notifie.');
+      setActionSuccess('Demande acceptee.');
     } catch (error) {
       console.error("Erreur lors de l'acceptation", error);
       setActionError("Impossible d'accepter la demande.");
@@ -303,10 +316,10 @@ export default function AdminDemandesPage() {
 
     setActionError(null);
     setActionSuccess(null);
-    setActionState({ id: demandeId, type: 'cancel' });
+    setBusy(demandeId, 'cancel');
 
     try {
-      await cancelDemande({ demandeId, reason: 'Refus client' });
+      await cancelDemande({ demandeId, reason: 'Refus admin' });
       setActionSuccess('Demande annulee.');
     } catch (error) {
       console.error("Erreur lors de l'annulation", error);
@@ -316,14 +329,169 @@ export default function AdminDemandesPage() {
     }
   };
 
+  const handleSaveAdminNote = async (demandeId: string) => {
+    const note = adminNotes[demandeId] ?? '';
+    setActionError(null);
+    setActionSuccess(null);
+    setBusy(demandeId, 'save_note');
+
+    try {
+      await updateDemandeAdminNote({ demandeId, adminNote: note });
+      setActionSuccess('Note admin enregistree.');
+    } catch (error) {
+      console.error('Erreur sauvegarde note admin', error);
+      setActionError('Impossible de sauvegarder la note admin.');
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleCreateAiDraft = async (demande: Demande) => {
+    if (!demande.id || !demande.clientId) {
+      setActionError('Demande incomplete: client introuvable.');
+      return;
+    }
+
+    setActionError(null);
+    setActionSuccess(null);
+    setBusy(demande.id, 'create_ai');
+
+    try {
+      const brief = toRequestPayload(demande.payload);
+      const aiName =
+        demande.aiName ??
+        (typeof brief.objective === 'string' ? brief.objective : undefined) ??
+        demande.title ??
+        `IA ${demande.id.slice(0, 5)}`;
+
+      const draftRef = await createAiDraftFromDemande({
+        demandeId: demande.id,
+        ownerId: demande.clientId,
+        ownerMail: demande.clientMail,
+        aiName,
+        requestType: demande.requestType,
+        payload: brief,
+      });
+
+      await attachDemandeAiProfile({
+        demandeId: demande.id,
+        aiId: draftRef.id,
+        aiName,
+      });
+
+      setActionSuccess('Brouillon IA cree et lie a la demande.');
+    } catch (error) {
+      console.error('Erreur creation brouillon IA', error);
+      setActionError('Impossible de creer le brouillon IA.');
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const handleSyncToAiProfile = async (demande: Demande) => {
+    if (!demande.id || !demande.aiId || !userId) {
+      setActionError('Synchronisation impossible: IA non liee.');
+      return;
+    }
+
+    setActionError(null);
+    setActionSuccess(null);
+    setBusy(demande.id, 'sync_ai');
+
+    try {
+      const requestType = normalizeDemandeRequestType(demande.requestType);
+      const demandeStatus = normalizeStatus(demande.status);
+      const note = adminNotes[demande.id] ?? demande.adminNote;
+      const brief = toRequestPayload(demande.payload);
+
+      if (requestType === 'moderation' || requestType === 'incident') {
+        let targetStatus: 'pending' | 'active' | 'rejected' | 'suspended' = 'pending';
+        if (requestType === 'incident' && demandeStatus === 'accepted') {
+          targetStatus = 'suspended';
+        } else if (demandeStatus === 'accepted') {
+          targetStatus = 'active';
+        } else if (demandeStatus === 'cancelled') {
+          targetStatus = 'rejected';
+        }
+
+        await updateAiProfileStatus({
+          profileId: demande.aiId,
+          status: targetStatus,
+          adminId: userId,
+          adminMail: profile?.mail ?? undefined,
+          note,
+        });
+      }
+
+      if (requestType === 'update_ai') {
+        const updates: Record<string, unknown> = {};
+        if (typeof brief.mentality === 'string') {
+          updates.mentality = brief.mentality;
+        }
+        if (typeof brief.voice === 'string') {
+          updates.voice = brief.voice;
+        }
+        if (brief.look && typeof brief.look === 'object') {
+          updates.look = brief.look;
+        }
+        if (Object.keys(updates).length > 0) {
+          await updateAiProfileDetails({
+            profileId: demande.aiId,
+            updates,
+          });
+        }
+      }
+
+      await attachDemandeAiProfile({
+        demandeId: demande.id,
+        aiId: demande.aiId,
+        aiName: demande.aiName,
+      });
+
+      setActionSuccess('Demande synchronisee vers le profil IA.');
+    } catch (error) {
+      console.error('Erreur synchronisation demande -> IA', error);
+      setActionError('Impossible de synchroniser cette demande vers IA.');
+    } finally {
+      setActionState(null);
+    }
+  };
+
+  const renderPayloadSummary = (demande: Demande) => {
+    const entries = Object.entries(toRequestPayload(demande.payload)).filter(([, value]) => {
+      if (typeof value === 'string') {
+        return value.trim().length > 0;
+      }
+      if (Array.isArray(value)) {
+        return value.length > 0;
+      }
+      return Boolean(value);
+    });
+
+    if (!entries.length) {
+      return <p className="text-[11px] text-slate-500">Aucun detail structuré.</p>;
+    }
+
+    return (
+      <ul className="mt-2 grid gap-1 text-[11px] text-slate-400">
+        {entries.slice(0, 5).map(([key, value]) => (
+          <li key={key}>
+            {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 md:px-6 lg:px-8">
         <header className="space-y-3 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-900 to-slate-950/80 p-6 shadow-2xl shadow-slate-900/40 backdrop-blur">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Espace admin</p>
-          <h1 className="text-3xl font-semibold md:text-4xl">Liste des demandes a traiter</h1>
+          <h1 className="text-3xl font-semibold md:text-4xl">Demandes IA a traiter</h1>
           <p className="text-sm text-slate-400 md:text-base">
-            Acceptez ou annulez les demandes, le client est synchronise en temps reel.
+            Traitement des demandes IA assignees: timeline, note admin, creation de brouillon IA et
+            synchronisation vers `iaProfiles`.
           </p>
         </header>
 
@@ -344,20 +512,15 @@ export default function AdminDemandesPage() {
             <p className="mt-2 text-sm text-slate-400">
               Connectez-vous avec un compte admin pour acceder a cet espace.
             </p>
-            <Link
-              href="/demandes/client"
-              className="mt-4 inline-flex items-center rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
-            >
-              Aller aux demandes client
-            </Link>
           </section>
         ) : (
           <section className="rounded-3xl border border-white/5 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-xl font-semibold">Flux en temps reel</h2>
+                <h2 className="text-xl font-semibold">Flux demandes IA</h2>
                 <p className="text-sm text-slate-400">
-                  Appariement automatique, acceptation et annulation synchronises.
+                  Les demandes historiques restent visibles, les nouvelles demandes IA portent un
+                  `requestType`.
                 </p>
               </div>
               {profileLoading ? (
@@ -365,9 +528,7 @@ export default function AdminDemandesPage() {
               ) : profileError ? (
                 <span className="text-xs text-rose-300">{profileError}</span>
               ) : (
-                <span className="text-xs text-slate-500">
-                  Role: {profile?.role ?? 'non defini'}
-                </span>
+                <span className="text-xs text-slate-500">Role: {profile?.role ?? 'non defini'}</span>
               )}
             </div>
 
@@ -379,20 +540,16 @@ export default function AdminDemandesPage() {
 
             <div className="mt-4 grid gap-3 md:grid-cols-[1.3fr_0.7fr]">
               <div className="space-y-1">
-                <label className="text-[11px] uppercase tracking-wide text-slate-400">
-                  Recherche
-                </label>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">Recherche</label>
                 <input
                   value={demandeSearch}
                   onChange={(event) => setDemandeSearch(event.target.value)}
                   className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-600"
-                  placeholder="Client, ville, categorie..."
+                  placeholder="Client, IA, note admin..."
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] uppercase tracking-wide text-slate-400">
-                  Filtre statut
-                </label>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">Filtre statut</label>
                 <select
                   value={demandeStatusFilter}
                   onChange={(event) => setDemandeStatusFilter(event.target.value)}
@@ -407,6 +564,7 @@ export default function AdminDemandesPage() {
                 </select>
               </div>
             </div>
+
             <div className="mt-3 flex flex-wrap items-center justify-between text-[11px] text-slate-500">
               <span>
                 Resultats: {filteredDemandes.length} / {sortedDemandes.length}
@@ -433,26 +591,23 @@ export default function AdminDemandesPage() {
               ) : (
                 paginatedDemandes.map((demande) => {
                   const statusKey = normalizeStatus(demande.status);
+                  const requestType = normalizeDemandeRequestType(demande.requestType);
                   const isBusy = actionState?.id === demande.id;
                   const canAccept = statusKey === 'matched';
                   const canCancel = statusKey === 'matched' || statusKey === 'accepted';
-                  const hasLocation =
-                    typeof demande.location?.lat === 'number' &&
-                    typeof demande.location?.lng === 'number';
-                  const locationData = hasLocation
-                    ? {
-                        lat: demande.location?.lat as number,
-                        lng: demande.location?.lng as number,
-                        accuracy: demande.location?.accuracy,
-                      }
-                    : null;
+                  const noteValue = adminNotes[demande.id] ?? '';
+                  const timeline = timelineSteps(demande);
+                  const canCreateAiDraft =
+                    requestType === 'create_ai' && statusKey === 'accepted' && !demande.aiId;
+                  const canSyncAi =
+                    ['update_ai', 'moderation', 'incident'].includes(requestType) && Boolean(demande.aiId);
 
                   return (
                     <div
                       key={demande.id}
                       className="rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4"
                     >
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-semibold">
                           {demande.title ?? `Demande ${demande.id.slice(0, 5)}`}
                         </p>
@@ -462,57 +617,60 @@ export default function AdminDemandesPage() {
                           {statusLabels[statusKey]}
                         </span>
                       </div>
+
+                      <p className="mt-1 text-xs text-slate-400">Type: {requestTypeLabels[requestType]}</p>
+                      <p className="mt-1 text-xs text-slate-400">Client: {formatClientLabel(demande)}</p>
                       <p className="mt-1 text-xs text-slate-400">
-                        Client: {formatClientLabel(demande)}
+                        IA: {demande.aiName ?? 'Aucune'} {demande.aiId ? `(${demande.aiId.slice(0, 6)})` : ''}
                       </p>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {demande.category ?? 'Categorie libre'} - {demande.city ?? 'Ville inconnue'}
+                      <p className="mt-1 text-xs text-slate-500">
+                        Creee le {formatDate(demande.createdAt)} - Maj {formatDate(demande.updatedAt)}
                       </p>
+
                       {demande.description ? (
                         <p className="mt-2 text-xs text-slate-500">{demande.description}</p>
                       ) : null}
-                      <p className="mt-2 text-xs text-slate-500">
-                        Creee le {formatDate(demande.createdAt)} - Maj{' '}
-                        {formatDate(demande.updatedAt)}
-                      </p>
+
                       <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-                          <span>Position: {formatCoordinates(locationData)}</span>
-                          {locationData?.accuracy !== undefined && (
-                            <span>{formatAccuracy(locationData.accuracy)}</span>
-                          )}
-                        </div>
-                        {demande.locationUpdatedAt && (
-                          <p className="mt-1 text-[11px] text-slate-500">
-                            Maj position {formatDate(demande.locationUpdatedAt)}
-                          </p>
-                        )}
-                        {locationData ? (
-                          <div className="mt-2 space-y-2">
-                            <div className="aspect-[4/3] w-full overflow-hidden rounded-lg border border-slate-800/80">
-                              <iframe
-                                title={`Position client ${demande.id}`}
-                                src={buildMapEmbedUrl(locationData)}
-                                className="h-full w-full"
-                                loading="lazy"
-                                referrerPolicy="no-referrer-when-downgrade"
-                              />
+                        <p className="text-[11px] uppercase tracking-wide text-slate-400">Timeline</p>
+                        <div className="mt-2 grid gap-2">
+                          {timeline.map((step) => (
+                            <div key={step.key} className="flex items-center justify-between gap-3 text-xs">
+                              <span className={step.done ? 'text-emerald-300' : 'text-slate-500'}>
+                                {step.done ? '●' : '○'} {step.label}
+                              </span>
+                              <span className="text-slate-500">{step.done ? formatDate(step.at) : '-'}</span>
                             </div>
-                            <a
-                              href={buildMapLink(locationData)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[11px] font-semibold text-emerald-300 transition hover:text-emerald-200"
-                            >
-                              Ouvrir dans OpenStreetMap
-                            </a>
-                          </div>
-                        ) : (
-                          <p className="mt-2 text-[11px] text-slate-500">
-                            Position client non partagee.
-                          </p>
-                        )}
+                          ))}
+                        </div>
                       </div>
+
+                      <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
+                        <p className="text-[11px] uppercase tracking-wide text-slate-400">Brief IA</p>
+                        {renderPayloadSummary(demande)}
+                      </div>
+
+                      <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
+                        <label className="text-[11px] uppercase tracking-wide text-slate-400">Note admin</label>
+                        <textarea
+                          rows={2}
+                          value={noteValue}
+                          onChange={(event) =>
+                            setAdminNotes((prev) => ({ ...prev, [demande.id]: event.target.value }))
+                          }
+                          className="mt-2 w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-3 py-2 text-xs text-slate-200"
+                          placeholder="Message visible dans le suivi client"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveAdminNote(demande.id)}
+                          disabled={isBusy}
+                          className="mt-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isBusy && actionState?.type === 'save_note' ? 'Sauvegarde...' : 'Sauvegarder la note'}
+                        </button>
+                      </div>
+
                       <div className="mt-4 flex flex-wrap gap-2">
                         {demande.clientId ? (
                           <Link
@@ -522,6 +680,7 @@ export default function AdminDemandesPage() {
                             Logs client
                           </Link>
                         ) : null}
+
                         {canAccept && (
                           <button
                             type="button"
@@ -529,11 +688,10 @@ export default function AdminDemandesPage() {
                             disabled={isBusy}
                             className="rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:bg-emerald-500/50"
                           >
-                            {isBusy && actionState?.type === 'accept'
-                              ? 'Validation...'
-                              : 'Accepter'}
+                            {isBusy && actionState?.type === 'accept' ? 'Validation...' : 'Accepter'}
                           </button>
                         )}
+
                         {canCancel && (
                           <button
                             type="button"
@@ -544,12 +702,39 @@ export default function AdminDemandesPage() {
                             {isBusy && actionState?.type === 'cancel' ? 'Annulation...' : 'Annuler'}
                           </button>
                         )}
+
+                        {canCreateAiDraft && (
+                          <button
+                            type="button"
+                            onClick={() => handleCreateAiDraft(demande)}
+                            disabled={isBusy}
+                            className="rounded-lg border border-cyan-400/60 bg-cyan-500/10 px-3 py-1.5 text-xs font-semibold text-cyan-200 transition hover:border-cyan-300 disabled:cursor-not-allowed"
+                          >
+                            {isBusy && actionState?.type === 'create_ai'
+                              ? 'Creation IA...'
+                              : 'Creer IA depuis la demande'}
+                          </button>
+                        )}
+
+                        {canSyncAi && (
+                          <button
+                            type="button"
+                            onClick={() => handleSyncToAiProfile(demande)}
+                            disabled={isBusy}
+                            className="rounded-lg border border-indigo-400/60 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-200 transition hover:border-indigo-300 disabled:cursor-not-allowed"
+                          >
+                            {isBusy && actionState?.type === 'sync_ai'
+                              ? 'Synchronisation...'
+                              : 'Pousser vers IA profile'}
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
                 })
               )}
             </div>
+
             {!demandesLoading && !demandesError && filteredDemandes.length > 0 && (
               <div className="mt-4 flex items-center justify-between">
                 <button

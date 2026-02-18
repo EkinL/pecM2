@@ -38,7 +38,7 @@ struct AppConfig {
       nextApiBaseUrl = Self.fallbackNextApiBaseUrl
     }
 
-    let fallbackUrl = URL(string: "http://localhost:3000")!
+    let fallbackUrl = Self.fallbackNextApiBaseUrl
     nextApiBaseUrls = AppConfig.uniqueUrls([nextApiBaseUrl, fallbackUrl])
   }
 
