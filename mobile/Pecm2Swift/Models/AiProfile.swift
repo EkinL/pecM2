@@ -44,6 +44,8 @@ struct AiProfile: Codable, Identifiable {
   var reviewedAt: Date?
   var reviewedBy: String?
   var reviewedMail: String?
+  var sourceDemandeId: String?
+  var sourceRequestType: String?
   var createdAt: Date?
   var updatedAt: Date?
 }

@@ -180,7 +180,7 @@ export default function CreateAiPage() {
       });
   }, [authUser]);
 
-  const roleMismatch = Boolean(authUser && profileRole && profileRole !== 'client');
+  const roleMismatch = Boolean(authUser && profileRole === 'admin');
   const locationRequired = Boolean(authUser) && !roleMismatch;
   const locationReady = locationStatus === 'ready' || Boolean(manualCountry);
   const locationBlocked = locationRequired && !locationReady;
@@ -353,8 +353,10 @@ export default function CreateAiPage() {
       <div className="min-h-screen bg-slate-950 text-slate-100">
         <div className="mx-auto flex min-h-screen max-w-5xl items-center justify-center px-6 py-12">
           <div className="w-full max-w-lg space-y-4 rounded-3xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-2xl">
-            <h1 className="text-2xl font-semibold">Acces reserve aux clients</h1>
-            <p className="text-sm text-slate-400">Ce module est reserve aux comptes client.</p>
+            <h1 className="text-2xl font-semibold">Acces indisponible pour les admins</h1>
+            <p className="text-sm text-slate-400">
+              Ce formulaire de publication est accessible aux comptes non-admin.
+            </p>
             <button
               type="button"
               onClick={() => router.replace('/demandes/client')}

@@ -10,6 +10,64 @@ import {
   sanitizeOptionalString,
   pickRandomItem,
 } from '../helpers';
+import {
+  isAiDemandeRequest,
+  normalizeDemandeRequestType,
+  type DemandeAiPayload,
+  type DemandeRequestType,
+} from '../../demandes/types';
+
+const toSanitizedPayload = (payload: unknown): DemandeAiPayload | undefined => {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return undefined;
+  }
+
+  const sanitize = (value: unknown): unknown => {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed.length ? trimmed : undefined;
+    }
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : undefined;
+    }
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      const items = value.map((item) => sanitize(item)).filter((item) => item !== undefined);
+      return items.length ? items : undefined;
+    }
+    if (value && typeof value === 'object') {
+      const objectEntries = Object.entries(value as Record<string, unknown>)
+        .map(([key, nestedValue]) => [key, sanitize(nestedValue)] as const)
+        .filter(([, nestedValue]) => nestedValue !== undefined);
+      return objectEntries.length ? Object.fromEntries(objectEntries) : undefined;
+    }
+    return undefined;
+  };
+
+  const entries = Object.entries(payload as Record<string, unknown>)
+    .map(([key, value]) => [key, sanitize(value)] as const)
+    .filter(([, value]) => value !== undefined);
+
+  return entries.length ? (Object.fromEntries(entries) as DemandeAiPayload) : undefined;
+};
+
+const pickMatchedPrestataire = async ({ prioritizeAdmin }: { prioritizeAdmin: boolean }) => {
+  if (prioritizeAdmin) {
+    const adminsSnapshot = await getDocs(query(utilisateurs, where('role', '==', 'admin')));
+    const admins = mapSnapshot(adminsSnapshot);
+    if (admins.length > 0) {
+      return pickRandomItem(admins);
+    }
+  }
+
+  const prestatairesSnapshot = await getDocs(
+    query(utilisateurs, where('role', 'in', ['client', 'admin'])),
+  );
+  const prestataires = mapSnapshot(prestatairesSnapshot);
+  return prestataires.length > 0 ? pickRandomItem(prestataires) : undefined;
+};
 
 export const fetchDemandesRealTime = (onData: any, onError: any) =>
   createRealtimeListener(demandes, onData, onError, 'demandes');
@@ -53,19 +111,24 @@ export const addDemande = async ({
   city,
   availability,
   location,
+  aiId,
+  aiName,
+  requestType,
+  payload: aiPayloadInput,
 }: any) => {
   const normalizedClientId = normalizeRequiredString(clientId, 'Client ID');
   const normalizedTitle = normalizeRequiredString(title, 'Titre');
   const normalizedDescription = normalizeRequiredString(description, 'Description');
   const normalizedLocation = normalizeOptionalLocation(location);
+  const normalizedRequestType = normalizeDemandeRequestType(requestType);
+  const normalizedPayload = toSanitizedPayload(aiPayloadInput);
+  const isAiRequest =
+    isAiDemandeRequest(normalizedRequestType) ||
+    Boolean(sanitizeOptionalString(aiId) || sanitizeOptionalString(aiName) || normalizedPayload);
 
-  const prestatairesSnapshot = await getDocs(
-    query(utilisateurs, where('role', 'in', ['client', 'admin'])),
-  );
-  const prestataires = mapSnapshot(prestatairesSnapshot);
-  const matchedPrestataire = prestataires.length > 0 ? pickRandomItem(prestataires) : undefined;
+  const matchedPrestataire = await pickMatchedPrestataire({ prioritizeAdmin: isAiRequest });
 
-  const payload = {
+  const demandePayload = {
     clientId: normalizedClientId,
     clientMail: sanitizeOptionalString(clientMail),
     clientPseudo: sanitizeOptionalString(clientPseudo),
@@ -77,15 +140,20 @@ export const addDemande = async ({
     availability: sanitizeOptionalString(availability),
     location: normalizedLocation,
     locationUpdatedAt: normalizedLocation ? serverTimestamp() : undefined,
+    aiId: sanitizeOptionalString(aiId),
+    aiName: sanitizeOptionalString(aiName),
+    requestType: normalizedRequestType as DemandeRequestType,
+    payload: normalizedPayload,
     prestataireId: matchedPrestataire?.id,
     prestatairePseudo: sanitizeOptionalString(matchedPrestataire?.pseudo),
     prestataireMail: sanitizeOptionalString(matchedPrestataire?.mail),
     status: matchedPrestataire ? 'matched' : 'pending',
+    matchedAt: matchedPrestataire ? serverTimestamp() : undefined,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
 
-  return addDoc(demandes, omitUndefinedFields(payload));
+  return addDoc(demandes, omitUndefinedFields(demandePayload));
 };
 
 export const updateDemandeLocation = async ({ demandeId, location }: any) => {
@@ -122,6 +190,25 @@ export const cancelDemande = async ({ demandeId, reason }: any) => {
     status: 'cancelled',
     cancelReason: sanitizeOptionalString(reason),
     cancelledAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const updateDemandeAdminNote = async ({ demandeId, adminNote }: any) => {
+  const normalizedDemandeId = normalizeRequiredString(demandeId, 'Demande ID');
+  return updateDoc(doc(demandes, normalizedDemandeId), {
+    adminNote: sanitizeOptionalString(adminNote),
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const attachDemandeAiProfile = async ({ demandeId, aiId, aiName }: any) => {
+  const normalizedDemandeId = normalizeRequiredString(demandeId, 'Demande ID');
+  const normalizedAiId = normalizeRequiredString(aiId, 'IA ID');
+
+  return updateDoc(doc(demandes, normalizedDemandeId), {
+    aiId: normalizedAiId,
+    aiName: sanitizeOptionalString(aiName),
     updatedAt: serverTimestamp(),
   });
 };

@@ -1,6 +1,21 @@
 import Foundation
 import FirebaseFirestoreSwift
 
+struct DemandeAiPayload: Codable {
+  var objective: String?
+  var tone: String?
+  var constraints: String?
+  var requestedChanges: String?
+  var currentStatus: String?
+  var requestedStatus: String?
+  var incidentType: String?
+  var incidentSeverity: String?
+  var incidentContext: String?
+  var mentality: String?
+  var voice: String?
+  var look: [String: String]?
+}
+
 struct Demande: Codable, Identifiable {
   @DocumentID var id: String?
   var clientId: String?
@@ -23,4 +38,10 @@ struct Demande: Codable, Identifiable {
   var acceptedAt: Date?
   var cancelledAt: Date?
   var cancelReason: String?
+  var matchedAt: Date?
+  var aiId: String?
+  var aiName: String?
+  var requestType: String?
+  var payload: DemandeAiPayload?
+  var adminNote: String?
 }
