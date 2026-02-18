@@ -15,7 +15,12 @@ import {
   updateAiProfileStatus,
   updateDemandeAdminNote,
 } from '../../indexFirebase';
-import { normalizeDemandeRequestType, type Demande, type DemandeRequestType, type Timestamp } from '../types';
+import {
+  normalizeDemandeRequestType,
+  type Demande,
+  type DemandeRequestType,
+  type Timestamp,
+} from '../types';
 
 type Profil = {
   id: string;
@@ -119,7 +124,9 @@ const formatClientLabel = (demande: Demande) => {
 const timelineSteps = (demande: Demande) => {
   const normalizedStatus = normalizeStatus(demande.status);
   const isMatched =
-    normalizedStatus === 'matched' || normalizedStatus === 'accepted' || normalizedStatus === 'cancelled';
+    normalizedStatus === 'matched' ||
+    normalizedStatus === 'accepted' ||
+    normalizedStatus === 'cancelled';
   return [
     {
       key: 'created',
@@ -611,7 +618,9 @@ export default function AdminDemandesPage() {
               ) : profileError ? (
                 <span className="text-xs text-rose-300">{profileError}</span>
               ) : (
-                <span className="text-xs text-slate-500">Role: {profile?.role ?? 'non defini'}</span>
+                <span className="text-xs text-slate-500">
+                  Role: {profile?.role ?? 'non defini'}
+                </span>
               )}
             </div>
 
@@ -623,7 +632,9 @@ export default function AdminDemandesPage() {
 
             <div className="mt-4 grid gap-3 md:grid-cols-[1.3fr_0.7fr]">
               <div className="space-y-1">
-                <label className="text-[11px] uppercase tracking-wide text-slate-400">Recherche</label>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">
+                  Recherche
+                </label>
                 <input
                   value={demandeSearch}
                   onChange={(event) => setDemandeSearch(event.target.value)}
@@ -632,7 +643,9 @@ export default function AdminDemandesPage() {
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] uppercase tracking-wide text-slate-400">Filtre statut</label>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">
+                  Filtre statut
+                </label>
                 <select
                   value={demandeStatusFilter}
                   onChange={(event) => setDemandeStatusFilter(event.target.value)}
@@ -683,7 +696,8 @@ export default function AdminDemandesPage() {
                   const canCreateAiDraft =
                     requestType === 'create_ai' && statusKey === 'accepted' && !demande.aiId;
                   const canSyncAi =
-                    ['update_ai', 'moderation', 'incident'].includes(requestType) && Boolean(demande.aiId);
+                    ['update_ai', 'moderation', 'incident'].includes(requestType) &&
+                    Boolean(demande.aiId);
 
                   return (
                     <div
@@ -701,13 +715,19 @@ export default function AdminDemandesPage() {
                         </span>
                       </div>
 
-                      <p className="mt-1 text-xs text-slate-400">Type: {requestTypeLabels[requestType]}</p>
-                      <p className="mt-1 text-xs text-slate-400">Client: {formatClientLabel(demande)}</p>
                       <p className="mt-1 text-xs text-slate-400">
-                        IA: {demande.aiName ?? 'Aucune'} {demande.aiId ? `(${demande.aiId.slice(0, 6)})` : ''}
+                        Type: {requestTypeLabels[requestType]}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        Client: {formatClientLabel(demande)}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        IA: {demande.aiName ?? 'Aucune'}{' '}
+                        {demande.aiId ? `(${demande.aiId.slice(0, 6)})` : ''}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
-                        Creee le {formatDate(demande.createdAt)} - Maj {formatDate(demande.updatedAt)}
+                        Creee le {formatDate(demande.createdAt)} - Maj{' '}
+                        {formatDate(demande.updatedAt)}
                       </p>
 
                       {demande.description ? (
@@ -715,26 +735,37 @@ export default function AdminDemandesPage() {
                       ) : null}
 
                       <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
-                        <p className="text-[11px] uppercase tracking-wide text-slate-400">Timeline</p>
+                        <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                          Timeline
+                        </p>
                         <div className="mt-2 grid gap-2">
                           {timeline.map((step) => (
-                            <div key={step.key} className="flex items-center justify-between gap-3 text-xs">
+                            <div
+                              key={step.key}
+                              className="flex items-center justify-between gap-3 text-xs"
+                            >
                               <span className={step.done ? 'text-emerald-300' : 'text-slate-500'}>
                                 {step.done ? '●' : '○'} {step.label}
                               </span>
-                              <span className="text-slate-500">{step.done ? formatDate(step.at) : '-'}</span>
+                              <span className="text-slate-500">
+                                {step.done ? formatDate(step.at) : '-'}
+                              </span>
                             </div>
                           ))}
                         </div>
                       </div>
 
                       <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
-                        <p className="text-[11px] uppercase tracking-wide text-slate-400">Brief IA</p>
+                        <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                          Brief IA
+                        </p>
                         {renderPayloadSummary(demande)}
                       </div>
 
                       <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
-                        <label className="text-[11px] uppercase tracking-wide text-slate-400">Note admin</label>
+                        <label className="text-[11px] uppercase tracking-wide text-slate-400">
+                          Note admin
+                        </label>
                         <textarea
                           rows={2}
                           value={noteValue}
@@ -750,7 +781,9 @@ export default function AdminDemandesPage() {
                           disabled={isBusy}
                           className="mt-2 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {isBusy && actionState?.type === 'save_note' ? 'Sauvegarde...' : 'Sauvegarder la note'}
+                          {isBusy && actionState?.type === 'save_note'
+                            ? 'Sauvegarde...'
+                            : 'Sauvegarder la note'}
                         </button>
                       </div>
 
@@ -771,7 +804,9 @@ export default function AdminDemandesPage() {
                             disabled={isBusy || status === 'in_review'}
                             className="rounded-lg border border-sky-400/60 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-200 transition hover:border-sky-300 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {isBusy && actionState?.type === 'accept' ? 'Validation...' : 'Accepter'}
+                            {isBusy && actionState?.type === 'accept'
+                              ? 'Validation...'
+                              : 'Accepter'}
                           </button>
                         )}
 
