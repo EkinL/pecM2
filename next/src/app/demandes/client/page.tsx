@@ -205,7 +205,7 @@ export default function ClientDemandesPage() {
   const [demandeStatusFilter, setDemandeStatusFilter] = useState('all');
   const [demandePage, setDemandePage] = useState(1);
 
-  const roleMismatch = Boolean(userId && profile?.role && profile.role !== 'client');
+  const roleMismatch = Boolean(userId && profile?.role === 'admin');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -363,8 +363,8 @@ export default function ClientDemandesPage() {
       return;
     }
 
-    if (profile?.role && profile.role !== 'client') {
-      setSubmitError("Ce compte n'est pas un profil client.");
+    if (profile?.role === 'admin') {
+      setSubmitError('Ce formulaire est reserve aux comptes non-admin.');
       return;
     }
 
@@ -679,9 +679,9 @@ export default function ClientDemandesPage() {
           </section>
         ) : roleMismatch ? (
           <section className="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-lg shadow-black/40">
-            <h2 className="text-lg font-semibold">Acces reserve aux clients</h2>
+            <h2 className="text-lg font-semibold">Acces indisponible pour les admins</h2>
             <p className="mt-2 text-sm text-slate-400">
-              Connectez-vous avec un compte client pour acceder a cet espace.
+              Connectez-vous avec un compte non-admin pour acceder a cet espace.
             </p>
           </section>
         ) : (
