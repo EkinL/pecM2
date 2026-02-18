@@ -49,7 +49,9 @@ struct DemandesAdminView: View {
       }
       .navigationTitle("Demandes")
       .onAppear {
-        viewModel.listenAll()
+        if let adminId = session.user?.uid {
+          viewModel.listenForPrestataire(prestataireId: adminId)
+        }
       }
       .onChange(of: viewModel.errorMessage) { newValue in
         guard let newValue, !newValue.isEmpty else { return }

@@ -8,6 +8,7 @@ scrape_configs:
       - targets: ['prometheus:9090']
 
   - job_name: next-app
+    scheme: https
     metrics_path: /api/metrics
     static_configs:
-      - targets: ['host.docker.internal:3000']
+      - targets: ['pec-m2.vercel.app']

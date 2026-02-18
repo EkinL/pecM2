@@ -1,14 +1,16 @@
-# Monitoring local (Grafana + Prometheus)
+# Monitoring (Grafana + Prometheus)
 
-Cette stack lit les metriques de l'app Next via `http://localhost:3000/api/metrics`.
+Cette stack lit les metriques de l'app Next via `https://pec-m2.vercel.app/api/metrics`.
 Docker Desktop (ou un daemon Docker equivalent) doit etre demarre avant `docker compose`.
 
-## 1) Lancer l'app Next
+## 1) (Optionnel) Lancer l'app Next en local
 
 ```bash
 cd next
 npm run dev
 ```
+
+Utile uniquement si tu veux reconfigurer Prometheus pour cibler une instance locale.
 
 ## 2) Lancer Prometheus + Grafana
 
@@ -33,7 +35,10 @@ docker compose --env-file monitoring/.env -f monitoring/docker-compose.yml down
 
 ## 5) Notes
 
-- Cible Prometheus par defaut: `host.docker.internal:3000` sur `/api/metrics`
+- Cible Prometheus par defaut: `https://pec-m2.vercel.app/api/metrics`
+- Pour cibler le local, ajuste `monitoring/prometheus/prometheus.yml`:
+  - `scheme: http`
+  - `targets: ['host.docker.internal:3000']`
 - Sur Linux natif, `host.docker.internal` est mappe via `extra_hosts` dans le compose.
 - Change les identifiants Grafana avec:
   - `GRAFANA_ADMIN_USER`

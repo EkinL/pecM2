@@ -5,8 +5,6 @@ struct DemandeFormData {
   var description: String
   var category: String?
   var budget: Double?
-  var city: String?
-  var availability: String?
 }
 
 struct DemandeFormView: View {
@@ -15,8 +13,6 @@ struct DemandeFormView: View {
   @State private var description = ""
   @State private var category = ""
   @State private var budget = ""
-  @State private var city = ""
-  @State private var availability = ""
 
   var onSubmit: (DemandeFormData) -> Void
 
@@ -82,31 +78,7 @@ struct DemandeFormView: View {
                   textContentType: nil,
                   autocapitalization: .never,
                   autocorrectionDisabled: true,
-                  submitLabel: .next
-                )
-
-                AppTextField(
-                  label: "Ville",
-                  placeholder: "Ex: Paris",
-                  text: $city,
-                  keyboardType: .default,
-                  textContentType: .addressCity,
-                  autocapitalization: .words,
-                  autocorrectionDisabled: false,
-                  submitLabel: .next
-                )
-
-                AppTextField(
-                  label: "Disponibilité",
-                  placeholder: "Ex: Soirs et week-ends",
-                  text: $availability,
-                  keyboardType: .default,
-                  textContentType: nil,
-                  autocapitalization: .sentences,
-                  autocorrectionDisabled: false,
                   submitLabel: .done,
-                  axis: .vertical,
-                  lineLimit: 1...3
                 )
               }
             }
@@ -118,9 +90,7 @@ struct DemandeFormView: View {
               title: title,
               description: description,
               category: category.isEmpty ? nil : category,
-              budget: budgetValue,
-              city: city.isEmpty ? nil : city,
-              availability: availability.isEmpty ? nil : availability
+              budget: budgetValue
             ))
             Haptics.success()
             dismiss()
