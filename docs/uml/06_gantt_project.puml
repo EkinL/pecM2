@@ -1,0 +1,142 @@
+@startgantt
+title Diagramme de Gantt — pecM2
+
+printscale weekly
+project starts 2025-01-06
+
+-- Infrastructure & Setup --
+[Firebase (Auth, Firestore, Storage)] as [FIREBASE] requires 5 days
+[OpenAI / HuggingFace API setup] as [API_SETUP] requires 2 days
+[Initialisation Next.js + Tailwind] as [NEXT_INIT] requires 2 days
+[Firestore rules & Storage rules] as [RULES] requires 3 days
+[RULES] starts at [FIREBASE]'s end
+
+-- Authentification --
+[Auth web (email, Apple, Google)] as [AUTH_WEB] requires 5 days
+[AUTH_WEB] starts at [NEXT_INIT]'s end
+[AUTH_WEB] starts at [FIREBASE]'s end
+[Gestion rôles & profils utilisateurs] as [ROLES] requires 3 days
+[ROLES] starts at [AUTH_WEB]'s end
+
+-- Profils IA --
+[Modèle iaProfiles Firestore] as [IA_MODEL] requires 3 days
+[IA_MODEL] starts at [RULES]'s end
+[Formulaire création IA (20+ champs)] as [IA_FORM] requires 8 days
+[IA_FORM] starts at [IA_MODEL]'s end
+[IA_FORM] starts at [ROLES]'s end
+[Catalogue IA & page détail] as [IA_CATALOG] requires 4 days
+[IA_CATALOG] starts at [IA_MODEL]'s end
+[Gestion IA par propriétaire] as [IA_OWNER] requires 3 days
+[IA_OWNER] starts at [IA_CATALOG]'s end
+
+-- Génération Avatar IA --
+[API génération image (OpenAI)] as [IMG_GEN] requires 6 days
+[IMG_GEN] starts at [API_SETUP]'s end
+[IMG_GEN] starts at [IA_MODEL]'s end
+[Stockage avatar (Storage + chunks)] as [IMG_STORE] requires 4 days
+[IMG_STORE] starts at [IMG_GEN]'s end
+[Détection safety & rejet auto] as [IMG_SAFETY] requires 3 days
+[IMG_SAFETY] starts at [IMG_GEN]'s end
+
+-- Chat IA --
+[API reply (GPT-4o-mini + fallback HF)] as [AI_REPLY] requires 7 days
+[AI_REPLY] starts at [API_SETUP]'s end
+[AI_REPLY] starts at [ROLES]'s end
+[Mémoire conversationnelle (aiMemory)] as [AI_MEMORY] requires 4 days
+[AI_MEMORY] starts at [AI_REPLY]'s end
+[API TTS (voix IA dynamique)] as [AI_TTS] requires 4 days
+[AI_TTS] starts at [AI_REPLY]'s end
+
+-- Conversations --
+[Send message + transaction tokens] as [MSG_SEND] requires 5 days
+[MSG_SEND] starts at [AI_REPLY]'s end
+[MSG_SEND] starts at [ROLES]'s end
+[Page conversation temps réel] as [CONV_PAGE] requires 6 days
+[CONV_PAGE] starts at [MSG_SEND]'s end
+[CONV_PAGE] starts at [IMG_STORE]'s end
+[Historique conversations] as [HISTO] requires 3 days
+[HISTO] starts at [CONV_PAGE]'s end
+
+-- Géolocalisation & Tokens --
+[API géolocalisation (Nominatim)] as [GEO] requires 3 days
+[GEO] starts at [NEXT_INIT]'s end
+[Système de tokens (pricing dynamique)] as [TOKENS] requires 6 days
+[TOKENS] starts at [GEO]'s end
+[TOKENS] starts at [ROLES]'s end
+[Cloud Function getTokenPrice] as [CF_PRICE] requires 3 days
+[CF_PRICE] starts at [TOKENS]'s end
+
+-- Demandes --
+[CRUD demandes client] as [DEM_CLIENT] requires 5 days
+[DEM_CLIENT] starts at [ROLES]'s end
+[Vue prestataire & accept/reject] as [DEM_PRESTA] requires 4 days
+[DEM_PRESTA] starts at [DEM_CLIENT]'s end
+
+-- Admin --
+[Dashboard admin (KPI, listeners temps réel)] as [ADMIN_DASH] requires 10 days
+[ADMIN_DASH] starts at [CONV_PAGE]'s end
+[ADMIN_DASH] starts at [TOKENS]'s end
+[Validation IA (approve/reject + image)] as [ADMIN_IA] requires 4 days
+[ADMIN_IA] starts at [IMG_GEN]'s end
+[ADMIN_IA] starts at [IA_FORM]'s end
+[Admin tokens (pricing + carte geo)] as [ADMIN_TOK] requires 4 days
+[ADMIN_TOK] starts at [CF_PRICE]'s end
+[Admin conversations] as [ADMIN_CONV] requires 3 days
+[ADMIN_CONV] starts at [HISTO]'s end
+[Admin RGPD (suppression comptes)] as [ADMIN_RGPD] requires 4 days
+[ADMIN_RGPD] starts at [ADMIN_DASH]'s end
+[Admin logs (activity logging)] as [ADMIN_LOGS] requires 4 days
+[ADMIN_LOGS] starts at [ADMIN_DASH]'s end
+
+-- Observabilité --
+[Métriques Prometheus custom] as [PROM_METRICS] requires 5 days
+[PROM_METRICS] starts at [CONV_PAGE]'s end
+[Stack monitoring (Docker Grafana)] as [GRAFANA] requires 4 days
+[GRAFANA] starts at [PROM_METRICS]'s end
+[Dashboard sparklines & tendances] as [SPARK] requires 3 days
+[SPARK] starts at [PROM_METRICS]'s end
+
+-- Mobile iOS --
+[Architecture MVVM + Firebase iOS] as [IOS_ARCH] requires 5 days
+[IOS_ARCH] starts at [AUTH_WEB]'s end
+[Auth iOS (email + Apple Sign-In)] as [IOS_AUTH] requires 4 days
+[IOS_AUTH] starts at [IOS_ARCH]'s end
+[Catalogue IA iOS] as [IOS_IA] requires 4 days
+[IOS_IA] starts at [IOS_AUTH]'s end
+[IOS_IA] starts at [IA_CATALOG]'s end
+[Chat iOS (messages + TTS)] as [IOS_CHAT] requires 6 days
+[IOS_CHAT] starts at [IOS_AUTH]'s end
+[IOS_CHAT] starts at [CONV_PAGE]'s end
+[Demandes iOS] as [IOS_DEM] requires 4 days
+[IOS_DEM] starts at [IOS_AUTH]'s end
+[IOS_DEM] starts at [DEM_PRESTA]'s end
+[Admin iOS (dashboard + gestion)] as [IOS_ADMIN] requires 6 days
+[IOS_ADMIN] starts at [IOS_CHAT]'s end
+[IOS_ADMIN] starts at [ADMIN_DASH]'s end
+[Design system iOS (AppTheme)] as [IOS_DESIGN] requires 4 days
+[IOS_DESIGN] starts at [IOS_ARCH]'s end
+[RGPD iOS + CGU] as [IOS_RGPD] requires 3 days
+[IOS_RGPD] starts at [IOS_AUTH]'s end
+[IOS_RGPD] starts at [ADMIN_RGPD]'s end
+
+-- CI/CD --
+[Husky + commit conventionnel] as [HUSKY] requires 1 day
+[HUSKY] starts at [NEXT_INIT]'s end
+[ESLint + Prettier + TypeScript] as [LINT] requires 2 days
+[LINT] starts at [NEXT_INIT]'s end
+[Jest tests unitaires (6 suites)] as [TESTS] requires 5 days
+[TESTS] starts at [IA_FORM]'s end
+[TESTS] starts at [TOKENS]'s end
+[CI iOS (GitHub Actions + Fastlane)] as [IOS_CI] requires 5 days
+[IOS_CI] starts at [IOS_CHAT]'s end
+
+-- Documentation --
+[Diagrammes UML (5 PlantUML)] as [UML] requires 4 days
+[UML] starts at [ADMIN_DASH]'s end
+[UML] starts at [IOS_ADMIN]'s end
+[Cahier des charges] as [CDC] requires 3 days
+[CDC] starts at [UML]'s end
+[README projet] as [README] requires 1 day
+[README] starts at [CDC]'s end
+
+@endgantt
