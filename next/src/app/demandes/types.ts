@@ -86,4 +86,3 @@ export const normalizeDemandeRequestType = (value: unknown): DemandeRequestType 
 
 export const isAiDemandeRequest = (requestType: unknown): boolean =>
   normalizeDemandeRequestType(requestType) !== 'other';
-

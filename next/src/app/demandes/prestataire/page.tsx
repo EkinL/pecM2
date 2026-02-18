@@ -29,24 +29,6 @@ type Profil = {
   role?: string;
 };
 
-type Utilisateur = {
-  id: string;
-  mail?: string;
-  pseudo?: string;
-  accountDeletionRequestedAt?: unknown;
-  accountDeletionRequestStatus?: string;
-  accountDeletionRequestSource?: string;
-  accountDeletionRequestContactEmail?: string;
-  accountDeletionRequestPseudo?: string;
-  accountDeletionReviewedAt?: unknown;
-  accountDeletionReviewedBy?: string;
-  accountDeletionReviewedByMail?: string;
-  updatedAt?: unknown;
-  [key: string]: unknown;
-};
-
-type DeletionStatus = 'all' | 'pending' | 'in_review' | 'completed' | 'rejected';
-
 const demandeStatusLabels: Record<string, string> = {
   pending: 'En attente',
   matched: 'A confirmer',
@@ -249,30 +231,6 @@ export default function AdminDemandesPage() {
   }, [userId, roleMismatch]);
 
   useEffect(() => {
-    if (!userId || roleMismatch) {
-      setDeletionUsers([]);
-      setDeletionUsersLoading(false);
-      return;
-    }
-
-    setDeletionUsersLoading(true);
-
-    const unsubscribe = fetchUtilisateursRealTime(
-      (data: unknown) => {
-        setDeletionUsers((Array.isArray(data) ? data : []) as Utilisateur[]);
-        setDeletionUsersLoading(false);
-        setDeletionUsersError(null);
-      },
-      () => {
-        setDeletionUsersError('Impossible de recuperer les demandes RGPD.');
-        setDeletionUsersLoading(false);
-      },
-    );
-
-    return () => unsubscribe?.();
-  }, [userId, roleMismatch]);
-
-  useEffect(() => {
     setDemandePage(1);
   }, [demandeSearch, demandeStatusFilter]);
 
@@ -347,9 +305,9 @@ export default function AdminDemandesPage() {
       setActionSuccess('Demande acceptee.');
     } catch (error) {
       console.error("Erreur lors de l'acceptation", error);
-      setDemandeActionError("Impossible d'accepter la demande.");
+      setActionError("Impossible d'accepter la demande.");
     } finally {
-      setDemandeActionState(null);
+      setActionState(null);
     }
   };
 
@@ -372,50 +330,9 @@ export default function AdminDemandesPage() {
       setActionSuccess('Demande annulee.');
     } catch (error) {
       console.error("Erreur lors de l'annulation", error);
-      setDemandeActionError("Impossible d'annuler la demande.");
+      setActionError("Impossible d'annuler la demande.");
     } finally {
-      setDemandeActionState(null);
-    }
-  };
-
-  const handleUpdateDeletionStatus = async (
-    user: Utilisateur,
-    nextStatus: Exclude<DeletionStatus, 'all'>,
-  ) => {
-    const currentStatus = normalizeDeletionStatus(user.accountDeletionRequestStatus);
-    if (currentStatus === nextStatus || !userId) {
-      return;
-    }
-
-    if (nextStatus === 'completed' || nextStatus === 'rejected') {
-      const actionLabel = nextStatus === 'completed' ? 'traitee' : 'refusee';
-      const confirmed = window.confirm(
-        `Confirmer: marquer la demande de ${formatDeletionUserLabel(user)} comme ${actionLabel} ?`,
-      );
-      if (!confirmed) {
-        return;
-      }
-    }
-
-    setDeletionActionError(null);
-    setDeletionActionSuccess(null);
-    setDeletionActionState({ userId: user.id, status: nextStatus });
-
-    try {
-      await updateUtilisateurDeletionRequestStatus({
-        userId: user.id,
-        status: nextStatus,
-        adminId: userId,
-        adminMail: profile?.mail,
-      });
-      setDeletionActionSuccess(
-        `Demande de ${formatDeletionUserLabel(user)} mise a jour: ${deletionStatusLabels[nextStatus]}.`,
-      );
-    } catch (error) {
-      console.error('Erreur lors de la mise a jour de la demande RGPD', error);
-      setDeletionActionError('Impossible de mettre a jour le statut de la demande.');
-    } finally {
-      setDeletionActionState(null);
+      setActionState(null);
     }
   };
 
@@ -709,9 +626,9 @@ export default function AdminDemandesPage() {
                           {demande.title ?? `Demande ${demande.id.slice(0, 5)}`}
                         </p>
                         <span
-                          className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${statusStyles[statusKey]}`}
+                          className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${demandeStatusStyles[statusKey]}`}
                         >
-                          {statusLabels[statusKey]}
+                          {demandeStatusLabels[statusKey]}
                         </span>
                       </div>
 
@@ -790,7 +707,7 @@ export default function AdminDemandesPage() {
                       <div className="mt-4 flex flex-wrap gap-2">
                         {demande.clientId ? (
                           <Link
-                            href={`/admin/users/${user.id}/logs`}
+                            href={`/admin/users/${demande.clientId}/logs`}
                             className="rounded-lg border border-slate-700/70 bg-slate-900/40 px-3 py-1.5 text-xs font-semibold text-slate-200 transition hover:border-slate-500"
                           >
                             Logs user
@@ -800,8 +717,8 @@ export default function AdminDemandesPage() {
                         {canAccept && (
                           <button
                             type="button"
-                            onClick={() => void handleUpdateDeletionStatus(user, 'in_review')}
-                            disabled={isBusy || status === 'in_review'}
+                            onClick={() => void handleAccept(demande.id)}
+                            disabled={isBusy}
                             className="rounded-lg border border-sky-400/60 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-200 transition hover:border-sky-300 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             {isBusy && actionState?.type === 'accept'
@@ -813,13 +730,11 @@ export default function AdminDemandesPage() {
                         {canCancel && (
                           <button
                             type="button"
-                            onClick={() => void handleUpdateDeletionStatus(user, 'completed')}
-                            disabled={isBusy || status === 'completed'}
+                            onClick={() => void handleCancel(demande.id)}
+                            disabled={isBusy}
                             className="rounded-lg border border-emerald-400/60 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-200 transition hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            {isBusy && deletionActionState?.status === 'completed'
-                              ? 'Mise a jour...'
-                              : 'Marquer traitee'}
+                            {isBusy && actionState?.type === 'cancel' ? 'Annulation...' : 'Annuler'}
                           </button>
                         )}
 
@@ -874,8 +789,8 @@ export default function AdminDemandesPage() {
                   Page suivante
                 </button>
               </div>
-            </section>
-          </>
+            )}
+          </section>
         )}
       </div>
     </div>

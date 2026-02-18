@@ -128,7 +128,9 @@ const formatDate = (value?: Timestamp | string) => {
 const timelineSteps = (demande: Demande) => {
   const normalizedStatus = normalizeStatus(demande.status);
   const isMatched =
-    normalizedStatus === 'matched' || normalizedStatus === 'accepted' || normalizedStatus === 'cancelled';
+    normalizedStatus === 'matched' ||
+    normalizedStatus === 'accepted' ||
+    normalizedStatus === 'cancelled';
   return [
     {
       key: 'created',
@@ -649,10 +651,12 @@ export default function ClientDemandesPage() {
       <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 md:px-6 lg:px-8">
         <header className="space-y-3 rounded-3xl border border-slate-800/80 bg-gradient-to-br from-slate-900/80 via-slate-900 to-slate-950/80 p-6 shadow-2xl shadow-slate-900/40 backdrop-blur">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Espace client</p>
-          <h1 className="text-3xl font-semibold md:text-4xl">Demandes IA: nouvelle demande & suivi</h1>
+          <h1 className="text-3xl font-semibold md:text-4xl">
+            Demandes IA: nouvelle demande & suivi
+          </h1>
           <p className="text-sm text-slate-400 md:text-base">
-            Creez une demande IA (creation, moderation, incident, modification) et suivez son traitement
-            par un admin assigne.
+            Creez une demande IA (creation, moderation, incident, modification) et suivez son
+            traitement par un admin assigne.
           </p>
           <div className="flex flex-wrap gap-2 text-xs">
             <Link
@@ -699,13 +703,17 @@ export default function ClientDemandesPage() {
                 ) : profileError ? (
                   <span className="text-xs text-rose-300">{profileError}</span>
                 ) : (
-                  <span className="text-xs text-slate-500">Role: {profile?.role ?? 'non defini'}</span>
+                  <span className="text-xs text-slate-500">
+                    Role: {profile?.role ?? 'non defini'}
+                  </span>
                 )}
               </div>
 
               <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">
-                  <label className="text-xs uppercase tracking-wide text-slate-400">Type de demande IA</label>
+                  <label className="text-xs uppercase tracking-wide text-slate-400">
+                    Type de demande IA
+                  </label>
                   <div className="flex flex-wrap gap-2">
                     {requestTypeOptions.map((option) => {
                       const isActive = selectedRequestType === option.id;
@@ -736,7 +744,10 @@ export default function ClientDemandesPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label htmlFor="title" className="text-xs uppercase tracking-wide text-slate-400">
+                    <label
+                      htmlFor="title"
+                      className="text-xs uppercase tracking-wide text-slate-400"
+                    >
                       Titre
                     </label>
                     <input
@@ -749,7 +760,10 @@ export default function ClientDemandesPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="category" className="text-xs uppercase tracking-wide text-slate-400">
+                    <label
+                      htmlFor="category"
+                      className="text-xs uppercase tracking-wide text-slate-400"
+                    >
                       Categorie
                     </label>
                     <select
@@ -769,7 +783,10 @@ export default function ClientDemandesPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="description" className="text-xs uppercase tracking-wide text-slate-400">
+                  <label
+                    htmlFor="description"
+                    className="text-xs uppercase tracking-wide text-slate-400"
+                  >
                     Description
                   </label>
                   <textarea
@@ -783,7 +800,10 @@ export default function ClientDemandesPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="budget" className="text-xs uppercase tracking-wide text-slate-400">
+                  <label
+                    htmlFor="budget"
+                    className="text-xs uppercase tracking-wide text-slate-400"
+                  >
                     Budget (optionnel)
                   </label>
                   <input
@@ -799,7 +819,8 @@ export default function ClientDemandesPage() {
 
                 <div className="space-y-2 rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
                   <label htmlFor="aiId" className="text-xs uppercase tracking-wide text-slate-400">
-                    IA associee {isAiRequired(selectedRequestType) ? '(obligatoire)' : '(optionnel)'}
+                    IA associee{' '}
+                    {isAiRequired(selectedRequestType) ? '(obligatoire)' : '(optionnel)'}
                   </label>
                   <select
                     id="aiId"
@@ -843,7 +864,9 @@ export default function ClientDemandesPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">Suivi des demandes IA</h2>
-                  <p className="text-sm text-slate-400">Timeline statuts + infos IA + note admin.</p>
+                  <p className="text-sm text-slate-400">
+                    Timeline statuts + infos IA + note admin.
+                  </p>
                 </div>
                 <span className="text-xs text-slate-500">
                   {demandesLoading ? 'Chargement...' : `${sortedDemandes.length} demandes`}
@@ -859,7 +882,9 @@ export default function ClientDemandesPage() {
 
               <div className="mt-4 grid gap-3 md:grid-cols-[1.3fr_0.7fr]">
                 <div className="space-y-1">
-                  <label className="text-[11px] uppercase tracking-wide text-slate-400">Recherche</label>
+                  <label className="text-[11px] uppercase tracking-wide text-slate-400">
+                    Recherche
+                  </label>
                   <input
                     value={demandeSearch}
                     onChange={(event) => setDemandeSearch(event.target.value)}
@@ -868,7 +893,9 @@ export default function ClientDemandesPage() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] uppercase tracking-wide text-slate-400">Filtre statut</label>
+                  <label className="text-[11px] uppercase tracking-wide text-slate-400">
+                    Filtre statut
+                  </label>
                   <select
                     value={demandeStatusFilter}
                     onChange={(event) => setDemandeStatusFilter(event.target.value)}
@@ -923,37 +950,52 @@ export default function ClientDemandesPage() {
                         </div>
 
                         <p className="mt-1 text-xs text-slate-400">
-                          Type: {requestTypeLabels[requestType]} - Admin: {formatAssignedAdmin(demande)}
+                          Type: {requestTypeLabels[requestType]} - Admin:{' '}
+                          {formatAssignedAdmin(demande)}
                         </p>
                         <p className="mt-1 text-xs text-slate-400">
-                          IA: {demande.aiName ?? 'Aucune'} {demande.aiId ? `(${demande.aiId.slice(0, 6)})` : ''}
+                          IA: {demande.aiName ?? 'Aucune'}{' '}
+                          {demande.aiId ? `(${demande.aiId.slice(0, 6)})` : ''}
                         </p>
                         {demande.description ? (
                           <p className="mt-2 text-xs text-slate-500">{demande.description}</p>
                         ) : null}
 
                         <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-400">Timeline</p>
+                          <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                            Timeline
+                          </p>
                           <div className="mt-2 grid gap-2">
                             {steps.map((step) => (
-                              <div key={step.key} className="flex items-center justify-between gap-3 text-xs">
+                              <div
+                                key={step.key}
+                                className="flex items-center justify-between gap-3 text-xs"
+                              >
                                 <span className={step.done ? 'text-emerald-300' : 'text-slate-500'}>
                                   {step.done ? '●' : '○'} {step.label}
                                 </span>
-                                <span className="text-slate-500">{step.done ? formatDate(step.at) : '-'}</span>
+                                <span className="text-slate-500">
+                                  {step.done ? formatDate(step.at) : '-'}
+                                </span>
                               </div>
                             ))}
                           </div>
                         </div>
 
                         <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-400">Brief IA</p>
+                          <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                            Brief IA
+                          </p>
                           {renderPayloadSummary(demande)}
                         </div>
 
                         <div className="mt-3 rounded-xl border border-slate-800/70 bg-slate-950/60 p-3">
-                          <p className="text-[11px] uppercase tracking-wide text-slate-400">Note admin</p>
-                          <p className="mt-1 text-xs text-slate-300">{demande.adminNote ?? 'Aucune note pour le moment.'}</p>
+                          <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                            Note admin
+                          </p>
+                          <p className="mt-1 text-xs text-slate-300">
+                            {demande.adminNote ?? 'Aucune note pour le moment.'}
+                          </p>
                         </div>
                       </div>
                     );

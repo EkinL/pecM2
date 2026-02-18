@@ -34,9 +34,7 @@ const toSanitizedPayload = (payload: unknown): DemandeAiPayload | undefined => {
       return value;
     }
     if (Array.isArray(value)) {
-      const items = value
-        .map((item) => sanitize(item))
-        .filter((item) => item !== undefined);
+      const items = value.map((item) => sanitize(item)).filter((item) => item !== undefined);
       return items.length ? items : undefined;
     }
     if (value && typeof value === 'object') {

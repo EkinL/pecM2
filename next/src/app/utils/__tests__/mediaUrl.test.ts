@@ -14,7 +14,9 @@ describe('mediaUrl', () => {
     });
 
     it('returns trimmed relative paths as-is', () => {
-      expect(normalizeMediaUrl('  /images/avatar.png?size=sm#v1  ')).toBe('/images/avatar.png?size=sm#v1');
+      expect(normalizeMediaUrl('  /images/avatar.png?size=sm#v1  ')).toBe(
+        '/images/avatar.png?size=sm#v1',
+      );
     });
 
     it('normalizes loopback URLs to path + query + hash', () => {
@@ -31,7 +33,9 @@ describe('mediaUrl', () => {
     });
 
     it('returns trimmed raw value for invalid URLs', () => {
-      expect(normalizeMediaUrl('  not a valid url with spaces  ')).toBe('not a valid url with spaces');
+      expect(normalizeMediaUrl('  not a valid url with spaces  ')).toBe(
+        'not a valid url with spaces',
+      );
     });
   });
 });
