@@ -39,7 +39,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ aiId
     }
 
     const firestore = getFirebaseAdminFirestore();
-    const avatarRef = firestore.collection('iaProfiles').doc(aiId).collection('assets').doc('avatar');
+    const avatarRef = firestore
+      .collection('iaProfiles')
+      .doc(aiId)
+      .collection('assets')
+      .doc('avatar');
     const avatarSnap = await avatarRef.get();
     if (!avatarSnap.exists) {
       return NextResponse.json({ error: 'Avatar introuvable.' }, { status: 404 });
