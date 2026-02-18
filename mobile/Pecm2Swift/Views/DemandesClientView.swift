@@ -63,8 +63,6 @@ struct DemandesClientView: View {
               description: form.description,
               category: form.category,
               budget: form.budget,
-              city: form.city,
-              availability: form.availability,
               location: geo
             )
           }
@@ -122,11 +120,6 @@ private struct DemandeRow: View {
           .lineLimit(3)
       }
 
-      if let city = demande.city, !city.isEmpty {
-        Label(city, systemImage: "mappin.and.ellipse")
-          .font(AppTypography.footnote)
-          .foregroundColor(AppColors.textSecondary)
-      }
     }
     .padding(.vertical, 10)
   }

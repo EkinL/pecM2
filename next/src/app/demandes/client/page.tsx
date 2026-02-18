@@ -379,8 +379,6 @@ export default function ClientDemandesPage() {
     const description = toOptional(formData.get('description'));
     const category = toOptional(formData.get('category'));
     const budget = toOptional(formData.get('budget'));
-    const city = toOptional(formData.get('city'));
-    const availability = toOptional(formData.get('availability'));
 
     if (!title || !description) {
       setSubmitError('Le titre et la description sont obligatoires.');
@@ -442,8 +440,6 @@ export default function ClientDemandesPage() {
         description,
         category,
         budget,
-        city,
-        availability,
         aiId: targetAi?.id,
         aiName: targetAi?.name ?? undefined,
         requestType: selectedRequestType,
@@ -786,45 +782,18 @@ export default function ClientDemandesPage() {
                   />
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label htmlFor="budget" className="text-xs uppercase tracking-wide text-slate-400">
-                      Budget (optionnel)
-                    </label>
-                    <input
-                      id="budget"
-                      name="budget"
-                      type="number"
-                      min="0"
-                      step="1"
-                      className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100"
-                      placeholder="Montant estime"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="availability" className="text-xs uppercase tracking-wide text-slate-400">
-                      Disponibilite
-                    </label>
-                    <input
-                      id="availability"
-                      name="availability"
-                      type="text"
-                      className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-600"
-                      placeholder="Ex: cette semaine"
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
-                  <label htmlFor="city" className="text-xs uppercase tracking-wide text-slate-400">
-                    Ville
+                  <label htmlFor="budget" className="text-xs uppercase tracking-wide text-slate-400">
+                    Budget (optionnel)
                   </label>
                   <input
-                    id="city"
-                    name="city"
-                    type="text"
-                    className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100 placeholder:text-slate-600"
-                    placeholder="Paris, Lyon..."
+                    id="budget"
+                    name="budget"
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="w-full rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-2 text-sm text-slate-100"
+                    placeholder="Montant estime"
                   />
                 </div>
 
